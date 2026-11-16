@@ -36,3 +36,6 @@ __pycache__/
 /dist/
 .DS_Store
 fulldex-google-client.txt
+# The GBA games' box art (Nintendo's artwork): not distributed; gba/tools/embed_art.py
+# embeds it at build time if present.
+/gba/art/
