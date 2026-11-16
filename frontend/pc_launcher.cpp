@@ -1636,7 +1636,7 @@ int PickGame(Folders& fo, std::vector<Launcher::Game>& games, int selected, bool
                 F.dialog = 3; F.drow = 0; SDL_StartTextInput();
                 return;
             }
-            if (onTabs && !F.onSort) { Launcher::OpenTabMenu(tab); return; } // (a tab: move, hide; one of your own also rename, delete)
+            if (onTabs && !F.onSort && F.page < 0) { Launcher::OpenTabMenu(tab); return; } // (a tab: move, hide; one of your own also rename, delete)
             if (onTabs && F.onSort)
             {
                 // (Sort on the tab bar: a menu of the orders; what is chosen is kept in the settings as SORT is.)

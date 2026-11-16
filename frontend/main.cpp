@@ -8930,11 +8930,12 @@ int main(int argc, char** argv)
                         const int item = menu.ItemAt(x, y);
                         // A finger put down on a page that scrolls may be the start of a drag: a
                         // settings page anywhere across its rows (on a heading or between rows
-                        // too, not only on a row), and a plain list (cheats, the companion's
-                        // lists) anywhere in its box. Let go without moving, it is a tap.
+                        // too, not only on a row), a plain list (cheats, the companion's lists)
+                        // anywhere in its box, and the pause menu's tile page (a grid, not only
+                        // a column). Let go without moving, it is a tap.
                         const bool settingsRows = menu.style == 1 && !menu.keyGrid && !menu.slotGrid &&
                             !(item >= 0 && menu.items[item].kind == Menu::K_BACK) && x >= menu.rowX && x < menu.rowX + menu.rowW;
-                        const bool plainList = menu.style == 0 && menu.columns == 0 && menu.drawnLineH > 0 && item != -2;
+                        const bool plainList = menu.style == 0 && menu.drawnLineH > 0 && item != -2;
                         if (settingsRows || plainList)
                         {
                             menuDrag.Begin(y, menu.style == 1 ? menu.scrollPx : menu.scroll * menu.drawnLineH);
