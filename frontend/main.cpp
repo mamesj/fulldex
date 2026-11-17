@@ -8634,7 +8634,9 @@ int main(int argc, char** argv)
         // Waiting after Present on the DS's 59.8 a second instead is what walked past a
         // 59.94 Hz screen. Present itself then blocks only for the last couple of milliseconds
         // and returns on the refresh, which is when the next frame's work starts.
-        if (pace && syncToDisplay && !swapPaced)
+        // A successful SetSwapInterval is only a request: PRIME offload can return immediately.
+        // Keep the deadline guard even then. Blocking Present still gets its 2 ms lead below.
+        if (pace && syncToDisplay)
         {
             const uint64_t now = SDL_GetPerformanceCounter();
             if (now < nextTick)
