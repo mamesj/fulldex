@@ -1761,6 +1761,7 @@ struct Settings : OptionalFeatures
     // the message box's band in Black and White, the corner panel in Black 2 (Bw1Layouts::BUTTONS_*).
     int battleButtons = 1;
     bool encountersShown = false; // ENCOUNTERS ON SCREEN (FULLDEX NAV's count on the picture)
+    bool levelCapWarn = false; // WARN OVER THE CAP (Nuzlocke page): a note when a party Pokemon levels past the cap
     bool repelPrompt = true; // REPEL PROMPT: the Nav opens on Repel when one wears off (games that don't ask themselves)
     int navStyle = 0; // NAV STYLE (FULLDEX NAV): 0 MODERN, 1 CLASSIC, 2 SIMPLE, 3 WHEEL, 4 OFF (#181: L3 as before)
     // The PC all-games program: the window's size when it last closed (0: 1280x720, a wide view).
@@ -1865,6 +1866,7 @@ struct Settings : OptionalFeatures
             else if (k == "battle_buttons") battleButtons = v == "corner" ? 0 : v == "panel" ? 2 : v == "classic" ? 3 : v == "sunmoon" ? 4 : 1;
             else if (k == "encounters_shown") encountersShown = v == "1";
             else if (k == "repel_prompt") repelPrompt = v == "1";
+            else if (k == "level_cap_warn") levelCapWarn = v == "1";
             else if (k == "nav_style") navStyle = v == "classic" ? 1 : v == "simple" ? 2 : v == "wheel" ? 3 : v == "off" ? 4 : 0;
             else if (k == "window")
             {
@@ -1940,6 +1942,7 @@ struct Settings : OptionalFeatures
         f << "battle_buttons=" << (battleButtons == 0 ? "corner" : battleButtons == 2 ? "panel" : battleButtons == 3 ? "classic" : battleButtons == 4 ? "sunmoon" : "strip") << "\n";
         f << "encounters_shown=" << (encountersShown ? 1 : 0) << "\n";
         f << "repel_prompt=" << (repelPrompt ? 1 : 0) << "\n";
+        f << "level_cap_warn=" << (levelCapWarn ? 1 : 0) << "\n";
         f << "nav_style=" << (navStyle == 1 ? "classic" : navStyle == 2 ? "simple" : navStyle == 3 ? "wheel" : navStyle == 4 ? "off" : "modern") << "\n";
         controls.Save(f);
         f << "both_versions=" << (bothVersions ? 1 : 0) << "\n";
@@ -5755,7 +5758,7 @@ int main(int argc, char** argv)
     SDL_FingerID overlayFingerId=0;
     SDL_Texture* companionTexture=nullptr;
     int companionDiagnosticReady=-1,companionDiagnosticCount=-1;
-    auto liveCompanionWanted = [&]() {return cfg.liveCompanion||cfg.companionOverlay||cfg.partyHud||cfg.statusBar||nuzlocke.Enabled()||DsDisplayState::Mode(secondDisplay.State())==4;};
+    auto liveCompanionWanted = [&]() {return cfg.liveCompanion||cfg.companionOverlay||cfg.partyHud||cfg.statusBar||nuzlocke.Enabled()||cfg.levelCapWarn||DsDisplayState::Mode(secondDisplay.State())==4;};
     // The live companion (COMPANION WINDOW, HUD, STATUS BAR): its picture from the latest read, the
     // window's tab (Battle while a battle runs, then back) and where it was drawn, for taps.
     Menu::CompanionView liveView; unsigned liveViewVersion = ~0u;
@@ -5921,6 +5924,8 @@ int main(int argc, char** argv)
         }
     };
     const auto companionGuide=Companion::GuideFor(gameCode);
+    // (LEVEL CAP: the next boss's highest level, the first number in NEXT BOSS's hint; 0: not known for this game.)
+    std::function<int()> levelCap;
     // (GUIDE's NEXT BOSS: the next gym, or the League, from the save's badges. Black's
     // Striaton leader follows the starter; the gen 4 games' first leaders are fixed.)
     struct GuideBoss { std::string title, hint, answer; bool any = false; };
@@ -6013,6 +6018,16 @@ int main(int argc, char** argv)
         static const char* const ptE4[] = {"AARON","BERTHA","FLINT","LUCIAN","CYNTHIA"};
         return e4Card(ptE4, 5);
     };
+    levelCap = [&]() -> int {
+        static const int test = getenv("SSR_TEST_LEVELCAP") ? atoi(getenv("SSR_TEST_LEVELCAP")) : 0;
+        if (test > 0) return test;
+        if (!companionSnapshot.ready) return 0;
+        const GuideBoss g = guideNextBoss();
+        if (!g.any) return 0;
+        for (size_t i = 0; i < g.hint.size(); i++)
+            if (g.hint[i] >= '0' && g.hint[i] <= '9') { int v = 0; while (i < g.hint.size() && g.hint[i] >= '0' && g.hint[i] <= '9') v = v * 10 + (g.hint[i++] - '0'); return v; }
+        return 0;
+    };
     // (GUIDE's GYMS for the gen 4 games: each leader's team, from the same cart data.)
     auto guideGen4Team = [&](const char* name) -> std::string {
         const bool hg = gameCode == "IPKE" || gameCode == "IPGE";
@@ -6093,7 +6108,7 @@ int main(int argc, char** argv)
     // (PAGE_KEYS, controls.h). Items a platform does not have are left out of its pages.
     enum
     {
-        M_RESUME, M_LAYOUT, M_LARGE, M_FPS60, M_FULLSCREEN, M_SMOOTH, M_WIDE, M_WIDEMAP, M_BATTLEBUTTONS, M_NAVSTYLE, M_ENCSHOWN, M_REPELPROMPT,
+        M_RESUME, M_LAYOUT, M_LARGE, M_FPS60, M_FULLSCREEN, M_SMOOTH, M_WIDE, M_WIDEMAP, M_BATTLEBUTTONS, M_NAVSTYLE, M_ENCSHOWN, M_REPELPROMPT, M_LEVELCAPWARN,
         M_WIDELINES, M_AUTODETAIL, M_WIDEGPU, M_GPU3D, M_SHOWFPS, M_BUTTONS, M_PADTOUCH, M_EMULATION,
         M_CONTROLS, M_TOUCHLAYOUT, M_STARTBTN, M_FAST, M_FFLOWRES, M_SAVESTATE, M_LOADSTATE, M_RESET, M_QUIT,
         M_DISPLAY, M_LANGUAGE, M_SOUND, M_GRAPHICS, M_CONTROLMENU, M_BACK, M_CHEATS, M_NOTHING,
@@ -6782,6 +6797,18 @@ int main(int argc, char** argv)
             menu.items.back().icon=Glass::I_REWIND;
             menu.items.back().desc="Clear what the tracker has noted, to start a new run.";
             menu.items.back().tip="Your game and its save are not changed.";
+            // LEVEL CAP: the next boss's highest level, who is over it, and the warning.
+            {
+                const int cap=levelCap?levelCap():0;
+                section("LEVEL CAP",Glass::I_TROPHY);
+                noted("LEVEL CAP",cap>0?"Lv "+std::to_string(cap):UiLang::Tr("Not known here"));
+                menu.items.back().desc="The highest level in the next gym leader's or Elite Four's team, from your badges.";
+                toggle(M_LEVELCAPWARN,"WARN OVER THE CAP",Glass::I_INFO,Menu::P_NONE,cfg.levelCapWarn,
+                       "A note on screen when a Pok\xC3\xA9mon in your party goes over the level cap.",
+                       "A warning only: the game is not changed.");
+                if(cap>0)for(const auto& m:companionSnapshot.party)if(!m.egg&&m.level>cap)
+                    noted(m.nickname.empty()?companionMetadata.Species(m.species):m.nickname,UiLang::F("Lv {0}: over the cap",{std::to_string(m.level)}));
+            }
             section(UiLang::F("FAINTED  ({0})",{std::to_string(nuzlocke.Deaths().size())}).c_str(),Glass::I_PEOPLE);
             for(auto entry:nuzlocke.Deaths())noted(Cheats::Fit(companionMetadata.Species(entry.second),30),"OUT");
             if(nuzlocke.Deaths().empty())noted("NONE YET","");
@@ -10255,6 +10282,23 @@ int main(int argc, char** argv)
             }
             repelWas = repelNow;
         }
+        // (WARN OVER THE CAP: a party Pokemon's level going up past the cap, said once per level. SSR_TEST_LEVELCAP:
+        // a test's cap, and each Pokemon first seen a level lower, so the warning shows at once.)
+        if (cfg.levelCapWarn && companionSnapshot.ready && frame % 30 == 0 && levelCap)
+        {
+            static std::map<uint32_t, int> capSeen;
+            static const bool capTest = getenv("SSR_TEST_LEVELCAP") != nullptr;
+            const int cap = levelCap();
+            for (const auto& m : companionSnapshot.party)
+            {
+                if (m.egg || !m.personality || m.level <= 0) continue;
+                auto it = capSeen.find(m.personality);
+                if (it == capSeen.end()) { capSeen[m.personality] = capTest ? m.level - 1 : m.level; it = capSeen.find(m.personality); }
+                if (cap > 0 && m.level > it->second && m.level > cap)
+                    say(UiLang::F("{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}", { CompanionBattle::Upper(m.nickname.empty() ? companionMetadata.Species(m.species) : m.nickname), std::to_string(m.level), std::to_string(cap) }));
+                it->second = m.level;
+            }
+        }
         if (!menu.open && pressed(PAD_LS) && cfg.navStyle != 4) fdNavToggle = true; // (OFF: the left stick as before, below)
         if (menu.open) { fdNav.open = false; fdNavToggle = false; }
         const uint32_t fdNavKeys = PadKeys(ps, cfg.byLabel) | kbKeysHeld, fdNavDown = fdNavKeys & ~fdNavKeysWas;
@@ -10770,6 +10814,7 @@ int main(int argc, char** argv)
             case M_SMART_FAST:cfg.smartFast=!cfg.smartFast;cfg.Save(opt.config);break;
             case M_ENCSHOWN: cfg.encountersShown = !cfg.encountersShown; cfg.Save(opt.config); break;
             case M_REPELPROMPT: cfg.repelPrompt = !cfg.repelPrompt; cfg.Save(opt.config); break;
+            case M_LEVELCAPWARN: cfg.levelCapWarn = !cfg.levelCapWarn; cfg.Save(opt.config); break;
             case M_ZOOM:cfg.zoom=!cfg.zoom;cfg.Save(opt.config);break;
             case M_ZOOM_TEXT:cfg.zoomText=!cfg.zoomText;cfg.Save(opt.config);break;
             case M_SLOW_MOTION:cfg.slowDivisor=dir<0?(cfg.slowDivisor==1?4:cfg.slowDivisor==4?2:1):(cfg.slowDivisor==1?2:cfg.slowDivisor==2?4:1);cfg.Save(opt.config);break;

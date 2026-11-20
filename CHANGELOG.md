@@ -8,6 +8,7 @@
 - **Damage ranges in Battle Info** (Platinum, Black, White, Black 2 and White 2, where Battle Info reads the battle). Each of your moves shows the share of the foe's HP it takes, lowest and highest roll ("1x · 29-42%"), from both Pokémon's stats and stat changes, and a new section shows the foe's moves and what each would do to yours. Weather, held items, critical hits and most abilities are not counted.
 - **Black, White, Black 2 and White 2: a move's kind is right again in the Companion.** Status moves (Tail Whip, Leer) were shown as damaging moves with a matchup, and physical and special were swapped on the move pages.
 - **DexNav on the Location page** (DS games): how many of the wild Pokémon here you have caught ("3 of 17 caught here"), and Caught or Seen beside each one, from your save's Pokédex. FullDex Nav's Map app opens it.
+- **Level caps on the Nuzlocke page** (Black, HeartGold, SoulSilver, Platinum): the cap is the highest level in the next gym leader's or Elite Four's team, from your badges, and the page lists the Pokémon in your party over it. WARN OVER THE CAP (off to start) puts a note on screen when one levels past it. The game itself is not changed.
 
 ## FullDex 1.7 (not released yet)
 

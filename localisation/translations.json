@@ -1395,7 +1395,15 @@
       "{0} of {1} caught here": "{0} de {1} capturados aquí",
       "All {0} caught here": "Los {0} capturados aquí",
       "The wild Pokémon of this place against your Pokédex: each one shows Caught, Seen or ???.": "Los Pokémon salvajes de este lugar frente a tu Pokédex: cada uno muestra Capturado, Visto o ???.",
-      "DexNav": "DexNav"
+      "DexNav": "DexNav",
+      "LEVEL CAP": "LÍMITE DE NIVEL",
+      "Not known here": "Desconocido aquí",
+      "The highest level in the next gym leader's or Elite Four's team, from your badges.": "El nivel más alto del equipo del próximo líder de gimnasio o del Alto Mando, según tus medallas.",
+      "WARN OVER THE CAP": "AVISAR SI SE PASA",
+      "A note on screen when a Pokémon in your party goes over the level cap.": "Un aviso en pantalla cuando un Pokémon de tu equipo pasa del límite de nivel.",
+      "A warning only: the game is not changed.": "Solo un aviso: el juego no cambia.",
+      "Lv {0}: over the cap": "Nv. {0}: pasa del límite",
+      "{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}": "{0} PASA DEL LÍMITE DE NIVEL: NV. {1} DE {2}"
     },
     "it": {
       " (NEXT START)": " (AL RIAVVIO)",
@@ -2783,7 +2791,15 @@
       "{0} of {1} caught here": "{0} di {1} catturati qui",
       "All {0} caught here": "Tutti i {0} catturati qui",
       "The wild Pokémon of this place against your Pokédex: each one shows Caught, Seen or ???.": "I Pokémon selvatici di questo luogo confrontati con il tuo Pokédex: ognuno mostra Catturato, Visto o ???.",
-      "DexNav": "DexNav"
+      "DexNav": "DexNav",
+      "LEVEL CAP": "LIMITE DI LIVELLO",
+      "Not known here": "Non noto qui",
+      "The highest level in the next gym leader's or Elite Four's team, from your badges.": "Il livello più alto della squadra del prossimo capopalestra o dei Superquattro, secondo le tue medaglie.",
+      "WARN OVER THE CAP": "AVVISA SE SI SUPERA",
+      "A note on screen when a Pokémon in your party goes over the level cap.": "Un avviso sullo schermo quando un Pokémon della tua squadra supera il limite di livello.",
+      "A warning only: the game is not changed.": "Solo un avviso: il gioco non cambia.",
+      "Lv {0}: over the cap": "Liv. {0}: oltre il limite",
+      "{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}": "{0} SUPERA IL LIMITE DI LIVELLO: LIV. {1} SU {2}"
     },
     "fr": {
       " (NEXT START)": " (PROCHAIN DÉBUT)",
@@ -4171,7 +4187,15 @@
       "{0} of {1} caught here": "{0} sur {1} capturés ici",
       "All {0} caught here": "Les {0} capturés ici",
       "The wild Pokémon of this place against your Pokédex: each one shows Caught, Seen or ???.": "Les Pokémon sauvages de ce lieu comparés à ton Pokédex : chacun indique Capturé, Vu ou ???.",
-      "DexNav": "DexNav"
+      "DexNav": "DexNav",
+      "LEVEL CAP": "NIVEAU MAXIMUM",
+      "Not known here": "Inconnu ici",
+      "The highest level in the next gym leader's or Elite Four's team, from your badges.": "Le niveau le plus haut de l'équipe du prochain champion d'arène ou du Conseil 4, d'après tes badges.",
+      "WARN OVER THE CAP": "AVERTIR SI DÉPASSÉ",
+      "A note on screen when a Pokémon in your party goes over the level cap.": "Un message à l'écran quand un Pokémon de ton équipe dépasse le niveau maximum.",
+      "A warning only: the game is not changed.": "Un simple avertissement : le jeu n'est pas modifié.",
+      "Lv {0}: over the cap": "N. {0} : au-dessus",
+      "{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}": "{0} DÉPASSE LE NIVEAU MAXIMUM : N. {1} SUR {2}"
     },
     "de": {
       " (NEXT START)": " (NÄCHSTER START)",
@@ -5559,7 +5583,15 @@
       "{0} of {1} caught here": "{0} von {1} hier gefangen",
       "All {0} caught here": "Alle {0} hier gefangen",
       "The wild Pokémon of this place against your Pokédex: each one shows Caught, Seen or ???.": "Die wilden Pokémon dieses Orts im Vergleich zu deinem Pokédex: jedes zeigt Gefangen, Gesehen oder ???.",
-      "DexNav": "DexNav"
+      "DexNav": "DexNav",
+      "LEVEL CAP": "LEVEL-GRENZE",
+      "Not known here": "Hier nicht bekannt",
+      "The highest level in the next gym leader's or Elite Four's team, from your badges.": "Das höchste Level im Team des nächsten Arenaleiters oder der Top Vier, nach deinen Orden.",
+      "WARN OVER THE CAP": "WARNEN BEI ÜBERSCHREITUNG",
+      "A note on screen when a Pokémon in your party goes over the level cap.": "Ein Hinweis auf dem Bildschirm, wenn ein Pokémon deines Teams die Level-Grenze überschreitet.",
+      "A warning only: the game is not changed.": "Nur ein Hinweis: das Spiel wird nicht verändert.",
+      "Lv {0}: over the cap": "Lv. {0}: über der Grenze",
+      "{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}": "{0} IST ÜBER DER LEVEL-GRENZE: LV. {1} VON {2}"
     },
     "ja": {
       " (NEXT START)": " (次のスタート)",
@@ -6947,7 +6979,15 @@
       "{0} of {1} caught here": "捕獲 {0}/{1}",
       "All {0} caught here": "全{0}匹 捕獲",
       "The wild Pokémon of this place against your Pokédex: each one shows Caught, Seen or ???.": "この場所の野生のポケモンをずかんと照らし合わせます。それぞれ「捕まえた」「見た」「???」で表示。",
-      "DexNav": "ずかんナビ"
+      "DexNav": "ずかんナビ",
+      "LEVEL CAP": "レベル上限",
+      "Not known here": "ここでは不明",
+      "The highest level in the next gym leader's or Elite Four's team, from your badges.": "次のジムリーダーまたは四天王のチームの最高レベル。持っているバッジから決まります。",
+      "WARN OVER THE CAP": "上限を超えたら知らせる",
+      "A note on screen when a Pokémon in your party goes over the level cap.": "手持ちのポケモンがレベル上限を超えたとき、画面に表示します。",
+      "A warning only: the game is not changed.": "知らせるだけで、ゲームは変わりません。",
+      "Lv {0}: over the cap": "Lv{0} 超",
+      "{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}": "{0}がレベル上限を超えた：Lv{1}／{2}"
     },
     "ko": {
       " (NEXT START)": " (다음 시작)",
@@ -8335,7 +8375,15 @@
       "{0} of {1} caught here": "잡음 {0}/{1}",
       "All {0} caught here": "{0}마리 모두 잡음",
       "The wild Pokémon of this place against your Pokédex: each one shows Caught, Seen or ???.": "이곳의 야생 포켓몬을 도감과 비교합니다. 각각 잡음, 봄, ???로 표시됩니다.",
-      "DexNav": "도감내비"
+      "DexNav": "도감내비",
+      "LEVEL CAP": "레벨 상한",
+      "Not known here": "여기서는 알 수 없음",
+      "The highest level in the next gym leader's or Elite Four's team, from your badges.": "다음 체육관 관장이나 사천왕 팀의 최고 레벨. 가진 배지로 정해집니다.",
+      "WARN OVER THE CAP": "상한 초과 시 알림",
+      "A note on screen when a Pokémon in your party goes over the level cap.": "파티의 포켓몬이 레벨 상한을 넘으면 화면에 알립니다.",
+      "A warning only: the game is not changed.": "알림만 하며 게임은 바뀌지 않습니다.",
+      "Lv {0}: over the cap": "Lv {0} 초과",
+      "{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}": "{0}이(가) 레벨 상한 초과: Lv {1} / {2}"
     }
   }
 }
