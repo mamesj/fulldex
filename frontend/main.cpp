@@ -2297,9 +2297,14 @@ int main(int argc, char** argv)
     }
     // The cartridge has its own copy now; Black 2's ROM is about 300 MB, which counts on the Switch.
     const int companionRevision=rom.size()>0x1E?rom[0x1E]:-1;
-    const Companion::Profile companionProfile=Companion::ProfileFor(gameCode,companionRevision);
+    Companion::Profile companionProfile=Companion::ProfileFor(gameCode,companionRevision);
     Companion::Metadata companionMetadata;
     companionMetadata.Load(rom,gameCode,companionProfile);
+    // (A hack with its text laid out otherwise (Origin HeartGold): the companion off, not misread.)
+    if(companionMetadata.unreadable){companionProfile.supported=false;fprintf(stderr,"[companion] this ROM's text is not where %s keeps it (a hack built another way): the companion is off\n",gameCode.c_str());}
+    // (An HG-Engine hack, as Heartfelt: its own save layout; companion_data.h UseHgEngineSave.)
+    // (Its battlers' abilities two bytes where its Pokemon's records have them so.)
+    if(companionMetadata.engine.on){Companion::UseHgEngineSave(companionProfile,companionMetadata.engine.count);companionProfile.battleAbility16=companionMetadata.engine.wideAbilities;fprintf(stderr,"[companion] HG-Engine: %d national, forms from %d, %d machines, %d tutors, %s abilities\n",companionMetadata.engine.nationalCount,companionMetadata.engine.formStart,(int)companionMetadata.engine.machines.size(),(int)companionMetadata.engine.tutors.size(),companionMetadata.engine.wideAbilities?"two-byte":"one-byte");}
     rom.clear();
     rom.shrink_to_fit();
 
@@ -3018,10 +3023,13 @@ int main(int argc, char** argv)
     // SoulSilver and HeartGold: the Running Shoes button. The game has it on the touch screen
     // beside its menu (x 182-255, y 89-130), but greys it out while the X menu is open, and the
     // single-screen view shows the touch screen only then. So its picture is kept from the last
-    // frame it was seen (shoesPix, shoesOn: running on) and drawn next to the X menu, where Y or
+    // frame it was seen (shoesPix, shoesOn: running on) and drawn under the X menu, where Y or
     // a touch on it toggles it: the menu is closed (B), the button touched, and the menu opened
     // again (X), one step after another (shoesStep, from shoesStepAt).
     static const int SHOES_X = 182, SHOES_Y = 89, SHOES_W = 74, SHOES_H = 42;
+    // (As a bar under the menu's panel: from the panel to the bar, and the bar's outline below it
+    // with the button's name under that, in the view's units.)
+    static const float SHOES_GAP = 4.5f, SHOES_LABEL = 8;
     std::vector<uint32_t> shoesPix(SHOES_W * SHOES_H);
     bool shoesSeen = false, shoesOn = false;
     int shoesStep = 0;
@@ -4746,10 +4754,16 @@ int main(int argc, char** argv)
             const uint32_t edge = tb ? (tb[100 * 256 + 5] & 0xFFFFFF) : 0x188241;
             const uint32_t frame = tb ? (tb[100 * 256 + 3] & 0xFFFFFF) : 0x494949;
             const int px0 = 5, pw = 158, ph = 186;
-            const float menuScale = viewWidth >= 300 ? 0.8f : 0.75f;
-            const float menuX = viewWidth >= 300 ? 128 + viewWidth / 2 - pw * menuScale - 2 : 256 - pw * menuScale - 4;
-            const float menuY = (192 - ph * menuScale) / 2;
-            Element back{ -1, 0, 0, pw, ph, menuX, menuY, menuScale, 0, 255, false };
+            // Flush with the view's right edge. With the Running Shoes button (a bar as wide as the
+            // panel under it, its key and state under that: see shoesPix) the two stand as one
+            // column in the middle of the view's height, a little smaller to fit.
+            const float menuScale = shoesSeen || viewWidth < 300 ? 0.75f : 0.8f;
+            const float menuX = 128 + viewWidth / 2 - pw * menuScale;
+            const float below = shoesSeen ? SHOES_GAP + (SHOES_H - 4) * menuScale + SHOES_LABEL : 0;
+            const float menuY = (192 - ph * menuScale - below) / 2;
+            // (The backing runs on past the view's edge, so the panel meets it whatever the
+            // rounding to whole pixels, the outline there off the view.)
+            Element back{ -1, 0, 0, pw + 2, ph, menuX, menuY, menuScale, 0, 255, false };
             back.keys[0] = edge;
             back.border = true;
             sc.items.push_back(back);
@@ -5962,6 +5976,18 @@ int main(int argc, char** argv)
             for (size_t i = 0; i < count; i++) readHash = (readHash ^ bytes[i]) * 1099511628211ULL;
             return true;
         });
+        // (An HG-Engine hack without the engine's save changes: its save read as HeartGold's from now on,
+        // FullDex Nav's Repel too.)
+        if (companionSnapshot.heartGoldSave) companionProfile = Companion::WithoutEngineSave(companionProfile);
+        // (An HG-Engine hack's Pokemon in a form, as a regional one: its form's own record, so its
+        // icon, types, stats and moves are the form's.)
+        if (companionMetadata.engine.on)
+        {
+            for (auto& mon : companionSnapshot.party)
+                if (mon.form > 0 && !mon.egg) mon.species = companionMetadata.engine.FormSpecies(mon.species, mon.form);
+            for (auto& b : companionSnapshot.battlers) // (a battler too, as a Mega once it evolves)
+                if (b.form > 0 && b.species) b.species = companionMetadata.engine.FormSpecies(b.species, b.form);
+        }
         // (A Pokemon the game is changing as it was read, its friendship as you walk, its HP in a
         // battle, fails its checksum for that moment and is left out: the party as last read is kept
         // then, so no slot drops out and comes back on the HUD and the window.)
@@ -6042,9 +6068,10 @@ int main(int argc, char** argv)
             for (const auto& item : snap.items) if (item.pocket == (int)pk) { pocket.stacks++; pocket.total += item.quantity; }
             cv.pockets.push_back(pocket);
         }
-        for (bool b : snap.seen) cv.seen += b;
-        for (bool b : snap.caught) cv.caught += b;
-        cv.dexTotal = companionProfile.maxSpecies;
+        // (The Pokedex's own entries: an HG-Engine hack's forms and unused numbers left out.)
+        for (size_t id = 0; id < snap.seen.size(); id++) if (companionMetadata.InDex((int)id, companionProfile.maxSpecies)) cv.seen += snap.seen[id];
+        for (size_t id = 0; id < snap.caught.size(); id++) if (companionMetadata.InDex((int)id, companionProfile.maxSpecies)) cv.caught += snap.caught[id];
+        cv.dexTotal = companionMetadata.DexCount(companionProfile.maxSpecies);
         cv.badges = snap.badges;
         cv.place = snap.map > 0 ? title(companionMetadata.PlaceName(snap.map)) : std::string(); // (map 0: none yet, as before a game is loaded)
         cv.area = snap.locationLive ? "" : "Where you last went through a door";
@@ -6083,7 +6110,31 @@ int main(int argc, char** argv)
             cv.battleLines = CompanionBattle::Lines(snap, companionMetadata);
         }
     };
-    const auto companionGuide=Companion::GuideFor(gameCode);
+    const auto companionGuide=companionMetadata.Guide(gameCode);
+    // (A ROM hack's own boss teams, from its trainers (TRAINER TEAMS' key trainers): the cart data's
+    // are HeartGold's and Platinum's, and a hack's FALKNER (Heartfelt Gold's) has other Pokemon.
+    // A hack without its game's eight leaders (Mythic Silver's gyms are others) has none here, as
+    // the badges would point at the wrong one. The answer is read before the next is looked up.)
+    Companion::Gen4Boss hackBoss;
+    int hackGyms = -1; // (-1: not looked at yet; 1: the eight leaders found by their names)
+    auto findBoss = [&](const char* name, bool heartGold) -> const Companion::Gen4Boss* {
+        if (!opt.romHack && !companionMetadata.engine.on) return Companion::FindGen4Boss(name, heartGold);
+        if (hackGyms < 0)
+        {
+            static const char* const johto[8] = {"FALKNER","BUGSY","WHITNEY","MORTY","CHUCK","JASMINE","PRYCE","CLAIR"};
+            static const char* const sinnoh[8] = {"ROARK","GARDENIA","FANTINA","MAYLENE","WAKE","BYRON","CANDICE","VOLKNER"};
+            hackGyms = 1;
+            for (int i = 0; i < 8; i++) if (companionMetadata.KeyTeam(heartGold ? johto[i] : sinnoh[i]).empty()) hackGyms = 0;
+        }
+        if (!hackGyms) return nullptr;
+        const auto team = companionMetadata.KeyTeam(name);
+        if (team.empty()) return nullptr;
+        hackBoss = {};
+        hackBoss.name = name;
+        hackBoss.count = (int)std::min<size_t>(6, team.size());
+        for (int i = 0; i < hackBoss.count; i++) hackBoss.team[i] = {team[i].level, team[i].species};
+        return &hackBoss;
+    };
     // (LEVEL CAP: the next boss's highest level, the first number in NEXT BOSS's hint; 0: not known for this game.)
     std::function<int()> levelCap;
     // (GUIDE's NEXT BOSS: the next gym, or the League, from the save's badges. Black's
@@ -6126,7 +6177,7 @@ int main(int argc, char** argv)
         };
         auto displayName = [](const char* name) { std::string s = name; for (char& c : s) if (c == '_') c = ' '; return s; };
         auto makeBoss = [&](const char* name, const char* where) -> GuideBoss {
-            const Companion::Gen4Boss* b = Companion::FindGen4Boss(name, hg);
+            const Companion::Gen4Boss* b = findBoss(name, hg);
             if (!b) return {};
             const auto team = bossAnswer(*b);
             GuideBoss g; g.any = true;
@@ -6140,7 +6191,7 @@ int main(int argc, char** argv)
             GuideBoss g; int high = 0; std::string lines;
             for (int i = 0; i < n; i++)
             {
-                const Companion::Gen4Boss* b = Companion::FindGen4Boss(names[i], hg);
+                const Companion::Gen4Boss* b = findBoss(names[i], hg);
                 if (!b) continue;
                 const auto team = bossAnswer(*b);
                 high = std::max(high, team.second);
@@ -6192,7 +6243,7 @@ int main(int argc, char** argv)
     auto guideGen4Team = [&](const char* name) -> std::string {
         const bool hg = gameCode == "IPKE" || gameCode == "IPGE";
         if (!hg && gameCode != "CPUE") return "";
-        const Companion::Gen4Boss* b = Companion::FindGen4Boss(name, hg);
+        const Companion::Gen4Boss* b = findBoss(name, hg);
         if (!b) return "";
         std::string out;
         for (int i = 0; i < b->count; i++)
@@ -6283,7 +6334,7 @@ int main(int argc, char** argv)
         M_EXTRAS, M_EXTRA0=92000, M_EXTRA_END=92007, M_PLAYBACK=93000, M_FAST_SPEED, M_SMART_FAST, M_SLOW_MOTION, M_REWIND_MB, M_REWIND, M_TURBO_A, M_SCREEN_FILTER, M_COMPANION_OVERLAY, M_PARTY_HUD, M_STATUS_BAR, M_LIVE_GLASS, M_FAST_BUTTON, M_ZOOM, M_ZOOM_TEXT,
         M_STATES, M_SLOT_SAVE, M_SLOT_LOAD, M_SLOT_PREVIOUS, M_UNDO_LOAD, M_AUTO_STATE, M_AUTO_RESUME,
         M_KEY0=94000, M_KEY_LAYER=94900, M_KEY_SPACE, M_KEY_DEL, M_KEY_DONE, M_KEY_SYMBOLS, // (the keyboard's keys, Menu::keyGrid: SEARCH, the log in)
-        M_FLY0=96000, M_FREEFLIGHT=95990, M_CPARTY0=80000, M_CDEX0=81000, M_CITEM0=83000, M_RRESULT0=86000, M_SLOT0=90000, M_GUIDE0=91000, M_CGUIDE_GYM0=91100,
+        M_FLY0=96000, M_FREEFLIGHT=95990, M_CFORM0=97000, M_CPARTY0=80000, M_CDEX0=81000, M_CITEM0=83000, M_RRESULT0=86000, M_SLOT0=90000, M_GUIDE0=91000, M_CGUIDE_GYM0=91100,
         M_BACKUP0 = 70000,
         M_CHEAT0 = 1000, // (M_CHEAT0 + i: cheat i, CHEATS)
         M_ACH0 = 30000,  // (M_ACH0 + i: achievement i, ACHIEVEMENTS)
@@ -7130,7 +7181,7 @@ int main(int argc, char** argv)
                 for (int i : m.Machines(id))
                 {
                     Menu::CompanionView::DexEntry::Learn l;
-                    l.label = Companion::MachineLabel(m.gen5, i);
+                    l.label = m.MachineName(i);
                     l.move = title(m.Move(m.machineMoves[i]));
                     const auto info = m.MoveData(m.machineMoves[i]);
                     if (info.ready) l.type = info.type;
@@ -7197,10 +7248,12 @@ int main(int argc, char** argv)
             auto dexEntry = [&](int id, bool full = false) {
                 auto title = [](const std::string& t) { return CleanFont::Title(t); };
                 const auto& snap = companionSnapshot;
-                const bool seen = snap.dexReady && id < (int)snap.seen.size() && snap.seen[id];
-                const bool caught = snap.dexReady && id < (int)snap.caught.size() && snap.caught[id];
+                const int dexId = companionMetadata.engine.Base(id); // (a form: as its species)
+                const bool seen = snap.dexReady && dexId < (int)snap.seen.size() && snap.seen[dexId];
+                const bool caught = snap.dexReady && dexId < (int)snap.caught.size() && snap.caught[dexId];
                 Menu::CompanionView::DexEntry e;
                 e.id = id; e.seen = seen; e.caught = caught;
+                if (companionMetadata.engine.on) e.number = companionMetadata.DexNumber(id);
                 e.hidden = !seen && !companionRevealed.count(id);
                 e.name = title(species(id));
                 companionMetadata.MonIcon(id, false, e.icon);
@@ -7223,7 +7276,8 @@ int main(int argc, char** argv)
                     {
                         if (move.move <= 0) continue;
                         Menu::CompanionView::DexEntry::Learn l;
-                        l.level = move.level; l.move = title(companionMetadata.Move(move.move));
+                        // (HG-Engine's level 0: learned as it evolves; -1 here, shown as Evo.)
+                        l.level = move.level == 0 && companionMetadata.engine.on ? -1 : move.level; l.move = title(companionMetadata.Move(move.move));
                         const auto info = companionMetadata.MoveData(move.move);
                         if (info.ready) l.type = info.type;
                         e.learns.push_back(l);
@@ -7326,13 +7380,26 @@ int main(int argc, char** argv)
                 menu.items.back().icon=Glass::I_GLOBE;
                 menu.items.back().desc="Type part of a name to narrow the list.";
                 auto entries=companionMetadata.ReferenceEntries(companionReferenceKind,companionQuery);
-                section(UiLang::F("RESULTS  ({0})",{std::to_string(entries.size())}).c_str(),Glass::I_INFO);
-                for(const auto& entry:entries)
-                {
-                    add(M_RRESULT0+entry.first,Cheats::Fit(entry.second,32).c_str(),companionReferenceKind==0?std::to_string(entry.first):std::string(),true);
+                // (Trainers, with nothing searched for: the ones that matter most first, their levels beside them.)
+                auto value=[&](int id)->std::string{
+                    if(companionReferenceKind==0){const int n=companionMetadata.DexNumber(id);return n>0?std::to_string(n):std::string("FORM");}
+                    if(companionReferenceKind==4)return companionMetadata.TrainerLevels(id);
+                    return "";
+                };
+                auto result=[&](int id,const std::string& name){
+                    add(M_RRESULT0+id,Cheats::Fit(name,32).c_str(),value(id),true);
                     menu.items.back().kind=Menu::K_LINK;
                     menu.items.back().desc="Open its full entry.";
+                };
+                std::set<int> keyShown;
+                if(companionReferenceKind==4&&companionQuery.empty()&&!companionMetadata.keyTrainers.empty())
+                {
+                    section(UiLang::F("KEY TRAINERS  ({0})",{std::to_string(companionMetadata.keyTrainers.size())}).c_str(),Glass::I_PEOPLE);
+                    for(int id:companionMetadata.keyTrainers){result(id,Companion::Metadata::Name(companionMetadata.trainerNames,id,"TRAINER"));keyShown.insert(id);}
+                    entries.erase(std::remove_if(entries.begin(),entries.end(),[&](const std::pair<int,std::string>& e){return keyShown.count(e.first)>0;}),entries.end());
                 }
+                section(UiLang::F(keyShown.empty()?"RESULTS  ({0})":"OTHER TRAINERS  ({0})",{std::to_string(entries.size())}).c_str(),Glass::I_INFO);
+                for(const auto& entry:entries)result(entry.first,entry.second);
                 if(entries.empty())info("NO MATCHES. CHANGE OR CLEAR THE SEARCH.","NO MATCHES");
             }
             else if(menuPage==PAGE_RDETAIL)
@@ -7375,8 +7442,11 @@ int main(int argc, char** argv)
                         std::string moves;
                         for(int move:mon.moves)if(move)moves+=(moves.empty()?"":", ")+CleanFont::Title(companionMetadata.Move(move));
                         const std::string about=UiLang::F(mon.customMoves?"Its own moves: {0}.":"Moves by level: {0}.",{moves});
-                        row("LEVEL",std::to_string(mon.level),about);
+                        row("LEVEL",mon.level>0?std::to_string(mon.level):std::string("?"),mon.level>0?about:std::string("Your game's data doesn't give this one a fixed level."));
                         if(mon.item)row("HOLDING",companionMetadata.ItemName(mon.item),about);
+                        if(mon.ability>0)row("ABILITY",Companion::Metadata::Name(companionMetadata.abilities,mon.ability,"ABILITY"),about);
+                        static const char* const natureNames[25]={"HARDY","LONELY","BRAVE","ADAMANT","NAUGHTY","BOLD","DOCILE","RELAXED","IMPISH","LAX","TIMID","HASTY","SERIOUS","JOLLY","NAIVE","MODEST","MILD","QUIET","BASHFUL","RASH","CALM","GENTLE","SASSY","CAREFUL","QUIRKY"};
+                        if(mon.nature>=0&&mon.nature<25)row("NATURE",natureNames[mon.nature],about);
                         if(mon.form)row("FORM",std::to_string(mon.form),about);
                         for(int move:mon.moves)if(move)row(companionMetadata.Move(move),"",about);
                     }
@@ -7560,6 +7630,28 @@ int main(int argc, char** argv)
                     const auto& mon=companionSnapshot.party[h];
                     row("HELD BY",mon.nickname.empty()?companionMetadata.Species(mon.species):mon.nickname);
                 }
+                {
+                    // (A TM or HM: the move it teaches, from the ROM's own list.)
+                    const auto& m=companionMetadata;
+                    int machine=-1;
+                    if(m.engine.on&&!m.engine.machines.empty()){for(int i=0;i<(int)m.engine.machineItems.size();i++)if(m.engine.machineItems[i]==companionItem)machine=i;}
+                    else if(!m.gen5&&companionItem>=328&&companionItem<=427)machine=companionItem-328;
+                    if(machine>=0&&machine<(int)m.machineMoves.size())row("TEACHES",CleanFont::Title(m.Move(m.machineMoves[machine])));
+                }
+                // (Where it is found: given, an item ball or hidden, from each map's scripts and events.)
+                const auto& spots=companionMetadata.ItemSpots(companionItem);
+                if(!spots.empty())
+                {
+                    section("WHERE TO FIND",Glass::I_GLOBE);
+                    const size_t most=30;
+                    for(size_t i=0;i<spots.size()&&i<most;i++)
+                    {
+                        std::string how=CleanFont::Title(Companion::Metadata::SpotHow(spots[i].how));
+                        if(spots[i].quantity>1)how+=" x"+std::to_string(spots[i].quantity);
+                        row(CleanFont::Title(Companion::Metadata::Name(companionMetadata.places,spots[i].place,"PLACE")),how);
+                    }
+                    if(spots.size()>most)row("And "+std::to_string(spots.size()-most)+" more places","");
+                }
             }
             else if(menuPage == PAGE_CDEX)
             {
@@ -7589,8 +7681,10 @@ int main(int argc, char** argv)
                 const int typeWanted = dexTypes[companionDexType];
                 section("NATIONAL POKEDEX", Glass::I_INFO);
                 auto title = [](const std::string& t) { return CleanFont::Title(t); };
-                for (int id = 1; id <= companionProfile.maxSpecies; id++)
+                const int dexCount = companionMetadata.DexCount(companionProfile.maxSpecies);
+                for (int number = 1; number <= dexCount; number++)
                 {
+                    const int id = companionMetadata.DexSpecies(number); // (an HG-Engine hack's later Pokemon kept 50 on)
                     const bool seen = snap.dexReady && id < (int)snap.seen.size() && snap.seen[id];
                     const bool caught = snap.dexReady && id < (int)snap.caught.size() && snap.caught[id];
                     if (companionDexFilter == 1 && !seen) continue;
@@ -7599,7 +7693,7 @@ int main(int argc, char** argv)
                     Menu::CompanionView::DexEntry e = dexEntry(id);
                     cv.dex.push_back(e);
                     char label[64];
-                    snprintf(label, sizeof label, "%03d  %s", id, e.hidden ? "???" : e.name.c_str());
+                    snprintf(label, sizeof label, "%03d  %s", number, e.hidden ? "???" : e.name.c_str());
                     add(M_CDEX0 + id, label, caught ? "Caught" : seen ? "Seen" : "", true);
                     MenuItem& it = menu.items.back();
                     it.kind = Menu::K_LINK;
@@ -7631,7 +7725,9 @@ int main(int argc, char** argv)
                     it.choice=(int)cv.dex.size()-1;
                     it.noArt=menu.items.size()>3; // (its icon on the first row only)
                 };
-                char number[16];snprintf(number,sizeof number,"#%03d",id);
+                char number[24];
+                if(companionMetadata.DexNumber(id)>0)snprintf(number,sizeof number,"#%03d",companionMetadata.DexNumber(id));
+                else snprintf(number,sizeof number,"FORM");
                 menu.headerNote=number;
                 section("ENTRY",Glass::I_INFO);
                 row(e.name,e.caught?"CAUGHT":e.seen?"SEEN":"NOT SEEN");
@@ -7642,6 +7738,28 @@ int main(int argc, char** argv)
                 for(int i=0;i<6;i++)row(statNames[i],std::to_string(e.base[i]));
                 if(!e.abilities.empty()){section("ABILITIES",Glass::I_SPARKLE);for(const auto& a:e.abilities)row(a,"");}
                 if(!e.evolutions.empty()){section("EVOLUTION",Glass::I_PEOPLE);for(const auto& ev:e.evolutions)row(ev,"");}
+                {
+                    // (An HG-Engine hack's forms: Megas, regional forms and the rest, each with its own
+                    // stats, types, abilities and moves; each opens its own page. A form's: its species too.)
+                    const auto& engine=companionMetadata.engine;
+                    const int base=engine.Base(id);
+                    std::vector<int> others;
+                    if(engine.on){if(base!=id)others.push_back(base);for(int f:engine.Forms(base))if(f!=id)others.push_back(f);}
+                    if(!others.empty())
+                    {
+                        section(base!=id?"ITS SPECIES AND OTHER FORMS":"FORMS",Glass::I_SPARKLE);
+                        for(int f:others)
+                        {
+                            const int t1=companionMetadata.Type(f,0),t2=companionMetadata.Type(f,1);
+                            std::string types=CompanionTypes::Valid(t1)?CleanFont::Title(CompanionTypes::Name(t1)):std::string();
+                            if(CompanionTypes::Valid(t2)&&t2!=t1)types+=" / "+CleanFont::Title(CompanionTypes::Name(t2));
+                            add(M_CFORM0+f,CleanFont::Title(companionMetadata.Species(f)).c_str(),types,true);
+                            MenuItem& it=menu.items.back();
+                            it.kind=Menu::K_LINK;it.preview=Menu::P_CDEXMON;it.choice=(int)cv.dex.size()-1;it.noArt=true;
+                            it.desc="Open its own entry: its stats, abilities and moves.";
+                        }
+                    }
+                }
                 if(!e.found.empty()){section("WHERE TO FIND",Glass::I_GLOBE);for(const auto& f:e.found)row(f.first,f.second);}
                 else if(!e.facts.empty()){section("WHERE TO FIND",Glass::I_GLOBE);row("Not in the wild","");}
                 if(!e.facts.empty()){section("DETAILS",Glass::I_NOTE);for(const auto& f:e.facts)row(f.first,f.second);}
@@ -7656,7 +7774,7 @@ int main(int argc, char** argv)
                         row(w.pct==400?"4x damage":w.pct==200?"2x damage":w.pct==50?"Half damage":w.pct==25?"Quarter damage":"No damage",types);
                     }
                 }
-                if(!e.learns.empty()){section("LEARNS BY LEVEL",Glass::I_PLAY);for(const auto& l:e.learns)row(l.move,"LV "+std::to_string(std::max(1,l.level)));}
+                if(!e.learns.empty()){section("LEARNS BY LEVEL",Glass::I_PLAY);for(const auto& l:e.learns)row(l.move,l.level<0?std::string("EVO"):"LV "+std::to_string(std::max(1,l.level)));}
                 if(!e.machines.empty()){section("TMS AND HMS",Glass::I_CHIP);for(const auto& l:e.machines)row(l.move,l.label);}
                 if(!e.tutors.empty()){section("MOVE TUTORS",Glass::I_PEOPLE);for(const auto& l:e.tutors)row(l.move,"");}
                 if(!e.eggs.empty()){section("EGG MOVES",Glass::I_POKEBALL);for(const auto& l:e.eggs)row(l.move,"");}
@@ -7794,6 +7912,7 @@ int main(int argc, char** argv)
                 // it once chosen with Enter or a tap (and hidden again the same way). PokeDaisy's
                 // pages (credited on the launcher's About page).
                 settingsPage(Glass::I_CHEATS);
+                menu.companion.guide.clear(); // (each build its own answers, not added after the last build's)
                 menu.rowTall = 1.5f;
                 GuideText::Lang() = UiLang::lang;
                 // (The pages' capitals as the rest of the menus: "ILEX FOREST" as "Ilex Forest".)
@@ -7867,11 +7986,12 @@ int main(int argc, char** argv)
                         };
                         const Row* rows = hg ? hgRows : ptRows;
                         const int count = hg ? (int)(sizeof(hgRows)/sizeof(hgRows[0])) : (int)(sizeof(ptRows)/sizeof(ptRows[0]));
-                        section(guideText(GuideText::Tr("GYMS")).c_str(), Glass::I_TROPHY);
+                        bool gymsShown = false; // (a hack's leaders not found under these names: no GYMS)
                         for (int i = 0; i < count; i++)
                         {
                             const std::string team = guideGen4Team(rows[i].name);
                             if (team.empty()) continue;
+                            if (!gymsShown) { section(guideText(GuideText::Tr("GYMS")).c_str(), Glass::I_TROPHY); gymsShown = true; }
                             Menu::CompanionView::GuideAnswer a;
                             a.text = guideText(team);
                             a.shown = companionGymShown.count(i) > 0;
@@ -8040,7 +8160,8 @@ int main(int argc, char** argv)
         }
         else if (menuPage == PAGE_MATCHUPS)
         {
-            add(M_NOTHING, "MANUAL TYPE CHART - GEN 3-5", "", true);
+            // (A game whose own chart was read from its ROM, an HG-Engine hack's with the Fairy type: that one.)
+            add(M_NOTHING, CompanionTypes::romChart.empty() ? "MANUAL TYPE CHART - GEN 3-5" : "THIS GAME'S OWN TYPE CHART", "", true);
             add(M_NOTHING, "NO ABILITIES / ITEMS / MOVE EXCEPTIONS", "", true);
             add(M_TYPE1, "DEFENDER TYPE 1", CompanionTypes::Name(companionType1));
             add(M_TYPE2, "DEFENDER TYPE 2", CompanionTypes::Name(companionType2));
@@ -11377,7 +11498,9 @@ int main(int argc, char** argv)
             }
             if(id>=M_CPARTY0 && id<M_CPARTY0+6 && dir==0)
             {companionMon=id-M_CPARTY0;goPage(PAGE_CMON,-1);hit=-1;}
-            if(id>M_CDEX0 && id<=M_CDEX0+649 && dir==0)
+            if(id>=M_CFORM0 && id<M_CFORM0+2048 && dir==0)
+            {companionSpecies=id-M_CFORM0;companionDexMoves=false;goPage(PAGE_CDEXDETAIL,-1);hit=-1;}
+            if(id>M_CDEX0 && id<M_CDEX0+2000 && dir==0)
             {
                 // (POKEDEX: an entry not yet seen shown when chosen; the rest is all in the preview.
                 // Opened from elsewhere, as the reference, the entry's own page.)
@@ -11394,7 +11517,7 @@ int main(int argc, char** argv)
                 else goPage(PAGE_CDEXDETAIL,-1);
                 hit=-1;
             }
-            if(id>M_CITEM0 && id<M_CITEM0+2048 && dir==0 && menuPage!=PAGE_CBAG) // (BAG: all of it is in the preview)
+            if(id>M_CITEM0 && id<M_CITEM0+3000 && dir==0 && menuPage!=PAGE_CBAG) // (BAG: all of it is in the preview)
             {companionItem=id-M_CITEM0;goPage(PAGE_CITEM,-1);hit=-1;}
             if(id>=M_RRESULT0 && id<M_RRESULT0+4096 && menuPage==PAGE_REFERENCE && dir==0)
             {
@@ -11723,6 +11846,8 @@ int main(int argc, char** argv)
                 if(menuPage==PAGE_STATES){goPage(PAGE_MAIN,M_STATES);hit=-1;break;}
                 if(menuPage==PAGE_CITEM){goPage(PAGE_CBAG,M_CITEM0+companionItem);hit=-1;break;}
                 if(menuPage==PAGE_CMON){goPage(PAGE_CPARTY,M_CPARTY0+companionMon);hit=-1;break;}
+                if(menuPage==PAGE_CDEXDETAIL&&companionMetadata.engine.IsForm(companionSpecies)) // (a form: back to its species)
+                {const int form=companionSpecies;companionSpecies=companionMetadata.engine.Base(form);goPage(PAGE_CDEXDETAIL,M_CFORM0+form);hit=-1;break;}
                 if(menuPage==PAGE_CDEXDETAIL){goPage(PAGE_CDEX,M_CDEX0+companionSpecies);hit=-1;break;}
                 if(menuPage>PAGE_COMPANION&&menuPage<=PAGE_CLOCATION)
                 {if(menuPage==PAGE_CDEX){goPage(PAGE_MAIN,M_CDEX);hit=-1;break;} // (POKEDEX: its own tile)
@@ -13477,9 +13602,18 @@ int main(int argc, char** argv)
         // the PAGE_ list) at that frame, counted from the run's start, for pictures of a menu.)
         {
             static int testPageAt=-2,testPage=0;static uint32_t testPageFrames=0;
-            if(testPageAt==-2){testPageAt=-1;if(const char* t=getenv("SSR_TEST_PAGE"))sscanf(t,"%d,%d",&testPageAt,&testPage);if(const char* t=getenv("SSR_TEST_SPECIES"))companionSpecies=std::max(1,atoi(t));}
+            if(testPageAt==-2){testPageAt=-1;if(const char* t=getenv("SSR_TEST_PAGE"))sscanf(t,"%d,%d",&testPageAt,&testPage);if(const char* t=getenv("SSR_TEST_SPECIES"))companionSpecies=std::max(1,atoi(t));
+                // (SSR_TEST_ITEM=<item>: ITEM's; SSR_TEST_REF=<kind>,<id>: a reference entry's; SSR_TEST_QUERY=<text>:
+                // SEARCH REFERENCE's search; SSR_TEST_ROW=<text>: the row after the first whose label has that
+                // text chosen, so the page shows it.)
+                if(const char* t=getenv("SSR_TEST_ITEM"))companionItem=std::max(1,atoi(t));
+                if(const char* t=getenv("SSR_TEST_REF"))sscanf(t,"%d,%d",&companionReferenceKind,&companionReferenceId);
+                if(const char* t=getenv("SSR_TEST_QUERY"))companionQuery=t;}
             if(testPageAt>=0&&++testPageFrames==(uint32_t)testPageAt&&testPage>=0&&testPage<PAGE_COUNT)
             {readCompanion(true);menu.open=true;goPage(testPage,-1);fprintf(stderr,"[test] page %d at frame %u\n",testPage,frame);testPageAt=-1;
+                if(const char* r=getenv("SSR_TEST_ROW"))
+                    for(size_t i=0;i<menu.items.size();i++)if([&]{std::string a=menu.items[i].label,b=r;for(char& ch:a)ch=(char)std::toupper((unsigned char)ch);for(char& ch:b)ch=(char)std::toupper((unsigned char)ch);return a.find(b)!=std::string::npos;}())
+                    {menu.selected=(int)std::min(menu.items.size()-1,i+(menu.items[i].kind==Menu::K_SECTION?1:0));break;}
                 // (SSR_TEST_GUIDE=1: the GUIDE's NEXT BOSS page, its answer shown, for pictures.)
                 if(const char* g=getenv("SSR_TEST_GUIDE")){const bool here=!strncmp(g,"here",4);const bool shown=strchr(g,'1')!=nullptr;if(here)companionHereShown=shown;else companionNextBossShown=shown;goPage(PAGE_CGUIDE,here?M_CGUIDE_HERE:M_CGUIDE_NEXT);
                     if(const char* s=getenv("SSR_TEST_GUIDE_SCROLL")){const int n=atoi(s);if(menu.selected>=0&&menu.selected<(int)menu.items.size()){const MenuItem& it=menu.items[menu.selected];if(it.preview==Menu::P_CGUIDE&&it.choice>=0&&it.choice<(int)menu.companion.guide.size())menu.companion.guide[it.choice].scroll=std::max(0,n);}}}}
@@ -14250,8 +14384,8 @@ int main(int argc, char** argv)
             }
         }
 #endif
-        // SoulSilver and HeartGold: the Running Shoes button beside the X menu (see shoesPix),
-        // left of the menu's panel at its foot, its button named under it.
+        // SoulSilver and HeartGold: the Running Shoes button with the X menu (see shoesPix), a bar
+        // as wide as the menu's panel under it, its button named under it.
         shoesRect[2] = 0;
         if (merged && shoesSeen && !paused && !strcmp(scene.name, "start-menu") && scene.items.size() >= 2)
         {
@@ -14261,28 +14395,79 @@ int main(int argc, char** argv)
                 if (e.screen == 1 && e.sw * e.sh > pp->sw * pp->sh) pp = &e;
             const Element& panel = *pp;
             const float sc = panel.scale;
-            const float w = SHOES_W * sc, h = SHOES_H * sc;
-            const float x = panel.dx - w - 6, y = panel.dy + panel.sh * sc - h - 14;
+            // The bar: the button's face (rows 2-39 of its picture, inside the game's grey outline)
+            // with square corners, as wide as the panel, the shoes in its middle and the panel's
+            // outline round it. The face has a border three pixels deep (orange round the grey
+            // face while running is off; on, its inner two are the face's own orange): the top
+            // and bottom ones from column 8, the ends from the left end's columns 4-6 (the
+            // picture's right end is past the touch screen's edge), meeting square in the
+            // corners; inside them the face as column 8 has it, row by row.
+            const int bw = panel.sw, bh = SHOES_H - 4;
+            static std::vector<uint32_t> bar;
+            bar.assign((size_t)bw * bh, 0);
+            for (int r = 0; r < bh; r++)
+                for (int c = 0; c < bw; c++)
+                {
+                    const int dx = std::min(c, bw - 1 - c), dy = std::min(r, bh - 1 - r);
+                    const int sxy = dy < 3 && dy <= dx ? (r < bh / 2 ? 2 + dy : SHOES_H - 3 - dy) * SHOES_W + 8
+                        : dx < 3 ? (2 + r) * SHOES_W + 4 + dx : (2 + r) * SHOES_W + 8;
+                    bar[(size_t)r * bw + c] = shoesPix[sxy];
+                }
+            int sx0 = SHOES_W, sx1 = -1;
+            for (int y = 3; y < SHOES_H - 3; y++)
+                for (int x = 8; x < SHOES_W - 5; x++)
+                    if (shoesPix[y * SHOES_W + x] != shoesPix[y * SHOES_W + 8]) { sx0 = std::min(sx0, x); sx1 = std::max(sx1, x); }
+            if (sx1 >= sx0)
+            {
+                const int at = (bw - (sx1 - sx0 + 1)) / 2 - sx0;
+                for (int y = 3; y < SHOES_H - 3; y++)
+                    for (int x = sx0; x <= sx1; x++)
+                        if (shoesPix[y * SHOES_W + x] != shoesPix[y * SHOES_W + 8])
+                            bar[(size_t)(y - 2) * bw + x + at] = shoesPix[y * SHOES_W + x];
+            }
+            // While running is off the game greys the face but leaves its border orange; here the
+            // bar is all grey then: each of the border's oranges (the face's own while running is
+            // on) the grey the face has in its place, as the bar looks while on but grey.
+            if (!shoesOn)
+            {
+                const uint32_t top = shoesPix[10 * SHOES_W + 8], band = shoesPix[21 * SHOES_W + 8], low = shoesPix[30 * SHOES_W + 8];
+                for (uint32_t& v : bar)
+                {
+                    const uint32_t c = v & 0xFFFFFF;
+                    if (c == 0xBA6910) v = low;
+                    else if (c == 0xEBAA59) v = top;
+                    else if (c == 0xD38A30) v = band;
+                }
+            }
+            const float w = bw * sc, h = bh * sc;
+            const float x = panel.dx, y = panel.dy + panel.sh * sc + SHOES_GAP;
             shoesRect[0] = x; shoesRect[1] = y; shoesRect[2] = w; shoesRect[3] = h;
+            // In pixels its left edge is the panel's, and it runs on to the view's edge when the
+            // panel does (whatever the rounding); the outline as thick as the panel's, none past
+            // the view's edge.
+            int vx0, vx1;
+            MergedViewColumns(outW, outH, vx0, vx1);
             const int ox = (int)(view.originX + x * view.unit), oy = (int)(view.originY + y * view.unit);
-            const int ow = (int)(w * view.unit), oh = (int)(h * view.unit);
+            int oe = (int)(view.originX + (x + w) * view.unit + 0.5f);
+            if (oe >= vx1 - 2) oe = vx1;
+            const int ow = oe - ox, oh = (int)(h * view.unit + 0.5f);
+            const int t = std::max(1, (int)(view.unit * 6 / 8.0f + 0.5f));
+            canvas.Fill(ox - t, oy - t, std::min(ow + 2 * t, vx1 - (ox - t)), oh + 2 * t, 0xFF282830u);
+            const float k = sc * view.unit;
             for (int py = 0; py < oh; py++)
             {
-                const int sy = std::min(SHOES_H - 1, py * SHOES_H / std::max(1, oh));
+                const int sy = std::min(bh - 1, (int)(py / k));
                 for (int px = 0; px < ow; px++)
-                {
-                    const int sx = std::min(SHOES_W - 1, px * SHOES_W / std::max(1, ow));
-                    const uint32_t c = shoesPix[sy * SHOES_W + sx];
-                    if (c >> 24) canvas.Fill(ox + px, oy + py, 1, 1, c);
-                }
+                    canvas.Fill(ox + px, oy + py, 1, 1, bar[(size_t)sy * bw + std::min(bw - 1, (int)(px / k))] | 0xFF000000u);
             }
             const int tsc = std::max(1, (int)(outH * UiScale() / 360));
             const std::string label = std::string(pads.Empty() ? Controls::KeyName(cfg.controls.Key(Controls::Y))
                 : Controls::InputName(cfg.controls.Pad(Controls::Y, cfg.byLabel), Controls::StyleOf(pads.Current())))
                 + ": RUN " + (shoesOn ? "ON" : "OFF");
             const int tw = Canvas::TextWidth(label, tsc);
-            canvas.Fill(ox + (ow - tw) / 2 - 3 * tsc, oy + oh + 2 * tsc, tw + 6 * tsc, 11 * tsc, 0xC0000000);
-            canvas.Text(ox + (ow - tw) / 2, oy + oh + 4 * tsc, label, tsc, 0xFFFFFFFF);
+            const int lx = ox + (int)(w * view.unit / 2) - tw / 2;
+            canvas.Fill(lx - 3 * tsc, oy + oh + t + 2 * tsc, tw + 6 * tsc, 11 * tsc, 0xC0000000);
+            canvas.Text(lx, oy + oh + t + 4 * tsc, label, tsc, 0xFFFFFFFF);
             overlayUsed = true;
         }
         // Platinum's Pokedex list: name the face buttons on SEARCH, SWITCH and CHECK, as the

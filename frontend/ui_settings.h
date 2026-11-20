@@ -1143,6 +1143,7 @@ inline uint32_t TypeColour(int type)
 {
     static const uint32_t c[] = { 0xFFA8A77A, 0xFFC22E28, 0xFFA98FF3, 0xFFA33EA1, 0xFFE2BF65, 0xFFB6A136, 0xFFA6B91A, 0xFF735797,
         0xFFB7B7CE, 0xFF68A090, 0xFFEE8130, 0xFF6390F0, 0xFF7AC74C, 0xFFF7D02C, 0xFFF95587, 0xFF96D9D6, 0xFF6F35FC, 0xFF705746 };
+    if (type == 9 && CompanionTypes::fairy) return 0xFFD685AD; // (Fairy, in a game that has it)
     return type >= 0 && type < 18 ? c[type] : 0xFF8A93A0;
 }
 // An icon from the ROM (ARGB, colour 0 clear) as large as size, each pixel a block.
@@ -1158,6 +1159,21 @@ inline void MonIcon(Canvas& c, const std::vector<uint32_t>& icon, int iw, int ih
             if (p >> 24) c.px[(size_t)Y * c.w + X] = Glass::Over(c.px[(size_t)Y * c.w + X], tint ? tint : p | 0xFF000000u, alpha); // (tint: a silhouette)
         }
     Glass::Mark(c, x, y, x + size, y + size);
+}
+// An icon from the ROM with its picture in the middle of the space: the games draw their item icons
+// in the top left of the 32 x 32 (24 x 24 of it, HeartGold's and Heartfelt's), so the picture's own
+// box is centred, at the same size.
+inline void CentredIcon(Canvas& c, const std::vector<uint32_t>& icon, int iw, int ih, int x, int y, int size, int alpha = 255, uint32_t tint = 0)
+{
+    if (icon.empty() || iw <= 0 || ih <= 0 || icon.size() < (size_t)iw * ih) return;
+    int x0 = iw, y0 = ih, x1 = -1, y1 = -1;
+    for (int yy = 0; yy < ih; yy++)
+        for (int xx = 0; xx < iw; xx++)
+            if (icon[(size_t)yy * iw + xx] >> 24) { x0 = std::min(x0, xx); x1 = std::max(x1, xx); y0 = std::min(y0, yy); y1 = std::max(y1, yy); }
+    if (x1 < 0) return;
+    // (The box's middle onto the space's, in the icon's half pixels.)
+    const int dx = (iw - (x0 + x1 + 1)) * size / (2 * iw), dy = (ih - (y0 + y1 + 1)) * size / (2 * ih);
+    MonIcon(c, icon, iw, ih, x + dx, y + dy, size, alpha, tint);
 }
 // A type as a small coloured pill with its name.
 inline int TypeChip(Canvas& c, int type, int x, int y, float k)
@@ -1255,7 +1271,7 @@ inline void ItemSummary(Canvas& c, const Menu::CompanionView& cv, const Menu::Co
     const int is = K(64);
     Glass::Round(c, x0, y, is, is, 14 * k, 0x400A111C);
     Glass::Rim(c, x0, y, is, is, 14 * k, std::max(1.0f, k), 0x60, 0x14);
-    if (!item.icon.empty()) MonIcon(c, item.icon, 32, 32, x0, y, is);
+    if (!item.icon.empty()) CentredIcon(c, item.icon, 32, 32, x0, y, is);
     else Glass::DrawIcon(c, Glass::I_LOAD, x0 + is * 0.5f, y + is * 0.5f, is * 0.26f, GlassText);
     // (Beside it how many, large, and the pocket; the name is the preview's title.)
     const int tx = x0 + is + K(16);
@@ -1308,7 +1324,9 @@ inline void DexSummary(Canvas& c, const Menu::CompanionView::DexEntry& e, int x0
     else if (!e.icon.empty()) MonIcon(c, e.icon, 32, 32, x0, y, is, e.hidden ? 0xC0 : e.seen ? 255 : 0x50, e.hidden ? 0xFF05080Du : 0);
     const int tx = x0 + is + K(16);
     char num[16];
-    snprintf(num, sizeof num, "No. %03d", e.id);
+    const int shownNumber = e.number >= 0 ? e.number : e.id;
+    if (shownNumber > 0) snprintf(num, sizeof num, "No. %03d", shownNumber);
+    else snprintf(num, sizeof num, "Form");
     T(c, tx, y + K(22), num, K(17), GlassText, true, false);
     // (Caught: a white pill; seen: a glass one; neither: a hint.)
     const std::string state = !e.stateKnown ? "" : e.caught ? "Caught" : e.seen ? "Seen" : "Not seen yet";
@@ -1351,7 +1369,7 @@ inline void DexSummary(Canvas& c, const Menu::CompanionView::DexEntry& e, int x0
             if (i / rows > 1) break;
             Glass::Round(c, mx, my + K(2), colW, rowH - K(4), 8 * k, Row);
             Glass::Round(c, mx + K(6), my + K(9), K(4), rowH - K(18), K(2), TypeColour(l.type));
-            const std::string lv = std::to_string(std::max(1, l.level)); // (the level; 1: knows it from the start)
+            const std::string lv = l.level < 0 ? std::string("Evo") : std::to_string(std::max(1, l.level)); // (the level; 1: knows it from the start; Evo: as it evolves)
             T(c, mx + K(16), my + rowH / 2 + K(5), lv, K(14), GlassHint, false, false);
             std::string name = l.move;
             const int nx = mx + K(16) + K(26);
@@ -1400,6 +1418,24 @@ inline void DexSummary(Canvas& c, const Menu::CompanionView::DexEntry& e, int x0
         lines.push_back(UiLang::F(e.abilities.size() > 1 ? "Abilities: {0}" : "Ability: {0}", { a }));
     }
     for (const auto& ev : e.evolutions) lines.push_back(ev);
+    {
+        // (A line too wide for the card (three abilities, a long evolution) goes on at its spaces.)
+        std::vector<std::string> wrapped;
+        for (const auto& line : lines)
+        {
+            std::string cur, word;
+            auto flush = [&](const std::string& w) {
+                const std::string next = cur.empty() ? w : cur + " " + w;
+                if (w == "\xC2\xB7") { cur = next; return; } // (a separator stays at the end of its line)
+                if (!cur.empty() && W(next, K(16), false, false) > w0) { wrapped.push_back(cur); cur = w; }
+                else cur = next;
+            };
+            for (char ch : line) { if (ch == ' ') { if (!word.empty()) flush(word); word.clear(); } else word += ch; }
+            if (!word.empty()) flush(word);
+            if (!cur.empty()) wrapped.push_back(cur);
+        }
+        lines.swap(wrapped);
+    }
     for (const auto& line : lines)
     {
         if (y + K(26) > bottom) break;
@@ -2049,7 +2085,7 @@ inline void Menu::DrawSettings(Canvas& c, const std::string& title, const std::s
             else if (!it.noArt && it.preview == P_CITEM && it.choice >= 0 && it.choice < (int)companion.bag.size() && !companion.bag[it.choice].icon.empty())
             {
                 const int d = std::min(rowH - KR(4), KR(36 * rowTall)); // (BAG: the item's own icon from the ROM)
-                MonIcon(c, companion.bag[it.choice].icon, 32, 32, listX + KR(36) + in - d / 2, y + (rowH - d) / 2, d);
+                CentredIcon(c, companion.bag[it.choice].icon, 32, 32, listX + KR(36) + in - d / 2, y + (rowH - d) / 2, d);
             }
             else if (!it.noArt && it.preview == P_CDEXMON && it.choice >= 0 && it.choice < (int)companion.dex.size() && !companion.dex[it.choice].icon.empty())
             {

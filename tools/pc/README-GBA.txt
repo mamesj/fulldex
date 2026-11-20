@@ -14,6 +14,13 @@ controller's shoulder buttons, show one console's games). Their saves are in the
 folder (as Pokemon GBA Widescreen keeps them); a .sav beside the ROM with the ROM's name is copied
 in the first time the game starts.
 
+The pause menu's Pokedex, Party, Bag, Location and Battle Info pages read these ROM hacks too,
+known by their exact version: Radical Red 4.1, Unbound 2.1.1.1, Ultra Violet 1.22, Emerald
+Legacy 1.1.4, Emerald Imperium 1.3.1, Heart and Soul 2.0.6, Wishes of Tomorrow 1.3, Generation 3
+Evolved 1.0.25, Inclement Emerald 1.1.3, Elite Redux 2.65.5.2b, R.O.W.E. 2.1.9.1 and Monomyth
+1.1. Another hack gets the Pokedex where its Pokemon can be found in the ROM; one rebuilt from
+source that FullDex doesn't know has the other pages turned off.
+
 In a GBA game: arrow keys, X and Z for A and B, Enter START, Backspace SELECT, Q and W for L and
 R, Left Shift fast forward; a controller as printed, the right trigger to fast forward. Esc (or
 a controller's left trigger) opens its pause menu: save state, load state, fast forward,

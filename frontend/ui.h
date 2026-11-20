@@ -308,6 +308,7 @@ struct Menu
         struct DexEntry
         {
             int id = 0, type1 = -1, type2 = -1, base[6] = {}; bool seen = false, caught = false, hidden = false; // (hidden: not seen, not yet shown)
+            int number = -1; // (the Pokedex's own number when not its id (an HG-Engine hack's later Pokemon); 0: a form)
             bool stateKnown = true; // (false: whether seen or caught is not known (the GBA games'), so not said)
             std::string name, desc; std::vector<std::string> abilities, evolutions; std::vector<uint32_t> icon;
             struct Learn { int level = 0, type = -1; std::string move, label; };

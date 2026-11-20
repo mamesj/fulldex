@@ -2,29 +2,81 @@
 // Based on PokeDaisy by Lidor Itzhari - https://github.com/lidor30/pokedaisy
 // Reference commit: 52f959770de4085bacfda16e6d77be7e91134bc4
 #pragma once
+#include <array>
+#include <cstdint>
 #include <string>
+#include <vector>
 
 namespace CompanionTypes
 {
-// Generation 3-5 type numbers; 9 is the unused mystery type.
+// Generation 3-5 type numbers; 9 is the unused mystery type, except in a game that makes it the
+// Fairy type (HG-Engine hacks such as Heartfelt: companion_hge.h sets these from the ROM).
 constexpr int None = -1;
-inline bool Valid(int type) { return type >= 0 && type < 18 && type != 9; }
+inline bool fairy = false;
+// (That game's own chart, read from its ROM: {attack, defence, multiplier x10} each, the battle
+// code's own table, so its Fairy matchups and any other changes are the game's.)
+inline std::vector<std::array<uint8_t, 3>> romChart;
+inline bool Valid(int type) { return type >= 0 && type < 18 && (type != 9 || fairy); }
+// The chart from the sixth generation on, the Fairy type at 9 (and Steel no longer resisting Ghost and Dark): for a
+// GBA hack built with the newer Pokemon (the expansion's, the Complete FireRed Upgrade's), as {attack, defence, x10}.
+inline const std::vector<std::array<uint8_t, 3>>& ModernChart()
+{
+    static const std::vector<std::array<uint8_t, 3>> chart = [] {
+        enum { NOR, FIG, FLY, POI, GRO, ROC, BUG, GHO, STE, FAI, FIR, WAT, GRA, ELE, PSY, ICE, DRA, DAR };
+        struct Row { int attack; std::vector<int> twice, half, none; };
+        const Row rows[] = {
+            { NOR, {}, { ROC, STE }, { GHO } },
+            { FIG, { NOR, ROC, STE, ICE, DAR }, { FLY, POI, BUG, PSY, FAI }, { GHO } },
+            { FLY, { FIG, BUG, GRA }, { ROC, STE, ELE }, {} },
+            { POI, { GRA, FAI }, { POI, GRO, ROC, GHO }, { STE } },
+            { GRO, { POI, ROC, STE, FIR, ELE }, { BUG, GRA }, { FLY } },
+            { ROC, { FLY, BUG, FIR, ICE }, { FIG, GRO, STE }, {} },
+            { BUG, { GRA, PSY, DAR }, { FIG, FLY, POI, GHO, STE, FIR, FAI }, {} },
+            { GHO, { GHO, PSY }, { DAR }, { NOR } },
+            { STE, { ROC, ICE, FAI }, { STE, FIR, WAT, ELE }, {} },
+            { FAI, { FIG, DRA, DAR }, { POI, STE, FIR }, {} },
+            { FIR, { BUG, STE, GRA, ICE }, { ROC, FIR, WAT, DRA }, {} },
+            { WAT, { GRO, ROC, FIR }, { WAT, GRA, DRA }, {} },
+            { GRA, { GRO, ROC, WAT }, { FLY, POI, BUG, STE, FIR, GRA, DRA }, {} },
+            { ELE, { FLY, WAT }, { GRA, ELE, DRA }, { GRO } },
+            { PSY, { FIG, POI }, { STE, PSY }, { DAR } },
+            { ICE, { FLY, GRO, GRA, DRA }, { STE, FIR, WAT, ICE }, {} },
+            { DRA, { DRA }, { STE }, { FAI } },
+            { DAR, { GHO, PSY }, { FIG, DAR, FAI }, {} },
+        };
+        std::vector<std::array<uint8_t, 3>> out;
+        for (const Row& r : rows)
+        {
+            for (int d : r.twice) out.push_back({ (uint8_t)r.attack, (uint8_t)d, 20 });
+            for (int d : r.half) out.push_back({ (uint8_t)r.attack, (uint8_t)d, 5 });
+            for (int d : r.none) out.push_back({ (uint8_t)r.attack, (uint8_t)d, 0 });
+        }
+        return out;
+    }();
+    return chart;
+}
 inline const char* Name(int type)
 {
     static const char* names[] = { "NORMAL", "FIGHTING", "FLYING", "POISON", "GROUND",
         "ROCK", "BUG", "GHOST", "STEEL", "???", "FIRE", "WATER", "GRASS",
         "ELECTRIC", "PSYCHIC", "ICE", "DRAGON", "DARK" };
+    if (type == 9 && fairy) return "FAIRY";
     return Valid(type) ? names[type] : "NONE";
 }
 inline int Cycle(int type, int direction, bool allowNone = false)
 {
     do { type = (type + (direction < 0 ? -1 : 1) + 19) % 19; }
-    while (type == 9 || (!allowNone && type == 18));
+    while ((type == 9 && !fairy) || (!allowNone && type == 18));
     return type == 18 ? None : type;
 }
 inline int Single(int attack, int defence)
 {
     if (!Valid(attack) || !Valid(defence)) return 100;
+    if (!romChart.empty())
+    {
+        for (const auto& e : romChart) if (e[0] == attack && e[1] == defence) return e[2] * 10;
+        return 100;
+    }
     switch (attack * 100 + defence)
     {
     case 5: return 50;
