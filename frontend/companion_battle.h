@@ -54,6 +54,38 @@ inline Matchup Evaluate(int id,const Companion::Metadata& data,const Companion::
     }
     return {true,percent,bypass?"ABILITY BYPASS":attacker.ability==96?"NORMALIZE":""};
 }
+// DAMAGE: the share of the target's HP a move takes, lowest and highest roll (the game's formula: level, power,
+// attack over defence with their stat changes, +2, then the random 85 to 100%, same-type bonus and the matchup;
+// a burn halves physical damage). Not counted: weather, held items, critical hits and most abilities.
+struct Damage {bool known=false;int lo=0,hi=0;};
+inline Damage DamageOf(int id,const Companion::Metadata& data,const Companion::Battler& a,const Companion::Battler& d)
+{
+    const auto move=data.MoveData(id);
+    if(!move.ready||move.category==2||move.power<=1||d.maxHp<=0||a.level<=0)return {};
+    const Matchup m=Evaluate(id,data,a,d);
+    if(!m.known)return {};
+    if(m.percent==0)return {true,0,0};
+    const bool physical=move.category==0;
+    auto staged=[](int v,int s){s=std::clamp(s,-6,6);return s>=0?v*(2+s)/2:v*2/(2-s);};
+    const int A=staged(physical?a.stat[0]:a.stat[2],physical?a.stage[0]:a.stage[2]);
+    const int Def=staged(physical?d.stat[1]:d.stat[3],physical?d.stage[1]:d.stage[3]);
+    if(A<=0||Def<=0)return {};
+    int base=(2*a.level/5+2)*move.power*A/Def/50;
+    if(physical&&a.statusKnown&&(a.status&0x10)&&a.ability!=62)base/=2;   // (burned, without Guts)
+    base+=2;
+    const int type=a.ability==96?0:move.type;
+    const bool stab=type==a.type1||type==a.type2;
+    auto roll=[&](int r){int v=base*r/100;if(stab)v=a.ability==91?v*2:v*3/2;v=v*m.percent/100;return std::max(1,v);};
+    Damage out;out.known=true;
+    out.lo=roll(85)*100/d.maxHp;out.hi=(roll(100)*100+d.maxHp-1)/d.maxHp;
+    return out;
+}
+inline std::string DamageText(const Damage& dmg)
+{
+    if(!dmg.known)return "";
+    if(dmg.lo==dmg.hi)return std::to_string(dmg.hi)+"%";
+    return std::to_string(dmg.lo)+"-"+std::to_string(dmg.hi)+"%";
+}
 inline std::string Label(const Matchup& matchup)
 {
     std::string text=matchup.known?CompanionTypes::Label(matchup.percent):"";

@@ -1390,7 +1390,8 @@
       "A: USE ANOTHER": "A: USAR OTRO",
       "When a Repel wears off and the Bag has another, FullDex Nav opens on its Repel app: A uses one, B closes it.": "Cuando se acaba un Repelente y queda otro en la Mochila, FullDex Nav se abre en su app Repelente: A usa uno, B la cierra.",
       "Black 2 and White 2 ask by themselves.": "Negra 2 y Blanca 2 lo preguntan por sí mismos.",
-      "ON: WHEN A REPEL WEARS OFF AND THE BAG HAS ANOTHER, FULLDEX NAV OPENS ON ITS REPEL APP: A USES ONE, B CLOSES IT.": "ON: CUANDO SE ACABA UN REPELENTE Y QUEDA OTRO EN LA MOCHILA, FULLDEX NAV SE ABRE EN SU APP REPELENTE: A USA UNO, B LA CIERRA."
+      "ON: WHEN A REPEL WEARS OFF AND THE BAG HAS ANOTHER, FULLDEX NAV OPENS ON ITS REPEL APP: A USES ONE, B CLOSES IT.": "ON: CUANDO SE ACABA UN REPELENTE Y QUEDA OTRO EN LA MOCHILA, FULLDEX NAV SE ABRE EN SU APP REPELENTE: A USA UNO, B LA CIERRA.",
+      "Damage: a share of the target's HP, from both Pokémon's stats and stat changes. Not counted: weather, items, critical hits, most abilities.": "Daño: una parte de los PS del objetivo, según las estadísticas y sus cambios de ambos Pokémon. No cuenta: clima, objetos, críticos, casi todas las habilidades."
     },
     "it": {
       " (NEXT START)": " (AL RIAVVIO)",
@@ -2773,7 +2774,8 @@
       "A: USE ANOTHER": "A: USANE UN ALTRO",
       "When a Repel wears off and the Bag has another, FullDex Nav opens on its Repel app: A uses one, B closes it.": "Quando un Repellente finisce e nella Borsa ce n'è un altro, FullDex Nav si apre sulla sua app Repellente: A ne usa uno, B la chiude.",
       "Black 2 and White 2 ask by themselves.": "Nera 2 e Bianca 2 lo chiedono da sé.",
-      "ON: WHEN A REPEL WEARS OFF AND THE BAG HAS ANOTHER, FULLDEX NAV OPENS ON ITS REPEL APP: A USES ONE, B CLOSES IT.": "ON: QUANDO UN REPELLENTE FINISCE E NELLA BORSA CE N'È UN ALTRO, FULLDEX NAV SI APRE SULLA SUA APP REPELLENTE: A NE USA UNO, B LA CHIUDE."
+      "ON: WHEN A REPEL WEARS OFF AND THE BAG HAS ANOTHER, FULLDEX NAV OPENS ON ITS REPEL APP: A USES ONE, B CLOSES IT.": "ON: QUANDO UN REPELLENTE FINISCE E NELLA BORSA CE N'È UN ALTRO, FULLDEX NAV SI APRE SULLA SUA APP REPELLENTE: A NE USA UNO, B LA CHIUDE.",
+      "Damage: a share of the target's HP, from both Pokémon's stats and stat changes. Not counted: weather, items, critical hits, most abilities.": "Danno: una parte dei PS del bersaglio, dalle statistiche e dalle loro modifiche di entrambi i Pokémon. Esclusi: tempo, strumenti, brutti colpi, quasi tutte le abilità."
     },
     "fr": {
       " (NEXT START)": " (PROCHAIN DÉBUT)",
@@ -4156,7 +4158,8 @@
       "A: USE ANOTHER": "A : EN UTILISER UN AUTRE",
       "When a Repel wears off and the Bag has another, FullDex Nav opens on its Repel app: A uses one, B closes it.": "Quand un Repousse ne fait plus effet et qu'il en reste un dans le Sac, FullDex Nav s'ouvre sur son appli Repousse : A en utilise un, B la ferme.",
       "Black 2 and White 2 ask by themselves.": "Noire 2 et Blanche 2 le demandent d'elles-mêmes.",
-      "ON: WHEN A REPEL WEARS OFF AND THE BAG HAS ANOTHER, FULLDEX NAV OPENS ON ITS REPEL APP: A USES ONE, B CLOSES IT.": "ON : QUAND UN REPOUSSE NE FAIT PLUS EFFET ET QU'IL EN RESTE UN DANS LE SAC, FULLDEX NAV S'OUVRE SUR SON APPLI REPOUSSE : A EN UTILISE UN, B LA FERME."
+      "ON: WHEN A REPEL WEARS OFF AND THE BAG HAS ANOTHER, FULLDEX NAV OPENS ON ITS REPEL APP: A USES ONE, B CLOSES IT.": "ON : QUAND UN REPOUSSE NE FAIT PLUS EFFET ET QU'IL EN RESTE UN DANS LE SAC, FULLDEX NAV S'OUVRE SUR SON APPLI REPOUSSE : A EN UTILISE UN, B LA FERME.",
+      "Damage: a share of the target's HP, from both Pokémon's stats and stat changes. Not counted: weather, items, critical hits, most abilities.": "Dégâts : une part des PV de la cible, d'après les stats et leurs changements des deux Pokémon. Non comptés : météo, objets, coups critiques, la plupart des talents."
     },
     "de": {
       " (NEXT START)": " (NÄCHSTER START)",
@@ -5539,7 +5542,8 @@
       "A: USE ANOTHER": "A: NOCH EINEN EINSETZEN",
       "When a Repel wears off and the Bag has another, FullDex Nav opens on its Repel app: A uses one, B closes it.": "Wenn ein Schutz nachlässt und noch einer im Beutel ist, öffnet sich FullDex Nav bei seiner Schutz-App: A setzt einen ein, B schließt sie.",
       "Black 2 and White 2 ask by themselves.": "Schwarz 2 und Weiß 2 fragen selbst danach.",
-      "ON: WHEN A REPEL WEARS OFF AND THE BAG HAS ANOTHER, FULLDEX NAV OPENS ON ITS REPEL APP: A USES ONE, B CLOSES IT.": "ON: WENN EIN SCHUTZ NACHLÄSST UND NOCH EINER IM BEUTEL IST, ÖFFNET SICH FULLDEX NAV BEI SEINER SCHUTZ-APP: A SETZT EINEN EIN, B SCHLIESST SIE."
+      "ON: WHEN A REPEL WEARS OFF AND THE BAG HAS ANOTHER, FULLDEX NAV OPENS ON ITS REPEL APP: A USES ONE, B CLOSES IT.": "ON: WENN EIN SCHUTZ NACHLÄSST UND NOCH EINER IM BEUTEL IST, ÖFFNET SICH FULLDEX NAV BEI SEINER SCHUTZ-APP: A SETZT EINEN EIN, B SCHLIESST SIE.",
+      "Damage: a share of the target's HP, from both Pokémon's stats and stat changes. Not counted: weather, items, critical hits, most abilities.": "Schaden: ein Anteil der KP des Ziels, aus Werten und Wertänderungen beider Pokémon. Nicht gezählt: Wetter, Items, Volltreffer, die meisten Fähigkeiten."
     },
     "ja": {
       " (NEXT START)": " (次のスタート)",
@@ -6922,7 +6926,8 @@
       "A: USE ANOTHER": "A：もう1つ使う",
       "When a Repel wears off and the Bag has another, FullDex Nav opens on its Repel app: A uses one, B closes it.": "むしよけの効果が切れてバッグにまだあるとき、FullDex Navがむしよけアプリで開きます。Aで使い、Bで閉じます。",
       "Black 2 and White 2 ask by themselves.": "ブラック2とホワイト2はゲーム自身が聞いてきます。",
-      "ON: WHEN A REPEL WEARS OFF AND THE BAG HAS ANOTHER, FULLDEX NAV OPENS ON ITS REPEL APP: A USES ONE, B CLOSES IT.": "ON：むしよけの効果が切れてバッグにまだあるとき、FULLDEX NAVがむしよけアプリで開きます。Aで使い、Bで閉じます。"
+      "ON: WHEN A REPEL WEARS OFF AND THE BAG HAS ANOTHER, FULLDEX NAV OPENS ON ITS REPEL APP: A USES ONE, B CLOSES IT.": "ON：むしよけの効果が切れてバッグにまだあるとき、FULLDEX NAVがむしよけアプリで開きます。Aで使い、Bで閉じます。",
+      "Damage: a share of the target's HP, from both Pokémon's stats and stat changes. Not counted: weather, items, critical hits, most abilities.": "相手HPに対する割合。天気、持ち物、急所、多くの特性は含まない。"
     },
     "ko": {
       " (NEXT START)": " (다음 시작)",
@@ -8305,7 +8310,8 @@
       "A: USE ANOTHER": "A: 하나 더 사용",
       "When a Repel wears off and the Bag has another, FullDex Nav opens on its Repel app: A uses one, B closes it.": "스프레이 효과가 끝나고 가방에 하나 더 있으면 FullDex Nav가 스프레이 앱으로 열립니다. A로 사용하고 B로 닫습니다.",
       "Black 2 and White 2 ask by themselves.": "블랙 2와 화이트 2는 게임이 직접 물어봅니다.",
-      "ON: WHEN A REPEL WEARS OFF AND THE BAG HAS ANOTHER, FULLDEX NAV OPENS ON ITS REPEL APP: A USES ONE, B CLOSES IT.": "ON: 스프레이 효과가 끝나고 가방에 하나 더 있으면 FULLDEX NAV가 스프레이 앱으로 열립니다. A로 사용하고 B로 닫습니다."
+      "ON: WHEN A REPEL WEARS OFF AND THE BAG HAS ANOTHER, FULLDEX NAV OPENS ON ITS REPEL APP: A USES ONE, B CLOSES IT.": "ON: 스프레이 효과가 끝나고 가방에 하나 더 있으면 FULLDEX NAV가 스프레이 앱으로 열립니다. A로 사용하고 B로 닫습니다.",
+      "Damage: a share of the target's HP, from both Pokémon's stats and stat changes. Not counted: weather, items, critical hits, most abilities.": "대미지: 상대 HP에 대한 비율. 두 포켓몬의 능력치와 능력 변화로 계산. 날씨, 도구, 급소, 대부분의 특성은 제외."
     }
   }
 }

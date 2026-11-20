@@ -7467,7 +7467,7 @@ int main(int argc, char** argv)
                 Menu::CompanionView& cv = menu.companion;
                 const auto& snap = companionSnapshot;
                 auto title = [](const std::string& t) { return CleanFont::Title(t); };
-                const char* staticTip = "Matchups from types and abilities alone: weather, stat changes and damage are not worked out.";
+                const char* staticTip = "Damage: a share of the target's HP, from both Pok\xC3\xA9" "mon's stats and stat changes. Not counted: weather, items, critical hits, most abilities.";
                 if (!cv.battleMapped)
                 {
                     section("NOT IN THIS GAME YET", Glass::I_GAUGE);
@@ -7515,13 +7515,36 @@ int main(int argc, char** argv)
                             mv.percent = m.known ? m.percent : -1;
                             if (!m.note.empty()) mv.note = CleanFont::Title(m.note) + ".";
                             cv.moves.push_back(mv);
-                            const std::string value = mv.category == 2 ? std::string("Status") : mv.pp == 0 ? std::string("No PP") : MatchText(mv.percent);
+                            std::string value = mv.category == 2 ? std::string("Status") : mv.pp == 0 ? std::string("No PP") : MatchText(mv.percent);
+                            const std::string dmg = mv.category == 2 ? "" : CompanionBattle::DamageText(CompanionBattle::DamageOf(own.moves[slot], companionMetadata, own, foe));
+                            if (!dmg.empty() && mv.pp != 0) value += "  \xC2\xB7  " + dmg;
                             add(M_NOTHING, mv.name.c_str(), value, true);
                             MenuItem& it = menu.items.back();
                             it.kind = Menu::K_LINK;
                             it.preview = Menu::P_CBMOVE;
                             it.choice = (int)cv.moves.size() - 1;
                             it.tip = staticTip;
+                        }
+                    }
+                    // (The foe's moves on your Pokemon in battle: the damage each would do to it.)
+                    if (own.species && own.maxHp > 0)
+                    {
+                        bool any = false;
+                        for (int slot = 0; slot < 4; slot++)
+                        {
+                            if (!foe.moves[slot]) continue;
+                            if (!any) { section(UiLang::F("{0}'S MOVES", { CompanionBattle::Upper(species(foe.species)) }).c_str(), Glass::I_GAUGE); any = true; }
+                            const auto data = companionMetadata.MoveData(foe.moves[slot]);
+                            std::string value = data.ready && data.category == 2 ? std::string("Status") : "";
+                            if (value.empty())
+                            {
+                                const auto m = CompanionBattle::Evaluate(foe.moves[slot], companionMetadata, foe, own);
+                                value = MatchText(m.known ? m.percent : -1);
+                                const std::string dmg = CompanionBattle::DamageText(CompanionBattle::DamageOf(foe.moves[slot], companionMetadata, foe, own));
+                                if (!dmg.empty()) value += "  \xC2\xB7  " + dmg;
+                            }
+                            add(M_NOTHING, title(companionMetadata.Move(foe.moves[slot])).c_str(), value, true);
+                            menu.items.back().tip = staticTip;
                         }
                     }
                     // (Your party: the best of each one's moves against the foe, the worst of the foe's

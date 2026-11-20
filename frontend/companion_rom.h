@@ -496,7 +496,9 @@ struct Metadata
         if(id<=0||id>=(int)moveRecords.size())return {};
         const auto& b=moveRecords[id];if(b.size()<(gen5?6u:7u))return {};
         MoveInfo out;out.type=b[gen5?0:4];if(gen5&&out.type>=9)out.type++;
-        out.category=b[2];if(out.category>2||out.type>17||out.type==9)return {};
+        // (Gen 5 numbers the kind 0 status, 1 physical, 2 special; FullDex uses Gen 4's: 0 physical, 1 special, 2 status.)
+        out.category=b[2];if(gen5&&out.category<=2)out.category=out.category==0?2:out.category-1;
+        if(out.category>2||out.type>17||out.type==9)return {};
         out.power=b[3];out.accuracy=b[gen5?4:5];out.pp=b[gen5?5:6];out.ready=true;return out;
     }
     struct TrainerMon {int species=0,level=0,item=0,form=0;std::array<int,4> moves{};bool customMoves=false;};

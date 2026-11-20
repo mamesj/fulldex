@@ -1,4 +1,6 @@
 #pragma once
+#include <cstdio>
+#include <cstdlib>
 // Read-only DS companion data, adapted from PokeDaisy Gen4Reader/Gen5Reader (GPL-3.0).
 // Based on PokeDaisy by Lidor Itzhari - https://github.com/lidor30/pokedaisy
 // Reference: 52f959770de4085bacfda16e6d77be7e91134bc4. No ROM or save writes.
@@ -209,6 +211,13 @@ struct Profile
     bool gen5Battle=false;
     uint32_t battleProc=93; // (the battle's process id: Black and White 93, Black 2 and White 2 0xA7)
 };
+// (SSR_TEST_BATTLEDUMP: a test's look at the battle structs, each battler once.)
+inline void BattleDump(const uint8_t* b,size_t n,int who)
+{
+    static const bool on=getenv("SSR_TEST_BATTLEDUMP")!=nullptr; static int done=0;
+    if(!on||(done>>who&1))return; done|=1<<who;
+    fprintf(stderr,"[dump] battler %d:",who);for(size_t i=0;i<n;i++)fprintf(stderr,"%s%02X",i%16?" ":"\n  ",b[i]);fprintf(stderr,"\n");
+}
 inline Profile ProfileFor(const std::string& code, int revision)
 {
     Profile p;
@@ -277,6 +286,9 @@ struct Battler
     int species=0,level=0,hp=0,maxHp=0,type1=-1,type2=-1,ability=0,item=0;
     uint32_t status=0;bool statusKnown=false;
     std::array<int,4> moves{},pp{};
+    // (In battle: attack, defence, special attack, special defence, speed as the battle has them (0: not read),
+    // and their stat changes, -6 to +6.)
+    std::array<int,5> stat{},stage{};
 };
 struct Snapshot
 {
@@ -403,10 +415,14 @@ inline Snapshot Read(const Profile& p,const Reader& read)
         auto mons=MainRange(battle,0x2D40+4*0xC0)?bytes(battle+0x2D40,4*0xC0):Bytes{};
         if(!mons.empty())for(int i=0;i<4;i++)
         {
-            const auto* b=mons.data()+i*0xC0;Battler m;m.species=U16(b);m.level=b[0x34];m.hp=U32(b+0x4C);m.maxHp=U32(b+0x50);
+            const auto* b=mons.data()+i*0xC0;BattleDump(b,0xC0,i);Battler m;m.species=U16(b);m.level=b[0x34];m.hp=U32(b+0x4C);m.maxHp=U32(b+0x50);
             m.status=U32(b+0x6C);m.statusKnown=true;
             m.type1=b[0x24];m.type2=b[0x25];m.ability=b[0x27];m.item=U16(b+0x78);
             for(int j=0;j<4;j++){m.moves[j]=U16(b+0x0C+j*2);m.pp[j]=b[0x2C+j];}
+            // (BattleMon: attack, defence, speed, sp. attack, sp. defence from +2; the stages from +0x18: HP, attack,
+            // defence, speed, sp. attack, sp. defence, accuracy, evasion, 6 for none.)
+            m.stat={U16(b+2),U16(b+4),U16(b+8),U16(b+10),U16(b+6)};
+            {const int at[5]={0x19,0x1A,0x1C,0x1D,0x1B};for(int j=0;j<5;j++)m.stage[j]=b[at[j]]<=12?b[at[j]]-6:0;}
             if(m.species<1||m.species>493||m.level<1||m.level>100||m.hp<0||m.maxHp<1||m.hp>m.maxHp)m={};
             s.battlers.push_back(m);
         }
@@ -421,7 +437,7 @@ inline Snapshot Read(const Profile& p,const Reader& read)
         auto parties=MainRange(main,0xCC+0x38)?bytes(main+0xCC,0x38):Bytes{};
         if(!parties.empty())for(int client=0;client<2;client++)
         {
-            uint32_t member=U32(parties.data()+client*0x1C);auto b=bytes(member,0x140);Battler m;
+            uint32_t member=U32(parties.data()+client*0x1C);auto b=bytes(member,0x140);if(!b.empty())BattleDump(b.data(),0x140,client);Battler m;
             if(!b.empty())
             {
                 // (The maximum HP first, then the HP now: a hurt Tepig at 13 of 29 in the savestate.)
@@ -429,6 +445,9 @@ inline Snapshot Read(const Profile& p,const Reader& read)
                 m.type1=b[0xF8];m.type2=b[0xF9];if(m.type1>=9)m.type1++;if(m.type2>=9)m.type2++;
                 m.ability=U16(b.data()+0x16);m.item=U16(b.data()+0x12);
                 for(int j=0;j<4;j++){m.moves[j]=U16(b.data()+0x104+j*14);m.pp[j]=b[0x106+j*14];}
+                // (Attack, defence, sp. attack, sp. defence, speed from +0xEE; their stages from +0xFC, 6 for none:
+                // checked against a level 4 Patrat's and a level 5 Oshawott's possible stats.)
+                for(int j=0;j<5;j++){m.stat[j]=U16(b.data()+0xEE + j*2);m.stage[j]=b[0xFC+j]<=12?b[0xFC+j]-6:0;}
                 if(m.species<1||m.species>649||m.level<1||m.level>100||m.maxHp<1||m.hp>m.maxHp)m={};
             }
             s.battlers.push_back(m);
