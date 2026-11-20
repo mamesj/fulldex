@@ -3442,7 +3442,13 @@ int main(int argc, char** argv)
                     put(sx, c.sy, sw, c.sh, x, dy, scl);
                     sc.items.back().drop = drop;
                 };
-                if (!centreLabel && dw <= c.sw * scl + 0.5f)
+                // (A button narrower than its cut: beside the wider message box of a translated game, as
+                // in Spanish Platinum, where FIGHT was drawn at its full width, over the buttons beside
+                // it, its unshaded ends showing past its outline. It is drawn as a wide one is, its
+                // colours across its width and its label in the middle, without the plain ends, the
+                // label narrowed only if it is wider still.)
+                const bool tight = dw < c.sw * scl - 0.5f;
+                if (!centreLabel && dw <= c.sw * scl + 0.5f && (!tight || narrowToFit))
                 {
                     piece(c.sx, c.sw, dx + (dw - c.sw * scl) / 2);
                     if (narrowToFit && dw < c.sw * scl)
@@ -3515,12 +3521,17 @@ int main(int argc, char** argv)
                     sc.items.push_back(body);
                     y0 = y1;
                 }
-                if (!centreLabel)
+                if (!centreLabel && !tight)
                 {
                     piece(c.sx, lx0 - c.sx, dx);
                     piece(lx1, c.sx + c.sw - lx1, dx + dw - (c.sx + c.sw - lx1) * scl);
                 }
                 piece(lx0, lx1 - lx0, dx + (dw - (lx1 - lx0) * scl) / 2);
+                if (tight && (lx1 - lx0) * scl > dw)
+                {
+                    sc.items.back().dx = dx;
+                    sc.items.back().stretchX = dw / ((lx1 - lx0) * scl);
+                }
             };
             if (cmd && SmButtons::S().on)
             {
