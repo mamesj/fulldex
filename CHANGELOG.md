@@ -1,6 +1,10 @@
 # Changelog
 
 
+## Next update (not released yet)
+
+- **Repel Prompt** (DS and GBA games; Settings > Display, on to start). When a Repel wears off and the Bag has another, FullDex Nav opens on its Repel app: A uses the strongest one, B closes it. In the GBA games the watch waits until you close the game's "REPEL's effect wore off..." text. Black 2 and White 2 already ask by themselves, so nothing changes there.
+
 ## FullDex 1.7 (not released yet)
 
 - **Pokémon X, Y, Ultra Sun and Ultra Moon (3DS beta).** FullDex lists a .3ds dump of any of them with your ROMs and plays it the same way as Omega Ruby and Alpha Sapphire: on a PC the game's code is built once from your dump (about 5 minutes), on a phone too. Each keeps its own save (pokemonx.sav, pokemony.sav, ultrasun.sav, ultramoon.sav) with your other saves.

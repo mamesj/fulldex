@@ -1761,6 +1761,7 @@ struct Settings : OptionalFeatures
     // the message box's band in Black and White, the corner panel in Black 2 (Bw1Layouts::BUTTONS_*).
     int battleButtons = 1;
     bool encountersShown = false; // ENCOUNTERS ON SCREEN (FULLDEX NAV's count on the picture)
+    bool repelPrompt = true; // REPEL PROMPT: the Nav opens on Repel when one wears off (games that don't ask themselves)
     int navStyle = 0; // NAV STYLE (FULLDEX NAV): 0 MODERN, 1 CLASSIC, 2 SIMPLE, 3 WHEEL, 4 OFF (#181: L3 as before)
     // The PC all-games program: the window's size when it last closed (0: 1280x720, a wide view).
     int windowW = 0, windowH = 0;
@@ -1863,6 +1864,7 @@ struct Settings : OptionalFeatures
             else if (k == "ra_token") ra.token = v;
             else if (k == "battle_buttons") battleButtons = v == "corner" ? 0 : v == "panel" ? 2 : v == "classic" ? 3 : v == "sunmoon" ? 4 : 1;
             else if (k == "encounters_shown") encountersShown = v == "1";
+            else if (k == "repel_prompt") repelPrompt = v == "1";
             else if (k == "nav_style") navStyle = v == "classic" ? 1 : v == "simple" ? 2 : v == "wheel" ? 3 : v == "off" ? 4 : 0;
             else if (k == "window")
             {
@@ -1937,6 +1939,7 @@ struct Settings : OptionalFeatures
         f << "start_button=" << (startMenu ? "menu" : "ds") << "\n";
         f << "battle_buttons=" << (battleButtons == 0 ? "corner" : battleButtons == 2 ? "panel" : battleButtons == 3 ? "classic" : battleButtons == 4 ? "sunmoon" : "strip") << "\n";
         f << "encounters_shown=" << (encountersShown ? 1 : 0) << "\n";
+        f << "repel_prompt=" << (repelPrompt ? 1 : 0) << "\n";
         f << "nav_style=" << (navStyle == 1 ? "classic" : navStyle == 2 ? "simple" : navStyle == 3 ? "wheel" : navStyle == 4 ? "off" : "modern") << "\n";
         controls.Save(f);
         f << "both_versions=" << (bothVersions ? 1 : 0) << "\n";
@@ -6090,7 +6093,7 @@ int main(int argc, char** argv)
     // (PAGE_KEYS, controls.h). Items a platform does not have are left out of its pages.
     enum
     {
-        M_RESUME, M_LAYOUT, M_LARGE, M_FPS60, M_FULLSCREEN, M_SMOOTH, M_WIDE, M_WIDEMAP, M_BATTLEBUTTONS, M_NAVSTYLE, M_ENCSHOWN,
+        M_RESUME, M_LAYOUT, M_LARGE, M_FPS60, M_FULLSCREEN, M_SMOOTH, M_WIDE, M_WIDEMAP, M_BATTLEBUTTONS, M_NAVSTYLE, M_ENCSHOWN, M_REPELPROMPT,
         M_WIDELINES, M_AUTODETAIL, M_WIDEGPU, M_GPU3D, M_SHOWFPS, M_BUTTONS, M_PADTOUCH, M_EMULATION,
         M_CONTROLS, M_TOUCHLAYOUT, M_STARTBTN, M_FAST, M_FFLOWRES, M_SAVESTATE, M_LOADSTATE, M_RESET, M_QUIT,
         M_DISPLAY, M_LANGUAGE, M_SOUND, M_GRAPHICS, M_CONTROLMENU, M_BACK, M_CHEATS, M_NOTHING,
@@ -6642,6 +6645,9 @@ int main(int argc, char** argv)
             toggle(M_ENCSHOWN, "ENCOUNTERS ON SCREEN", Glass::I_INFO, Menu::P_NONE, cfg.encountersShown,
                    "How many wild Pokemon you have met, in a corner of the picture as you play (FullDex Nav's Encounters).",
                    "Its Encounters app switches this too, and sets the count back to 0.");
+            toggle(M_REPELPROMPT, "REPEL PROMPT", Glass::I_INFO, Menu::P_NONE, cfg.repelPrompt,
+                   "When a Repel wears off and the Bag has another, FullDex Nav opens on its Repel app: A uses one, B closes it.",
+                   "Black 2 and White 2 ask by themselves.");
             toggle(M_ZOOM, "ZOOM AND LOOK AROUND", Glass::I_SPARKLE, Menu::P_NONE, cfg.zoom,
                    "A click of the right stick (C on a keyboard) zooms out in steps to show more of the world, and the right stick looks around.",
                    "Text, menus and battles come back close by themselves.");
@@ -10175,6 +10181,39 @@ int main(int argc, char** argv)
         static uint32_t testNavFrames = 0; // (counted from the run's start, as SSR_TEST_PAGE)
         ++testNavFrames;
         if (testNavAt >= 0 && testNavFrames == (uint32_t)testNavAt) { fdNav.open = true; readCompanion(true); fdNav.sel = std::clamp(testNavSel, 0, FdNav::APPS - 1); }
+        // (REPEL PROMPT: a Repel wearing off (its steps down to 0 as you walk) opens the watch on REPEL when the Bag has
+        // another, in the games that don't ask "use another?" themselves (Black 2 and White 2 do: repelType known).)
+        {
+            static int repelWas = -1;
+            static uint32_t repelLook = 0;
+            int repelNow = -1;
+            const bool watch = cfg.repelPrompt && cfg.navStyle != 4 && companionProfile.supported && companionProfile.repel &&
+                               !companionProfile.repelType && !companionProfile.pockets.empty() && !opt.lockstep && nds->MainRAM;
+            if (watch && !companionSnapshot.saveBase && frame - repelLook > 300) { repelLook = frame; readCompanion(); }
+            if (watch && companionSnapshot.saveBase)
+            {
+                const uint32_t at = companionSnapshot.saveBase + companionProfile.repel;
+                if (at >= 0x02000000 && at - 0x02000000 < (uint32_t)nds->MainRAMMask + 1) repelNow = nds->MainRAM[at - 0x02000000];
+            }
+            static int testRepelAt = -2, testRepelSteps = 0;
+            if (testRepelAt == -2) { testRepelAt = -1; if (const char* e = getenv("SSR_TEST_REPEL")) sscanf(e, "%d,%d", &testRepelAt, &testRepelSteps); }
+            if (testRepelAt >= 0 && frame >= (uint32_t)testRepelAt && companionSnapshot.saveBase && companionProfile.repel)
+            {
+                const uint32_t at = companionSnapshot.saveBase + companionProfile.repel;
+                if (at >= 0x02000000 && at - 0x02000000 < (uint32_t)nds->MainRAMMask + 1) { nds->MainRAM[at - 0x02000000] = (uint8_t)testRepelSteps; repelNow = testRepelSteps; }
+                fprintf(stderr, "[test] repel steps %d at frame %u\n", testRepelSteps, (unsigned)frame); testRepelAt = -1;
+            }
+            if (testRepelAt >= 0 && frame >= (uint32_t)testRepelAt && !companionSnapshot.saveBase) readCompanion(true);
+            if (!fdNav.open) fdNav.repelAsk = false;
+            if (repelWas > 0 && repelWas <= 4 && repelNow == 0 && !menu.open && !fdNav.open)
+            {
+                readCompanion(true);
+                bool another = false;
+                for (const auto& it : companionSnapshot.items) if (it.pocket == 0 && it.quantity > 0 && (it.id == 76 || it.id == 77 || it.id == 79)) another = true;
+                if (another) { fdNav.open = true; fdNav.sel = FdNav::REPEL; fdNav.resetAsk = 0; fdNav.repelAsk = true; }
+            }
+            repelWas = repelNow;
+        }
         if (!menu.open && pressed(PAD_LS) && cfg.navStyle != 4) fdNavToggle = true; // (OFF: the left stick as before, below)
         if (menu.open) { fdNav.open = false; fdNavToggle = false; }
         const uint32_t fdNavKeys = PadKeys(ps, cfg.byLabel) | kbKeysHeld, fdNavDown = fdNavKeys & ~fdNavKeysWas;
@@ -10689,6 +10728,7 @@ int main(int argc, char** argv)
             }
             case M_SMART_FAST:cfg.smartFast=!cfg.smartFast;cfg.Save(opt.config);break;
             case M_ENCSHOWN: cfg.encountersShown = !cfg.encountersShown; cfg.Save(opt.config); break;
+            case M_REPELPROMPT: cfg.repelPrompt = !cfg.repelPrompt; cfg.Save(opt.config); break;
             case M_ZOOM:cfg.zoom=!cfg.zoom;cfg.Save(opt.config);break;
             case M_ZOOM_TEXT:cfg.zoomText=!cfg.zoomText;cfg.Save(opt.config);break;
             case M_SLOW_MOTION:cfg.slowDivisor=dir<0?(cfg.slowDivisor==1?4:cfg.slowDivisor==4?2:1):(cfg.slowDivisor==1?2:cfg.slowDivisor==2?4:1);cfg.Save(opt.config);break;
@@ -13072,6 +13112,7 @@ int main(int argc, char** argv)
             std::string hint = "A: USE   B: CLOSE";
             if (fdNav.sel == FdNav::COUNT) hint = std::string("A: ") + UiLang::F("{0} ON SCREEN", { UiLang::Tr(cfg.encountersShown ? "HIDE" : "SHOW") }) + "   X: SET TO 0   B: CLOSE";
             else if (fdNav.sel == FdNav::RESET) hint = "A TWICE: RESET THE GAME   B: CLOSE";
+            else if (fdNav.sel == FdNav::REPEL && fdNav.repelAsk) hint = "REPEL WORE OFF   A: USE ANOTHER   B: CLOSE";
             static Canvas navCache;
             static std::string navKey;
             static int navBox[4] = {}, navDraws = 0, navFrames = 0;

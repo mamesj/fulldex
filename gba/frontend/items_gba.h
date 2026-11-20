@@ -179,6 +179,15 @@ public:
     bool PicksMon(int id) const { return CanUse(id) && !IsRepel(id); }
     bool PicksMove(int id) const { return IsPpOneMove(id); }
 
+    // The Repel's steps left (VarGet of its variable; -1 when the game can't be asked now).
+    int RepelSteps()
+    {
+        if (!Supported() || !pk_game_call_safe(core)) return -1;
+        uint32_t r = 0;
+        return Call(fns->varGet, { (uint32_t)fns->repelVar }, &r) ? (int)(r & 0xFFFF) : -1;
+    }
+    bool FieldFree() { return Gate() == USED; } // (on the field, the controls free: a Repel can be used now)
+    bool SetRepelSteps(int steps) { return Supported() && pk_game_call_safe(core) && Call(fns->varSet, { (uint32_t)fns->repelVar, (uint32_t)steps }); }
     // A Repel, on the field: the steps (its holdEffectParam) into the Repel counter, one out of the bag.
     Result UseRepel(int id, int& steps)
     {

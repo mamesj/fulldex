@@ -45,6 +45,7 @@ struct State
 {
     bool open = false;
     int sel = 0;
+    bool repelAsk = false; // (REPEL PROMPT: opened by a Repel wearing off; the hint says so)
     uint32_t resetAsk = 0; // (RESET: the frame of the first A; a second A within 3 seconds resets)
     bool counterShown = false; // (the counter on the picture while you play)
     int count = 0;

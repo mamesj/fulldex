@@ -189,6 +189,8 @@ const std::vector<Setting>& SettingsList()
           { { "modern", "MODERN" }, { "classic", "CLASSIC" }, { "simple", "SIMPLE" }, { "wheel", "WHEEL" }, { "off", "OFF" } },
           "modern",
           "THE WATCH OF APPS, OPENED BY CLICKING THE LEFT STICK, OR WITH ITS KEY OR ITS BUTTON ON PHONES: MODERN, CLASSIC, SIMPLE OR WHEEL. ON PHONES IT IS SMALLER, AT THE RIGHT. OFF: CLICKING THE LEFT STICK OPENS THE PAUSE MENU AGAIN, AS BEFORE." },
+        { "repel_prompt", "REPEL PROMPT", onOff, "1",
+          "ON: WHEN A REPEL WEARS OFF AND THE BAG HAS ANOTHER, FULLDEX NAV OPENS ON ITS REPEL APP: A USES ONE, B CLOSES IT." },
         { "follower", "FOLLOWING POKEMON", onOff, "0",
           "ON: THE FIRST POKEMON OF YOUR PARTY WALKS BEHIND YOU, AS IN HEARTGOLD AND SOULSILVER. ITS SPRITES COME FROM YOUR OWN "
           "HEARTGOLD OR SOULSILVER IN THE ROMS FOLDER (THE VERY BIG ONES HAVE NONE). NEEDS ZOOM AND LOOK AROUND'S GAMES." },
@@ -764,6 +766,7 @@ struct App
     bool navOpen = false, navToggle = false, navCountShown = false, navBattleWas = false, navCountLoaded = false;
     int navReturn = -1; // (a page opened from FULLDEX NAV: Back from it goes back to the watch)
     int navSel = 0, navCount = 0;
+    int navRepelWas = -1; bool navRepelAsk = false, navRepelDue = false; // (REPEL PROMPT: the steps last seen; the watch opened by one wearing off)
     Uint32 navResetAsk = 0;
     uint32_t navKeysWas = 0;
     unsigned long long navBattleAt = 0;
@@ -1840,7 +1843,7 @@ struct App
 #endif
         if (IsSettingsPage())
         {
-            static const char* const display[] = { "widescreen", "fullscreen", "scaling", "hd_filter", "lcd", "colour", "zoom", "zoom_text", "day_night", "follower", "nav_style", "show_fps" };
+            static const char* const display[] = { "widescreen", "fullscreen", "scaling", "hd_filter", "lcd", "colour", "zoom", "zoom_text", "day_night", "follower", "nav_style", "repel_prompt", "show_fps" };
             static const char* const sound[] = { "volume", "ff_mute" };
             static const char* const controls[] = { "gba_start", "buttons", "fast_lock", "ff_speed", "fast_button", "auto_state", "auto_resume" };
             static const char* const gameplay[] = { "instant_text", "reusable_tms", "run_indoors", "wild_encounters", "shiny_odds", "battle_speed", "text_speed", "bike_speed", "surf_speed", "fly_on", "flight_clouds" };
@@ -3993,7 +3996,7 @@ struct App
         using namespace GbaGlass;
         static const struct { const char* key; int icon; } icons[] = {
             { "widescreen", IC_RATIO }, { "fullscreen", IC_FULLSCREEN }, { "scaling", IC_EXPAND }, { "hd_filter", IC_SPARKLE },
-            { "lcd", IC_GRID }, { "colour", IC_MONITOR }, { "zoom", IC_EXPAND }, { "zoom_text", IC_EXPAND }, { "show_fps", IC_GAUGE }, { "volume", IC_SPEAKER }, { "ff_mute", IC_FAST },
+            { "lcd", IC_GRID }, { "colour", IC_MONITOR }, { "zoom", IC_EXPAND }, { "zoom_text", IC_EXPAND }, { "repel_prompt", IC_INFO }, { "show_fps", IC_GAUGE }, { "volume", IC_SPEAKER }, { "ff_mute", IC_FAST },
             { "gba_start", IC_PAD }, { "buttons", IC_PAD }, { "ff_speed", IC_FAST }, { "fast_button", IC_FAST }, { "fast_lock", IC_FAST },
             { "auto_state", IC_SAVE }, { "auto_resume", IC_LOAD },
             { "instant_text", IC_INFO }, { "reusable_tms", IC_CHIP }, { "run_indoors", IC_FAST }, { "wild_encounters", IC_GLOBE }, { "shiny_odds", IC_SPARKLE }, { "battle_speed", IC_FAST }, { "text_speed", IC_FAST }, { "bike_speed", IC_FAST }, { "surf_speed", IC_FAST }, { "day_night", IC_SPARKLE }, { "follower", IC_POKEBALL }, { "nav_style", IC_GRID } };
@@ -4556,6 +4559,29 @@ struct App
                 if (comp.foeParty.size() <= 1) { navCount++; NavSaveCount(); }
             }
         }
+        // (REPEL PROMPT: a Repel wearing off (its steps down to 0) opens the watch on REPEL when the Bag has another.)
+        if (!navOpen) navRepelAsk = false;
+        static long long testRepelAt = -2; static int testRepelSteps = 0;
+        if (testRepelAt == -2) { testRepelAt = -1; if (const char* e = getenv("GBAW_TEST_REPEL")) { int a = -1; sscanf(e, "%d,%d", &a, &testRepelSteps); testRepelAt = a; } }
+        if (testRepelAt >= 0 && (long long)gameFrames >= testRepelAt && items.SetRepelSteps(testRepelSteps))
+        { fprintf(stderr, "[test] repel steps %d at frame %lld\n", testRepelSteps, (long long)gameFrames); testRepelAt = -1; navRepelWas = testRepelSteps; }
+        if (gameFrames % 4 == 0 && items.Supported() && set.Get("repel_prompt") != "0" && set.Get("nav_style") != "off")
+        {
+            const int now = items.RepelSteps();
+            if (now >= 0)
+            {
+                if (navRepelWas > 0 && navRepelWas <= 4 && now == 0) navRepelDue = true;
+                if (now > 0) navRepelDue = false;
+                navRepelWas = now;
+            }
+            // (Due: once its text is closed and the field is free, with another Repel in the Bag.)
+            if (navRepelDue && !navOpen && items.FieldFree())
+            {
+                navRepelDue = false;
+                ReadCompanion();
+                if (NavRepel()) { navOpen = true; navSel = NAV_REPEL; navResetAsk = 0; navKeysWas = keys; navRepelAsk = true; }
+            }
+        }
         if (navToggle)
         {
             navToggle = false;
@@ -4652,7 +4678,8 @@ struct App
             for (int i = 0; i < NAV_APPS; i++) n.dim[i] = NavDim(i);
             if (navResetAsk && SDL_GetTicks() - navResetAsk < 3000) n.label[NAV_RESET] = "A again";
             n.hint = navSel == NAV_COUNT ? std::string("A: ") + (navCountShown ? "HIDE" : "SHOW") + " ON SCREEN   SELECT: SET TO 0   B: CLOSE"
-                   : navSel == NAV_RESET ? "A TWICE: RESET THE GAME   B: CLOSE" : "A: USE   B: CLOSE";
+                   : navSel == NAV_RESET ? "A TWICE: RESET THE GAME   B: CLOSE"
+                   : navSel == NAV_REPEL && navRepelAsk ? "REPEL WORE OFF   A: USE ANOTHER   B: CLOSE" : "A: USE   B: CLOSE";
             px = GbaGlass::NavDraw(n, ow, oh, changed);
         }
         else px = GbaGlass::NavCount(navCount, ow, oh, changed);

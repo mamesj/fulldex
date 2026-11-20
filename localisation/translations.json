@@ -1384,7 +1384,13 @@
       "NOT A 3DS CARTRIDGE DUMP": "NO ES UN VOLCADO DE CARTUCHO DE 3DS",
       "NOT A 3DS GAME FULLDEX PLAYS (X, Y, OMEGA RUBY, ALPHA SAPPHIRE, ULTRA SUN, ULTRA MOON)": "NO ES UN JUEGO DE 3DS QUE FULLDEX PUEDA JUGAR (X, Y, RUBÍ OMEGA, ZAFIRO ALFA, ULTRASOL, ULTRALUNA)",
       "ENCRYPTED: DECRYPT IT FIRST (GODMODE9 ON YOUR 3DS)": "CIFRADO: DESCÍFRALO PRIMERO (GODMODE9 EN TU 3DS)",
-      "THE 3DS FOLDER FROM THE FULLDEX DOWNLOAD IS MISSING BESIDE THE PROGRAM": "FALTA JUNTO AL PROGRAMA LA CARPETA 3DS DE LA DESCARGA DE FULLDEX"
+      "THE 3DS FOLDER FROM THE FULLDEX DOWNLOAD IS MISSING BESIDE THE PROGRAM": "FALTA JUNTO AL PROGRAMA LA CARPETA 3DS DE LA DESCARGA DE FULLDEX",
+      "REPEL PROMPT": "AVISO DE REPELENTE",
+      "REPEL WORE OFF": "SE ACABÓ EL REPELENTE",
+      "A: USE ANOTHER": "A: USAR OTRO",
+      "When a Repel wears off and the Bag has another, FullDex Nav opens on its Repel app: A uses one, B closes it.": "Cuando se acaba un Repelente y queda otro en la Mochila, FullDex Nav se abre en su app Repelente: A usa uno, B la cierra.",
+      "Black 2 and White 2 ask by themselves.": "Negra 2 y Blanca 2 lo preguntan por sí mismos.",
+      "ON: WHEN A REPEL WEARS OFF AND THE BAG HAS ANOTHER, FULLDEX NAV OPENS ON ITS REPEL APP: A USES ONE, B CLOSES IT.": "ON: CUANDO SE ACABA UN REPELENTE Y QUEDA OTRO EN LA MOCHILA, FULLDEX NAV SE ABRE EN SU APP REPELENTE: A USA UNO, B LA CIERRA."
     },
     "it": {
       " (NEXT START)": " (AL RIAVVIO)",
@@ -2761,7 +2767,13 @@
       "NOT A 3DS CARTRIDGE DUMP": "NON È UN DUMP DI UNA SCHEDA DI GIOCO 3DS",
       "NOT A 3DS GAME FULLDEX PLAYS (X, Y, OMEGA RUBY, ALPHA SAPPHIRE, ULTRA SUN, ULTRA MOON)": "NON È UN GIOCO 3DS CHE FULLDEX PUÒ AVVIARE (X, Y, RUBINO OMEGA, ZAFFIRO ALPHA, ULTRASOLE, ULTRALUNA)",
       "ENCRYPTED: DECRYPT IT FIRST (GODMODE9 ON YOUR 3DS)": "CRIPTATO: DECRIPTALO PRIMA (GODMODE9 SUL TUO 3DS)",
-      "THE 3DS FOLDER FROM THE FULLDEX DOWNLOAD IS MISSING BESIDE THE PROGRAM": "MANCA ACCANTO AL PROGRAMMA LA CARTELLA 3DS DEL DOWNLOAD DI FULLDEX"
+      "THE 3DS FOLDER FROM THE FULLDEX DOWNLOAD IS MISSING BESIDE THE PROGRAM": "MANCA ACCANTO AL PROGRAMMA LA CARTELLA 3DS DEL DOWNLOAD DI FULLDEX",
+      "REPEL PROMPT": "AVVISO REPELLENTE",
+      "REPEL WORE OFF": "IL REPELLENTE È FINITO",
+      "A: USE ANOTHER": "A: USANE UN ALTRO",
+      "When a Repel wears off and the Bag has another, FullDex Nav opens on its Repel app: A uses one, B closes it.": "Quando un Repellente finisce e nella Borsa ce n'è un altro, FullDex Nav si apre sulla sua app Repellente: A ne usa uno, B la chiude.",
+      "Black 2 and White 2 ask by themselves.": "Nera 2 e Bianca 2 lo chiedono da sé.",
+      "ON: WHEN A REPEL WEARS OFF AND THE BAG HAS ANOTHER, FULLDEX NAV OPENS ON ITS REPEL APP: A USES ONE, B CLOSES IT.": "ON: QUANDO UN REPELLENTE FINISCE E NELLA BORSA CE N'È UN ALTRO, FULLDEX NAV SI APRE SULLA SUA APP REPELLENTE: A NE USA UNO, B LA CHIUDE."
     },
     "fr": {
       " (NEXT START)": " (PROCHAIN DÉBUT)",
@@ -4138,7 +4150,13 @@
       "NOT A 3DS CARTRIDGE DUMP": "CE N'EST PAS UN DUMP DE CARTOUCHE 3DS",
       "NOT A 3DS GAME FULLDEX PLAYS (X, Y, OMEGA RUBY, ALPHA SAPPHIRE, ULTRA SUN, ULTRA MOON)": "CE N'EST PAS UN JEU 3DS QUE FULLDEX PEUT LANCER (X, Y, RUBIS OMÉGA, SAPHIR ALPHA, ULTRA-SOLEIL, ULTRA-LUNE)",
       "ENCRYPTED: DECRYPT IT FIRST (GODMODE9 ON YOUR 3DS)": "CHIFFRÉ : DÉCHIFFREZ-LE D'ABORD (GODMODE9 SUR VOTRE 3DS)",
-      "THE 3DS FOLDER FROM THE FULLDEX DOWNLOAD IS MISSING BESIDE THE PROGRAM": "LE DOSSIER 3DS DU TÉLÉCHARGEMENT DE FULLDEX MANQUE À CÔTÉ DU PROGRAMME"
+      "THE 3DS FOLDER FROM THE FULLDEX DOWNLOAD IS MISSING BESIDE THE PROGRAM": "LE DOSSIER 3DS DU TÉLÉCHARGEMENT DE FULLDEX MANQUE À CÔTÉ DU PROGRAMME",
+      "REPEL PROMPT": "RAPPEL REPOUSSE",
+      "REPEL WORE OFF": "LE REPOUSSE NE FAIT PLUS EFFET",
+      "A: USE ANOTHER": "A : EN UTILISER UN AUTRE",
+      "When a Repel wears off and the Bag has another, FullDex Nav opens on its Repel app: A uses one, B closes it.": "Quand un Repousse ne fait plus effet et qu'il en reste un dans le Sac, FullDex Nav s'ouvre sur son appli Repousse : A en utilise un, B la ferme.",
+      "Black 2 and White 2 ask by themselves.": "Noire 2 et Blanche 2 le demandent d'elles-mêmes.",
+      "ON: WHEN A REPEL WEARS OFF AND THE BAG HAS ANOTHER, FULLDEX NAV OPENS ON ITS REPEL APP: A USES ONE, B CLOSES IT.": "ON : QUAND UN REPOUSSE NE FAIT PLUS EFFET ET QU'IL EN RESTE UN DANS LE SAC, FULLDEX NAV S'OUVRE SUR SON APPLI REPOUSSE : A EN UTILISE UN, B LA FERME."
     },
     "de": {
       " (NEXT START)": " (NÄCHSTER START)",
@@ -5515,7 +5533,13 @@
       "NOT A 3DS CARTRIDGE DUMP": "KEIN DUMP EINES 3DS-MODULS",
       "NOT A 3DS GAME FULLDEX PLAYS (X, Y, OMEGA RUBY, ALPHA SAPPHIRE, ULTRA SUN, ULTRA MOON)": "KEIN 3DS-SPIEL, DAS FULLDEX SPIELT (X, Y, OMEGA RUBIN, ALPHA SAPHIR, ULTRASONNE, ULTRAMOND)",
       "ENCRYPTED: DECRYPT IT FIRST (GODMODE9 ON YOUR 3DS)": "VERSCHLÜSSELT: ENTSCHLÜSSELN SIE ES ZUERST (GODMODE9 AUF IHREM 3DS)",
-      "THE 3DS FOLDER FROM THE FULLDEX DOWNLOAD IS MISSING BESIDE THE PROGRAM": "DER 3DS-ORDNER AUS DEM FULLDEX-DOWNLOAD FEHLT NEBEN DEM PROGRAMM"
+      "THE 3DS FOLDER FROM THE FULLDEX DOWNLOAD IS MISSING BESIDE THE PROGRAM": "DER 3DS-ORDNER AUS DEM FULLDEX-DOWNLOAD FEHLT NEBEN DEM PROGRAMM",
+      "REPEL PROMPT": "SCHUTZ-HINWEIS",
+      "REPEL WORE OFF": "DER SCHUTZ WIRKT NICHT MEHR",
+      "A: USE ANOTHER": "A: NOCH EINEN EINSETZEN",
+      "When a Repel wears off and the Bag has another, FullDex Nav opens on its Repel app: A uses one, B closes it.": "Wenn ein Schutz nachlässt und noch einer im Beutel ist, öffnet sich FullDex Nav bei seiner Schutz-App: A setzt einen ein, B schließt sie.",
+      "Black 2 and White 2 ask by themselves.": "Schwarz 2 und Weiß 2 fragen selbst danach.",
+      "ON: WHEN A REPEL WEARS OFF AND THE BAG HAS ANOTHER, FULLDEX NAV OPENS ON ITS REPEL APP: A USES ONE, B CLOSES IT.": "ON: WENN EIN SCHUTZ NACHLÄSST UND NOCH EINER IM BEUTEL IST, ÖFFNET SICH FULLDEX NAV BEI SEINER SCHUTZ-APP: A SETZT EINEN EIN, B SCHLIESST SIE."
     },
     "ja": {
       " (NEXT START)": " (次のスタート)",
@@ -6892,7 +6916,13 @@
       "NOT A 3DS CARTRIDGE DUMP": "3DSカートリッジのダンプではありません",
       "NOT A 3DS GAME FULLDEX PLAYS (X, Y, OMEGA RUBY, ALPHA SAPPHIRE, ULTRA SUN, ULTRA MOON)": "FULLDEXで遊べる3DSのゲームではありません (X、Y、オメガルビー、アルファサファイア、ウルトラサン、ウルトラムーン)",
       "ENCRYPTED: DECRYPT IT FIRST (GODMODE9 ON YOUR 3DS)": "暗号化されています: 先に復号してください (3DSのGODMODE9で)",
-      "THE 3DS FOLDER FROM THE FULLDEX DOWNLOAD IS MISSING BESIDE THE PROGRAM": "FULLDEXのダウンロードに含まれる3DSフォルダーがプログラムの横にありません"
+      "THE 3DS FOLDER FROM THE FULLDEX DOWNLOAD IS MISSING BESIDE THE PROGRAM": "FULLDEXのダウンロードに含まれる3DSフォルダーがプログラムの横にありません",
+      "REPEL PROMPT": "むしよけの確認",
+      "REPEL WORE OFF": "むしよけの効果が切れた",
+      "A: USE ANOTHER": "A：もう1つ使う",
+      "When a Repel wears off and the Bag has another, FullDex Nav opens on its Repel app: A uses one, B closes it.": "むしよけの効果が切れてバッグにまだあるとき、FullDex Navがむしよけアプリで開きます。Aで使い、Bで閉じます。",
+      "Black 2 and White 2 ask by themselves.": "ブラック2とホワイト2はゲーム自身が聞いてきます。",
+      "ON: WHEN A REPEL WEARS OFF AND THE BAG HAS ANOTHER, FULLDEX NAV OPENS ON ITS REPEL APP: A USES ONE, B CLOSES IT.": "ON：むしよけの効果が切れてバッグにまだあるとき、FULLDEX NAVがむしよけアプリで開きます。Aで使い、Bで閉じます。"
     },
     "ko": {
       " (NEXT START)": " (다음 시작)",
@@ -8269,7 +8299,13 @@
       "NOT A 3DS CARTRIDGE DUMP": "3DS 카트리지 덤프가 아닙니다",
       "NOT A 3DS GAME FULLDEX PLAYS (X, Y, OMEGA RUBY, ALPHA SAPPHIRE, ULTRA SUN, ULTRA MOON)": "FULLDEX에서 플레이할 수 있는 3DS 게임이 아닙니다 (X, Y, 오메가루비, 알파사파이어, 울트라썬, 울트라문)",
       "ENCRYPTED: DECRYPT IT FIRST (GODMODE9 ON YOUR 3DS)": "암호화되어 있습니다: 먼저 복호화하세요 (3DS의 GODMODE9로)",
-      "THE 3DS FOLDER FROM THE FULLDEX DOWNLOAD IS MISSING BESIDE THE PROGRAM": "FULLDEX 다운로드의 3DS 폴더가 프로그램 옆에 없습니다"
+      "THE 3DS FOLDER FROM THE FULLDEX DOWNLOAD IS MISSING BESIDE THE PROGRAM": "FULLDEX 다운로드의 3DS 폴더가 프로그램 옆에 없습니다",
+      "REPEL PROMPT": "스프레이 알림",
+      "REPEL WORE OFF": "스프레이 효과가 끝남",
+      "A: USE ANOTHER": "A: 하나 더 사용",
+      "When a Repel wears off and the Bag has another, FullDex Nav opens on its Repel app: A uses one, B closes it.": "스프레이 효과가 끝나고 가방에 하나 더 있으면 FullDex Nav가 스프레이 앱으로 열립니다. A로 사용하고 B로 닫습니다.",
+      "Black 2 and White 2 ask by themselves.": "블랙 2와 화이트 2는 게임이 직접 물어봅니다.",
+      "ON: WHEN A REPEL WEARS OFF AND THE BAG HAS ANOTHER, FULLDEX NAV OPENS ON ITS REPEL APP: A USES ONE, B CLOSES IT.": "ON: 스프레이 효과가 끝나고 가방에 하나 더 있으면 FULLDEX NAV가 스프레이 앱으로 열립니다. A로 사용하고 B로 닫습니다."
     }
   }
 }
