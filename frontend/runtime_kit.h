@@ -13,6 +13,9 @@ inline std::filesystem::path NativePath(const std::filesystem::path& input, std:
     if (ec) return {};
     const std::wstring wide = path.make_preferred().wstring();
     if (wide.rfind(L"\\\\?\\", 0) == 0) return path;
+    // (\\?\ is only needed for long paths. A mapped or virtual drive rejects \\?\D:\... with
+    // ERROR_INVALID_PARAMETER, and every 3DS kit path is short.)
+    if (wide.size() < 248) return path;
     if (wide.rfind(L"\\\\", 0) == 0) return std::filesystem::path(L"\\\\?\\UNC\\" + wide.substr(2));
     return std::filesystem::path(L"\\\\?\\" + wide);
 #else
