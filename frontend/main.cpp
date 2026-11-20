@@ -7780,6 +7780,22 @@ int main(int argc, char** argv)
                 }
                 std::string method;
                 const auto found = companionMetadata.Encounters(snap.map);
+                // (DEXNAV: this place's wild Pokemon against your Pokedex: how many you have caught, each one marked.)
+                auto caughtHere = [&](int sp) { return snap.dexReady && sp >= 0 && sp < (int)snap.caught.size() && snap.caught[sp]; };
+                auto seenHere = [&](int sp) { return snap.dexReady && sp >= 0 && sp < (int)snap.seen.size() && snap.seen[sp]; };
+                if (!found.empty() && snap.dexReady)
+                {
+                    std::vector<int> kinds;
+                    for (const auto& enc : found) if (std::find(kinds.begin(), kinds.end(), enc.species) == kinds.end()) kinds.push_back(enc.species);
+                    int got = 0;
+                    for (int sp : kinds) got += caughtHere(sp) ? 1 : 0;
+                    add(M_NOTHING, "DexNav", got == (int)kinds.size() ? UiLang::F("All {0} caught here", { std::to_string(got) })
+                                                                       : UiLang::F("{0} of {1} caught here", { std::to_string(got), std::to_string(kinds.size()) }), true);
+                    MenuItem& it = menu.items.back();
+                    it.kind = Menu::K_PLAIN;
+                    it.icon = Glass::I_POKEBALL;
+                    it.desc = "The wild Pok\xC3\xA9" "mon of this place against your Pok\xC3\xA9" "dex: each one shows Caught, Seen or ???.";
+                }
                 for (const auto& enc : found)
                 {
                     if (enc.method != method)
@@ -7791,7 +7807,9 @@ int main(int argc, char** argv)
                     }
                     Menu::CompanionView::DexEntry e = dexEntry(enc.species);
                     cv.dex.push_back(e);
-                    const std::string lv = enc.low == 0 ? std::string("Lv varies") : "Lv " + std::to_string(enc.low) + (enc.high != enc.low ? "-" + std::to_string(enc.high) : "");
+                    std::string lv = enc.low == 0 ? UiLang::Tr("Lv varies") : "Lv " + std::to_string(enc.low) + (enc.high != enc.low ? "-" + std::to_string(enc.high) : "");
+                    if (caughtHere(enc.species)) lv += "  \xC2\xB7  " + UiLang::Tr("Caught");
+                    else if (seenHere(enc.species)) lv += "  \xC2\xB7  " + UiLang::Tr("Seen");
                     add(M_CDEX0 + enc.species, e.hidden ? "???" : e.name.c_str(), lv, true);
                     MenuItem& it = menu.items.back();
                     it.kind = Menu::K_LINK;

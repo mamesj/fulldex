@@ -7,6 +7,7 @@
 - **European Platinum: Fly and Open PC** from FullDex Nav and the Companion (the European cart, CPUE rev 10, uses the US cart's code at the same places). European HeartGold and SoulSilver already had them.
 - **Damage ranges in Battle Info** (Platinum, Black, White, Black 2 and White 2, where Battle Info reads the battle). Each of your moves shows the share of the foe's HP it takes, lowest and highest roll ("1x · 29-42%"), from both Pokémon's stats and stat changes, and a new section shows the foe's moves and what each would do to yours. Weather, held items, critical hits and most abilities are not counted.
 - **Black, White, Black 2 and White 2: a move's kind is right again in the Companion.** Status moves (Tail Whip, Leer) were shown as damaging moves with a matchup, and physical and special were swapped on the move pages.
+- **DexNav on the Location page** (DS games): how many of the wild Pokémon here you have caught ("3 of 17 caught here"), and Caught or Seen beside each one, from your save's Pokédex. FullDex Nav's Map app opens it.
 
 ## FullDex 1.7 (not released yet)
 
