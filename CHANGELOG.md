@@ -4,6 +4,7 @@
 ## Next update (not released yet)
 
 - **Repel Prompt** (DS and GBA games; Settings > Display, on to start). When a Repel wears off and the Bag has another, FullDex Nav opens on its Repel app: A uses the strongest one, B closes it. In the GBA games the watch waits until you close the game's "REPEL's effect wore off..." text. Black 2 and White 2 already ask by themselves, so nothing changes there.
+- **European Platinum: Fly and Open PC** from FullDex Nav and the Companion (the European cart, CPUE rev 10, uses the US cart's code at the same places). European HeartGold and SoulSilver already had them.
 
 ## FullDex 1.7 (not released yet)
 

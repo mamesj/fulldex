@@ -371,7 +371,8 @@ static const PkNdsFieldGame* portGame(const char code[4], int revision);
 
 const PkNdsFieldGame* pk_nds_field_game(const char code[4], int revision)
 {
-    if (memcmp(code, "CPUE", 4) == 0 && revision == 1) return &PLATINUM_US_REV1;
+    // (European Platinum, CPUE rev 10: the US rev 1 cart's code at the same addresses.)
+    if (memcmp(code, "CPUE", 4) == 0 && (revision == 1 || revision == 10)) return &PLATINUM_US_REV1;
     if (memcmp(code, "CPUF", 4) == 0 && revision == 0) return &PLATINUM_FR;
     if ((memcmp(code, "IPKE", 4) == 0 || memcmp(code, "IPGE", 4) == 0) && revision == 0) return &HEARTGOLD_US;
     if ((memcmp(code, "IPKD", 4) == 0 || memcmp(code, "IPGD", 4) == 0) && revision == 0) return &HEARTGOLD_DE;
