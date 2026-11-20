@@ -1403,7 +1403,15 @@
       "A note on screen when a Pokémon in your party goes over the level cap.": "Un aviso en pantalla cuando un Pokémon de tu equipo pasa del límite de nivel.",
       "A warning only: the game is not changed.": "Solo un aviso: el juego no cambia.",
       "Lv {0}: over the cap": "Nv. {0}: pasa del límite",
-      "{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}": "{0} PASA DEL LÍMITE DE NIVEL: NV. {1} DE {2}"
+      "{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}": "{0} PASA DEL LÍMITE DE NIVEL: NV. {1} DE {2}",
+      "FREE FLIGHT": "VUELO LIBRE",
+      "Fly over the map yourself, through trees, water and mountains. The D-pad steers and B lands.": "Vuela tú mismo sobre el mapa, por encima de árboles, agua y montañas. La cruceta dirige y B aterriza.",
+      "FREE FLIGHT: D-PAD TO STEER, B TO LAND": "VUELO LIBRE: CRUCETA PARA DIRIGIR, B PARA ATERRIZAR",
+      "FREE FLIGHT: NOT IN THIS GAME YET": "VUELO LIBRE: AÚN NO EN ESTE JUEGO",
+      "FREE FLIGHT: NOT HERE": "VUELO LIBRE: AQUÍ NO",
+      "LANDED": "ATERRIZADO",
+      "LOOKING FOR GROUND...": "BUSCANDO SUELO...",
+      "NO GROUND NEAR: FLY ON A LITTLE": "NO HAY SUELO CERCA: VUELA UN POCO MÁS"
     },
     "it": {
       " (NEXT START)": " (AL RIAVVIO)",
@@ -2799,7 +2807,15 @@
       "A note on screen when a Pokémon in your party goes over the level cap.": "Un avviso sullo schermo quando un Pokémon della tua squadra supera il limite di livello.",
       "A warning only: the game is not changed.": "Solo un avviso: il gioco non cambia.",
       "Lv {0}: over the cap": "Liv. {0}: oltre il limite",
-      "{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}": "{0} SUPERA IL LIMITE DI LIVELLO: LIV. {1} SU {2}"
+      "{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}": "{0} SUPERA IL LIMITE DI LIVELLO: LIV. {1} SU {2}",
+      "FREE FLIGHT": "VOLO LIBERO",
+      "Fly over the map yourself, through trees, water and mountains. The D-pad steers and B lands.": "Sorvola tu stesso la mappa, sopra alberi, acqua e montagne. La croce direzionale guida e B atterra.",
+      "FREE FLIGHT: D-PAD TO STEER, B TO LAND": "VOLO LIBERO: CROCE PER GUIDARE, B PER ATTERRARE",
+      "FREE FLIGHT: NOT IN THIS GAME YET": "VOLO LIBERO: NON ANCORA IN QUESTO GIOCO",
+      "FREE FLIGHT: NOT HERE": "VOLO LIBERO: NON QUI",
+      "LANDED": "ATTERRATO",
+      "LOOKING FOR GROUND...": "CERCO DOVE ATTERRARE...",
+      "NO GROUND NEAR: FLY ON A LITTLE": "NESSUN TERRENO VICINO: VOLA ANCORA UN PO'"
     },
     "fr": {
       " (NEXT START)": " (PROCHAIN DÉBUT)",
@@ -4195,7 +4211,15 @@
       "A note on screen when a Pokémon in your party goes over the level cap.": "Un message à l'écran quand un Pokémon de ton équipe dépasse le niveau maximum.",
       "A warning only: the game is not changed.": "Un simple avertissement : le jeu n'est pas modifié.",
       "Lv {0}: over the cap": "N. {0} : au-dessus",
-      "{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}": "{0} DÉPASSE LE NIVEAU MAXIMUM : N. {1} SUR {2}"
+      "{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}": "{0} DÉPASSE LE NIVEAU MAXIMUM : N. {1} SUR {2}",
+      "FREE FLIGHT": "VOL LIBRE",
+      "Fly over the map yourself, through trees, water and mountains. The D-pad steers and B lands.": "Survolez vous-même la carte, au-dessus des arbres, de l'eau et des montagnes. La croix dirige et B atterrit.",
+      "FREE FLIGHT: D-PAD TO STEER, B TO LAND": "VOL LIBRE : CROIX POUR DIRIGER, B POUR ATTERRIR",
+      "FREE FLIGHT: NOT IN THIS GAME YET": "VOL LIBRE : PAS ENCORE DANS CE JEU",
+      "FREE FLIGHT: NOT HERE": "VOL LIBRE : PAS ICI",
+      "LANDED": "ATTERRI",
+      "LOOKING FOR GROUND...": "RECHERCHE D'UN SOL...",
+      "NO GROUND NEAR: FLY ON A LITTLE": "PAS DE SOL PROCHE : VOLEZ ENCORE UN PEU"
     },
     "de": {
       " (NEXT START)": " (NÄCHSTER START)",
@@ -5591,7 +5615,15 @@
       "A note on screen when a Pokémon in your party goes over the level cap.": "Ein Hinweis auf dem Bildschirm, wenn ein Pokémon deines Teams die Level-Grenze überschreitet.",
       "A warning only: the game is not changed.": "Nur ein Hinweis: das Spiel wird nicht verändert.",
       "Lv {0}: over the cap": "Lv. {0}: über der Grenze",
-      "{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}": "{0} IST ÜBER DER LEVEL-GRENZE: LV. {1} VON {2}"
+      "{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}": "{0} IST ÜBER DER LEVEL-GRENZE: LV. {1} VON {2}",
+      "FREE FLIGHT": "FREIER FLUG",
+      "Fly over the map yourself, through trees, water and mountains. The D-pad steers and B lands.": "Flieg selbst über die Karte, über Bäume, Wasser und Berge. Das Steuerkreuz lenkt, B landet.",
+      "FREE FLIGHT: D-PAD TO STEER, B TO LAND": "FREIER FLUG: STEUERKREUZ ZUM LENKEN, B ZUM LANDEN",
+      "FREE FLIGHT: NOT IN THIS GAME YET": "FREIER FLUG: IN DIESEM SPIEL NOCH NICHT",
+      "FREE FLIGHT: NOT HERE": "FREIER FLUG: NICHT HIER",
+      "LANDED": "GELANDET",
+      "LOOKING FOR GROUND...": "SUCHE BODEN...",
+      "NO GROUND NEAR: FLY ON A LITTLE": "KEIN BODEN IN DER NÄHE: FLIEG NOCH EIN STÜCK"
     },
     "ja": {
       " (NEXT START)": " (次のスタート)",
@@ -6987,7 +7019,15 @@
       "A note on screen when a Pokémon in your party goes over the level cap.": "手持ちのポケモンがレベル上限を超えたとき、画面に表示します。",
       "A warning only: the game is not changed.": "知らせるだけで、ゲームは変わりません。",
       "Lv {0}: over the cap": "Lv{0} 超",
-      "{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}": "{0}がレベル上限を超えた：Lv{1}／{2}"
+      "{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}": "{0}がレベル上限を超えた：Lv{1}／{2}",
+      "FREE FLIGHT": "じゆうひこう",
+      "Fly over the map yourself, through trees, water and mountains. The D-pad steers and B lands.": "じぶんで マップの うえを とぶ。きも みずも やまも こえられる。じゅうじボタンで すすみ、Bで ちゃくりく。",
+      "FREE FLIGHT: D-PAD TO STEER, B TO LAND": "じゆうひこう: じゅうじボタンで すすむ、Bで ちゃくりく",
+      "FREE FLIGHT: NOT IN THIS GAME YET": "じゆうひこう: この ゲームでは まだ つかえない",
+      "FREE FLIGHT: NOT HERE": "じゆうひこう: ここでは つかえない",
+      "LANDED": "ちゃくりく した",
+      "LOOKING FOR GROUND...": "おりられる ばしょを さがしている...",
+      "NO GROUND NEAR: FLY ON A LITTLE": "ちかくに おりられる ばしょが ない: もうすこし とんで"
     },
     "ko": {
       " (NEXT START)": " (다음 시작)",
@@ -8383,7 +8423,15 @@
       "A note on screen when a Pokémon in your party goes over the level cap.": "파티의 포켓몬이 레벨 상한을 넘으면 화면에 알립니다.",
       "A warning only: the game is not changed.": "알림만 하며 게임은 바뀌지 않습니다.",
       "Lv {0}: over the cap": "Lv {0} 초과",
-      "{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}": "{0}이(가) 레벨 상한 초과: Lv {1} / {2}"
+      "{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}": "{0}이(가) 레벨 상한 초과: Lv {1} / {2}",
+      "FREE FLIGHT": "자유 비행",
+      "Fly over the map yourself, through trees, water and mountains. The D-pad steers and B lands.": "직접 지도 위를 날아요. 나무, 물, 산 위로도 지나갈 수 있어요. 십자 버튼으로 조종하고 B로 착륙해요.",
+      "FREE FLIGHT: D-PAD TO STEER, B TO LAND": "자유 비행: 십자 버튼으로 조종, B로 착륙",
+      "FREE FLIGHT: NOT IN THIS GAME YET": "자유 비행: 이 게임에서는 아직 안 돼요",
+      "FREE FLIGHT: NOT HERE": "자유 비행: 여기서는 안 돼요",
+      "LANDED": "착륙했어요",
+      "LOOKING FOR GROUND...": "착륙할 곳을 찾는 중...",
+      "NO GROUND NEAR: FLY ON A LITTLE": "근처에 착륙할 곳이 없어요: 조금 더 날아요"
     }
   }
 }

@@ -12,6 +12,7 @@
 - **HeartGold and SoulSilver: Fly's sky goes on to the right edge in widescreen** again. The text-box rule (the world beside a box inset from the edge) also caught the sky band, scrolled a pixel in on the right, and the speed streaks crossing the edge left gaps in it.
 - **Black, White, Black 2 and White 2: Fly fills the widescreen.** While the game shows its still picture of the map, the sides show the world as it was a moment before, in place of the blurred bars, and the sky band and the white flash go on to both edges. If the picture is of another place, the bars stay.
 - **Spanish Platinum's FIGHT button fits inside its outline** (#177). Beside the wider message box of a translated game the button is narrower than the game's own, and it was drawn at full width, over its outline, its ends unshaded when another button was chosen.
+- **Free Flight in Platinum** (Companion, FLY, FREE FLIGHT; US and European English carts): fly over the map yourself, through trees, water, mountains and cliffs, into the next route or town, its name, music and wild Pokémon changing as you cross. The D-pad steers and B lands on the nearest place you can stand (it glides on a little to find one). The camera rises while you fly and the edges of the map keep you in. No wild battles, trainers or doors on the way. It asks what Fly asks: a Pokémon that knows Fly.
 
 ## FullDex 1.7 (not released yet)
 
