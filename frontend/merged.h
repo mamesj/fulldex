@@ -209,6 +209,9 @@ struct WideImage
     // the first piece, which is not drawn.
     bool placed = false;
     int baseX = 0;
+    // Not 0: the world as it last was, held while a still picture of it covers the top screen (see main.cpp), one
+    // number for each time.
+    int held = 0;
 };
 
 struct ScreenImage
@@ -674,6 +677,99 @@ inline bool MergedParticleWeather(const ScreenImage& top)
     return runs >= 4;
 }
 
+// Whether the held world (WideImage::held) is of the scene the still picture on the top screen shows: the
+// screen's outer columns match it on at least half the rows (a band across them aside). Once it matches, it
+// stays so for that picture, so the sides don't flicker through a flash.
+inline bool MergedHeldWorld(const WideImage& wide, const ScreenImage& top, int outW, int outH)
+{
+    if (!wide.held || !wide.pixels || wide.placed || wide.w <= 0 || wide.h <= 0 || !top.pixels || outH <= 0) return false;
+    static int lastHeld = 0;
+    static bool lastOK = false;
+    if (wide.held == lastHeld && lastOK) return true;
+    const MergedView v = MergedMakeView(outW, outH);
+    int rows = 0, same = 0;
+    for (int sy = 2; sy < 192; sy += 4)
+    {
+        const int wy = std::clamp((int)((v.originY + (sy + 0.5f) * v.unit) * wide.h / outH), 0, wide.h - 1);
+        for (int side = 0; side < 2; side++)
+        {
+            const int sx = side ? 252 : 3;
+            const int wx = std::clamp((int)MergedWideX(v.originX + (sx + 0.5f) * v.unit, wide.w, outW, outH), 0, wide.w - 1);
+            const uint32_t a = top.pixels[sy * 256 + sx], b = wide.pixels[(size_t)wy * wide.w + wx];
+            rows++;
+            if (!(b >> 24)) continue;
+            const int d = std::abs((int)((a >> 16) & 0xFF) - (int)((b >> 16) & 0xFF)) + std::abs((int)((a >> 8) & 0xFF) - (int)((b >> 8) & 0xFF))
+                + std::abs((int)(a & 0xFF) - (int)(b & 0xFF));
+            same += d < 72;
+        }
+    }
+    lastHeld = wide.held;
+    lastOK = same * 2 >= rows;
+    return lastOK;
+}
+
+// A pixel of the wide world with the game's fade (WideImage::fadeMode, fade); black where nothing was drawn.
+inline uint32_t MergedWorldPixel(uint32_t c, const WideImage& wide)
+{
+    if (!(c >> 24)) c = 0;
+    const int f = wide.fade, mode = wide.fadeMode;
+    if (!mode || !f) return 0xFF000000 | c;
+    uint32_t r = (c >> 16) & 0xFF, g = (c >> 8) & 0xFF, b = c & 0xFF;
+    if (mode == 1) { r += (255 - r) * f / 16; g += (255 - g) * f / 16; b += (255 - b) * f / 16; }
+    else { r = r * (16 - f) / 16; g = g * (16 - f) / 16; b = b * (16 - f) / 16; }
+    return 0xFF000000 | (r << 16) | (g << 8) | b;
+}
+
+inline void MergedNarrowBands(const Scene& scene, const ScreenImage& top, uint32_t left[192], uint32_t right[192])
+{
+    // (The band and the picture are one bitmap in these games, so the band's rows are told by their colour: the
+    // 16 pixels nearest each edge mostly one colour (the streaks crossing it aside), on both sides, in runs that
+    // together, with gaps of up to 8 rows between them, make 24 rows or more. Each row goes on in its most common
+    // colour at that edge. Flat scenery at one side only (a pavement in the picture) keeps its bar.)
+    if (!scene.wide || !top.pixels) return;
+    bool flat[192]; uint32_t colour[2][192];
+    for (int y = 0; y < 192; y++)
+    {
+        const uint32_t* row = top.pixels + y * 256;
+        flat[y] = true;
+        for (int side = 0; side < 2; side++)
+        {
+            uint32_t best = 0; int bestN = 0;
+            for (int i = 1; i < 17; i++)
+            {
+                const uint32_t c = row[side ? 255 - i : i] & 0xFFFFFF;
+                int n = 0;
+                for (int k = 1; k < 17; k++) n += (row[side ? 255 - k : k] & 0xFFFFFF) == c;
+                if (n > bestN) { bestN = n; best = c; }
+            }
+            flat[y] = flat[y] && bestN >= 11;
+            colour[side][y] = best;
+        }
+    }
+    for (int y = 0; y < 192;)
+    {
+        if (!flat[y]) { y++; continue; }
+        const int first = y;
+        int last = y;
+        for (int gap = 0; y < 192 && gap <= 8; y++)
+        {
+            if (flat[y]) { last = y; gap = 0; }
+            else gap++;
+        }
+        y = last + 1;
+        if (last - first + 1 < 24) continue;
+        for (int side = 0; side < 2; side++)
+        {
+            uint32_t c = colour[side][first];
+            for (int r = first; r <= last; r++)
+            {
+                if (flat[r]) c = colour[side][r];
+                (side ? right : left)[r] = 0xFF000000u | c;
+            }
+        }
+    }
+}
+
 // Whether a picture in a bitmap background (not a fill, not blended with the world) reaches a
 // third or more of the top screen's left or right edge: the Surf and Fly cut-ins show a
 // snapshot of the world that way, which no continuation beside the screen would match.
@@ -1116,6 +1212,11 @@ inline const uint32_t* MergedFillWideHoles(const WideImage& wide, int screenX0, 
 // calm: the bars beside a 2D picture that covers the world for a moment (a door's zoom, a key
 // item's cut-in, Fly): averaged over 81 rows instead of 17 and darkened by a third, so that the
 // trees and houses at the picture's edges are not drawn out into streaks across the bars.
+// A band of flat colour over the 2D picture (Fly's sky in Black, White, Black 2 and White 2, over a snapshot of the
+// world): its rows go on to the edges of the view in their own colour, as they would beside the live world; the
+// picture's rows keep their bars.
+struct Scene;
+inline void MergedNarrowBands(const Scene& scene, const ScreenImage& top, uint32_t left[192], uint32_t right[192]);
 inline void MergedNarrowBars(const ScreenImage& s, uint32_t left[192], uint32_t right[192], bool calm = false)
 {
     const int reach = calm ? 40 : 8;
@@ -1246,6 +1347,11 @@ inline void MergedCompose(const Scene& scene, const ScreenImage screens[2], int 
     const bool narrowBars = (scene.softBars || (scene.wide && scene.narrow)) && !scene.items.empty() && scene.items[0].screen >= 0 &&
         v.originX > 0;
     if (narrowBars) MergedNarrowBars(screens[scene.items[0].screen], narrowBar[0], narrowBar[1], scene.wide && scene.narrow);
+    // (Beside a still picture of the world, the world as it last was, when it is of the same scene; the band
+    // across the picture still goes on over it.)
+    const bool heldWorld = narrowBars && scene.wide && scene.narrow && wide && MergedHeldWorld(*wide, screens[scene.items[0].screen], outW, outH);
+    if (heldWorld) std::fill(&narrowBar[0][0], &narrowBar[0][0] + 2 * 192, 0u);
+    if (narrowBars && scene.wide && scene.narrow) MergedNarrowBands(scene, screens[scene.items[0].screen], narrowBar[0], narrowBar[1]);
 
     auto rows = [&](int ya, int yb) {
         // Background: one colour, or the widescreen 3D picture with the game's fade applied.
@@ -1257,8 +1363,23 @@ inline void MergedCompose(const Scene& scene, const ScreenImage screens[2], int 
                 {
                     const int sy = std::clamp((int)((y - v.originY) / v.unit), 0, 191);
                     uint32_t* dst = &out[(size_t)y * outW];
-                    std::fill(dst, dst + std::min((int)v.originX, outW), narrowBar[0][sy]);
-                    std::fill(dst + std::max((int)(v.originX + 256 * v.unit), 0), dst + outW, narrowBar[1][sy]);
+                    const int left = std::min((int)v.originX, outW), right = std::max((int)(v.originX + 256 * v.unit), 0);
+                    if (heldWorld)
+                    {
+                        const uint32_t* wrow = wide->pixels + (size_t)std::clamp((int)((int64_t)y * wide->h / outH), 0, wide->h - 1) * wide->w;
+                        for (int side = 0; side < 2; side++)
+                            for (int x = side ? right : 0; x < (side ? outW : left); x++)
+                            {
+                                const uint32_t band = narrowBar[side][sy];
+                                dst[x] = (band >> 24) ? band
+                                    : MergedWorldPixel(wrow[std::clamp((int)MergedWideX((float)x, wide->w, outW, outH), 0, wide->w - 1)], *wide);
+                            }
+                    }
+                    else
+                    {
+                        std::fill(dst, dst + left, narrowBar[0][sy]);
+                        std::fill(dst + right, dst + outW, narrowBar[1][sy]);
+                    }
                 }
             const ScreenImage& top = screens[scene.items.empty() || scene.items[0].screen < 0 ? 0 : scene.items[0].screen];
             const int left = (int)v.originX, right = (int)(v.originX + 256 * v.unit);

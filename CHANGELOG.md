@@ -10,6 +10,7 @@
 - **DexNav on the Location page** (DS games): how many of the wild Pokémon here you have caught ("3 of 17 caught here"), and Caught or Seen beside each one, from your save's Pokédex. FullDex Nav's Map app opens it.
 - **Level caps on the Nuzlocke page** (Black, HeartGold, SoulSilver, Platinum): the cap is the highest level in the next gym leader's or Elite Four's team, from your badges, and the page lists the Pokémon in your party over it. WARN OVER THE CAP (off to start) puts a note on screen when one levels past it. The game itself is not changed.
 - **HeartGold and SoulSilver: Fly's sky goes on to the right edge in widescreen** again. The text-box rule (the world beside a box inset from the edge) also caught the sky band, scrolled a pixel in on the right, and the speed streaks crossing the edge left gaps in it.
+- **Black, White, Black 2 and White 2: Fly fills the widescreen.** While the game shows its still picture of the map, the sides show the world as it was a moment before, in place of the blurred bars, and the sky band and the white flash go on to both edges. If the picture is of another place, the bars stay.
 
 ## FullDex 1.7 (not released yet)
 

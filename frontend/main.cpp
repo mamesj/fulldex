@@ -11637,7 +11637,7 @@ int main(int argc, char** argv)
         // Filled in after the frame has run: the renderer hands over its picture then.
         WideImage wideImage;
         bool battleRenderLater = false; // see BattleGrab
-        auto takeWideImage = [&]() {
+        auto takeWideImageNow = [&]() {
             wideImage = WideImage();
             battleRenderLater = false;
             // A battle on a wide view: the screen widened (battlewide.h) instead of the bars.
@@ -11718,6 +11718,46 @@ int main(int argc, char** argv)
                     fprintf(stderr, "[wide] frame %u: picture %d, scene %s wide %d, renderer on %d, fade %d/%d\n", frame,
                         now & 1, scene.name, (now >> 1) & 1, (now >> 2) & 1, wideImage.fadeMode, wideImage.fade);
                 last = now;
+            }
+        };
+        // (Black and White's Fly and the like: a still picture of the world covers the top screen while the 3D
+        // world stops. Beside it, the world as it last was in the wide view, rather than bars, when the picture is
+        // of it: see MergedHeldWorld.)
+        auto takeWideImage = [&]() {
+            takeWideImageNow();
+            static std::vector<uint32_t> heldWorldPx;
+            static WideImage heldWorld;
+            static int heldCount = 0;
+            static uint32_t heldFrame = 0, narrowFrame = 0;
+            auto drawnAtEdges = [&]() {
+                int n = 0;
+                for (int y = 0; y < wideImage.h; y += 8)
+                {
+                    const uint32_t* row = wideImage.pixels + (size_t)y * wideImage.w;
+                    n += (row[0] >> 24) && (row[wideImage.w - 1] >> 24);
+                }
+                return n * 8 * 2 > wideImage.h;
+            };
+            if (scene.wide && !scene.narrow && wideImage.pixels && !wideImage.placed && wideImage.w > 0 && wideImage.h > 0)
+            {
+                if (heldFrame != frame && drawnAtEdges())
+                {
+                    heldWorldPx.assign(wideImage.pixels, wideImage.pixels + (size_t)wideImage.w * wideImage.h);
+                    heldWorld = wideImage;
+                    heldWorld.pixels = heldWorldPx.data();
+                    heldFrame = frame;
+                }
+            }
+            else if (!scene.wide) heldWorld = WideImage();
+            if (scene.wide && scene.narrow && heldWorld.pixels)
+            {
+                if (frame - narrowFrame > 1) heldCount++;
+                narrowFrame = frame;
+                const int mode = wideImage.fadeMode, f = wideImage.fade;
+                wideImage = heldWorld;
+                wideImage.fadeMode = mode;
+                wideImage.fade = f;
+                wideImage.held = heldCount;
             }
         };
         if (!paused)
