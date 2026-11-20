@@ -87,7 +87,7 @@ inline std::vector<std::vector<uint16_t>> Gen4EggMoves(const Bytes& data,size_t 
     {
         unsigned v=U16(data.data()+at);
         if(v==0xFFFF)break;
-        if(v>20000&&v<21000){current=(int)v-20000;if((int)out.size()<=current)out.resize(current+1);continue;}
+        if(v>20000&&v<22000){current=(int)v-20000;if((int)out.size()<=current)out.resize(current+1);continue;}
         if(current<0||v>1000)break;
         out[current].push_back((uint16_t)v);
     }
@@ -146,14 +146,15 @@ inline Bytes UnpackLz(const Bytes& d)
     }
     return out;
 }
-// An NCLR's first 16 colours (ARGB, colour 0 left clear by the caller).
+// An NCLR's first 16 colours (ARGB, colour 0 left clear by the caller). (A hack's tools may write
+// fewer, as some of Heartfelt Gold's pictures have 13: those, the rest black.)
 inline std::vector<uint32_t> FirstPalette(const Bytes& nclr)
 {
-    auto b=NitroBlock(nclr,"TTLP");if(b.size()<0x18+32)return {};
+    auto b=NitroBlock(nclr,"TTLP");if(b.size()<0x18+2)return {};
     std::vector<uint32_t> out;
     for(int c=0;c<16;c++)
     {
-        unsigned v=U16(b.data()+0x18+c*2);
+        unsigned v=(size_t)0x18+c*2+2<=b.size()?U16(b.data()+0x18+c*2):0;
         out.push_back(0xFF000000u|((v&31)*255/31<<16)|(((v>>5)&31)*255/31<<8)|((v>>10)&31)*255/31);
     }
     return out;

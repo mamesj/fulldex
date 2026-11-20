@@ -6,12 +6,17 @@
 #include "companion_data.h"
 #include "companion_art.h"
 #include "companion_dex.h"
+#include "companion_guides.h"
+#include <deque>
 #include <map>
 #include <sstream>
 #include <cctype>
 #include <set>
+#include <cstring>
 namespace Companion
 {
+// (A file of up to 96 MB: an HG-Engine hack's battle pictures, one set for each of its 1,500 species
+// and forms, are about 40 MB.)
 inline Bytes RomFile(const Bytes& rom,std::string path)
 {
     if(rom.size()<0x200)return {};
@@ -31,13 +36,14 @@ inline Bytes RomFile(const Bytes& rom,std::string path)
             size_t n=tag&127;if(!Range(fntSize,pos,n))return {};
             std::string name((const char*)rom.data()+fnt+pos,n);pos+=n;
             if(tag&128){if(!Range(fntSize,pos,2))return {};uint16_t sub=U16(rom.data()+fnt+pos);pos+=2;if(slash!=std::string::npos && name==path.substr(0,slash)){dir=sub;path=path.substr(slash+1);descended=true;break;}}
-            else {if(slash==std::string::npos && name==path){if(!Range(fatSize,(size_t)id*8,8))return {};uint32_t begin=U32(rom.data()+fat+id*8),end=U32(rom.data()+fat+id*8+4);if(end<begin||end-begin>32*1024*1024||!Range(rom.size(),begin,end-begin))return {};return Bytes(rom.begin()+begin,rom.begin()+end);}id++;}
+            else {if(slash==std::string::npos && name==path){if(!Range(fatSize,(size_t)id*8,8))return {};uint32_t begin=U32(rom.data()+fat+id*8),end=U32(rom.data()+fat+id*8+4);if(end<begin||end-begin>96*1024*1024||!Range(rom.size(),begin,end-begin))return {};return Bytes(rom.begin()+begin,rom.begin()+end);}id++;}
         }
         if(!descended)return {};
     }
     return {};
 }
-inline std::vector<Bytes> Narc(const Bytes& data)
+// (keep: which members to copy; the others are left empty, as a big archive's unused ones.)
+inline std::vector<Bytes> Narc(const Bytes& data,bool (*keep)(size_t)=nullptr)
 {
     std::vector<Bytes> result;
     if(data.size()<16||memcmp(data.data(),"NARC",4))return result;
@@ -50,7 +56,7 @@ inline std::vector<Bytes> Narc(const Bytes& data)
         pos+=len;
     }
     if(!fat||!img)return {};
-    for(uint32_t i=0;i<count;i++){uint32_t a=U32(data.data()+fat+i*8),b=U32(data.data()+fat+i*8+4);if(b<a||!Range(imgSize,a,b-a))return {};result.emplace_back(data.begin()+img+a,data.begin()+img+b);}
+    for(uint32_t i=0;i<count;i++){uint32_t a=U32(data.data()+fat+i*8),b=U32(data.data()+fat+i*8+4);if(b<a||!Range(imgSize,a,b-a))return {};if(keep&&!keep(i)){result.emplace_back();continue;}result.emplace_back(data.begin()+img+a,data.begin()+img+b);}
     return result;
 }
 inline std::vector<std::string> Text(const Bytes& file,bool gen5)
@@ -76,6 +82,9 @@ inline std::vector<std::string> Text(const Bytes& file,bool gen5)
             if((gen5&&c==0xF000)||(!gen5&&c==0xFFFE)){if(!Range(codes.size(),j,3))break;j+=2+codes[j+2];continue;}
             if(gen5&&c==0xFFFE){line+=' ';continue;}
             if(gen5&&c==0xF100){uint32_t bits=0;int have=0;bool end=false;for(size_t k=j+1;k<codes.size()&&!end;k++){bits|=(uint32_t)codes[k]<<have;have+=16;while(have>=9){int ch=bits&511;bits>>=9;have-=9;if(ch==511){end=true;break;}line+=AsciiChar(ch,true);}}break;}
+            // (Gen 4's compressed strings, as its trainers' names: 9-bit characters in the low 15 bits
+            // of each unit, hg-engine's msgenc DecodeTrainerNameMessage.)
+            if(!gen5&&c==0xF100){uint32_t bits=0;int have=0;bool end=false;for(size_t k=j+1;k<codes.size()&&!end;k++){bits|=(uint32_t)(codes[k]&0x7FFF)<<have;have+=15;while(have>=9){int ch=bits&511;bits>>=9;have-=9;if(ch==511){end=true;break;}line+=AsciiChar(ch,false);}}break;}
             line+=AsciiChar(c,gen5);
         }
         while(!line.empty()&&line.back()==' ')line.pop_back();
@@ -142,9 +151,22 @@ inline Bytes RomArm9(const Bytes& rom)
     if(unpacked.empty()||unpacked.size()+arm.size()-length>0x400000)return {};
     unpacked.insert(unpacked.end(),arm.begin()+length,arm.end());return unpacked;
 }
+}
+#include "companion_hge.h"
+#include "companion_itemspots.h"
+namespace Companion
+{
 struct Metadata
 {
     std::vector<std::string> species,moves,items,descriptions,abilities,itemDescriptions;
+    // (HG-Engine hacks, as Heartfelt: their species, forms, moves and tables; companion_hge.h.)
+    HgEngine engine;
+    bool unreadable=false; // (the ROM's text not where the game keeps it: see Load)
+    // (HeartGold and SoulSilver: each item's pocket (7: key items), and where each is found.)
+    std::vector<int> itemPockets;
+    std::vector<std::vector<ItemSpot>> itemSpots;
+    const std::vector<ItemSpot>& ItemSpots(int item)const{static const std::vector<ItemSpot> none;return item>0&&item<(int)itemSpots.size()?itemSpots[item]:none;}
+    static const char* SpotHow(int how){return how==1?"ITEM BALL":how==2?"HIDDEN":"GIVEN";}
     std::vector<Bytes> personal,evolutions,learnsets,moveRecords;
     // (The Pokedex page: companion_dex.h.)
     std::vector<uint16_t> machineMoves;
@@ -155,8 +177,16 @@ struct Metadata
     std::vector<uint16_t> Tutors(int species)const
     {
         std::vector<uint16_t> out;
+        if(engine.on&&!engine.tutorBits.empty())
+        {
+            const uint8_t* row=HgEngine::Row(engine.tutorBits,engine.tutorStride,species);
+            if(row)for(size_t i=0;i<engine.tutors.size();i++)if(row[i/8]>>(i%8)&1)out.push_back(engine.tutors[i]);
+            if(out.empty()&&engine.UsedForm(species))return Tutors(engine.Base(species));
+            return out;
+        }
         if(species<=0||species>=(int)tutorBits.size())return out;
         for(size_t i=0;i<tutorMoves.size()&&i<64;i++)if(tutorBits[species]>>i&1)out.push_back(tutorMoves[i]);
+        if(out.empty()&&engine.UsedForm(species))return Tutors(engine.Base(species));
         return out;
     }
     DexStats Stats(int species)const{return species>0&&species<(int)personal.size()?PersonalStats(personal[species],gen5):DexStats{};}
@@ -164,6 +194,7 @@ struct Metadata
     bool Size(int species,int& height,int& weight)const
     {
         if(gen5){if(species<=0||species>=(int)personal.size()||personal[species].size()<0x28)return false;height=U16(personal[species].data()+0x24);weight=U16(personal[species].data()+0x26);return true;}
+        if(engine.on&&species>493)return engine.Size(species,height,weight);
         if(dexSizes.size()<2||!Range(dexSizes[0].size(),(size_t)species*4,4)||!Range(dexSizes[1].size(),(size_t)species*4,4))return false;
         height=(int)U32(dexSizes[0].data()+species*4);weight=(int)U32(dexSizes[1].data()+species*4);return true;
     }
@@ -172,8 +203,33 @@ struct Metadata
     {
         std::vector<int> out;
         if(species<=0||species>=(int)personal.size())return out;
+        if(engine.on&&!engine.machines.empty())
+        {
+            // (HG-Engine: its own table of bits; the TMs in order, then the HMs.)
+            // (The TRs and Omega Ruby's HM07 only when the game gives them somewhere: Heartfelt Gold
+            // has their items but hands out none of them.)
+            const uint8_t* row=HgEngine::Row(engine.machineBits,engine.machineStride,species);
+            if(!row)return out;
+            auto shown=[&](int i){return !engine.machineLabels[i].empty()&&((i!=100&&i<240)||!ItemSpots(engine.machineItems[i]).empty());};
+            // (The TMs by their numbers, then the HMs, then any TRs.)
+            std::vector<int> order;
+            for(int i=0;i<(int)engine.machines.size();i++)if(i<92||(i>=101&&i<240))order.push_back(i);
+            std::stable_sort(order.begin(),order.end(),[&](int a,int b){return atoi(engine.machineLabels[a].c_str()+2)<atoi(engine.machineLabels[b].c_str()+2);});
+            for(int i=92;i<=100&&i<(int)engine.machines.size();i++)order.push_back(i);
+            for(int i=240;i<(int)engine.machines.size();i++)order.push_back(i);
+            for(int i:order)if(row[i/8]>>(i%8)&1&&shown(i))out.push_back(i);
+            if(out.empty()&&engine.UsedForm(species))return Machines(engine.Base(species));
+            return out;
+        }
         for(int i=0;i<(int)machineMoves.size();i++)if(CanLearnMachine(personal[species],gen5,i))out.push_back(i);
+        if(out.empty()&&engine.UsedForm(species))return Machines(engine.Base(species));
         return out;
+    }
+    // "TM06" / "HM01" for the machine at [index]; an HG-Engine hack's its item's own name ("TM006").
+    std::string MachineName(int index)const
+    {
+        if(engine.on&&!engine.machines.empty())return index>=0&&index<(int)engine.machineLabels.size()?engine.machineLabels[index]:std::string();
+        return MachineLabel(gen5,index);
     }
     const std::vector<uint16_t>& EggMoves(int species)const{static const std::vector<uint16_t> none;return species>0&&species<(int)eggMoves.size()?eggMoves[species]:none;}
     MapImage Picture(int species,bool shiny,bool female=false)const{return BattlePicture(battlePics,gen5,species,shiny,female);}
@@ -211,6 +267,15 @@ struct Metadata
             return pal<(int)iconPalettes.size()&&CompanionIcons::Icon(monIcons[member],iconPalettes[pal],out);
         }
         if(iconPalettes.empty())return false;
+        if(engine.on)
+        {
+            // (HG-Engine: an icon for each species and form after the archive's first 7, each
+            // one's palette from its own table.)
+            const int id=egg?CompanionIcons::Gen4Egg:species;
+            if(id<1||id>=(int)engine.iconPalette.size()||7+id>=(int)monIcons.size())return false;
+            const int pal=engine.iconPalette[id];
+            return pal<(int)iconPalettes.size()&&CompanionIcons::Icon(monIcons[7+id],iconPalettes[pal],out);
+        }
         const int id=egg?CompanionIcons::Gen4Egg:species;
         if(id<1||id>CompanionIcons::Gen4Egg||7+id>=(int)monIcons.size())return false;
         const int pal=CompanionIcons::Gen4Palette[id];
@@ -221,6 +286,7 @@ struct Metadata
     // item's {data, icon, palette, Gen 3 id}, found by its shape (item i's data file is i).)
     std::vector<Bytes> itemIcons;
     std::vector<std::array<int,2>> itemIconIds;
+    std::vector<int> itemDataIds; // (each item's data file, from the same table: HeartGold's not item i's file i past the TMs)
     bool ItemIcon(int item,std::vector<uint32_t>& out)const
     {
         if(item<=0||item>=(int)itemIconIds.size())return false;
@@ -265,14 +331,14 @@ struct Metadata
             for(size_t e=o;e+8<=arm.size()&&itemIconIds.size()<std::max<size_t>(items.size(),1);e+=8)
             {
                 if(u16(e+2)>=n||u16(e+4)>=n)break;
-                itemIconIds.push_back({u16(e+2),u16(e+4)});
+                itemIconIds.push_back({u16(e+2),u16(e+4)});itemDataIds.push_back(u16(e));
             }
             return;
         }
     }
     std::vector<std::string> places;
     std::vector<int> mapPlaces;
-    struct MapRecord {int place=-1,matrix=-1,worldX=-1,worldY=-1,encounter=-1;};
+    struct MapRecord {int place=-1,matrix=-1,worldX=-1,worldY=-1,encounter=-1,scripts=-1,events=-1;};
     std::vector<MapRecord> mapRecords;
     std::vector<Bytes> wildRecords;
     std::vector<std::pair<int,int>> placePoints;
@@ -281,7 +347,74 @@ struct Metadata
     std::vector<Bytes> trainerData,trainerTeams;
     static std::string Name(const std::vector<std::string>& names,int id,const char* fallback)
     {return id>=0 && id<(int)names.size()&&!names[id].empty()?names[id]:std::string(fallback)+" #"+std::to_string(id);}
-    std::string Species(int id)const{return Name(species,id,"SPECIES");}
+    std::string Species(int id)const{return engine.IsForm(id)?FormName(id):Name(species,id,"SPECIES");}
+    // (Base stat total: the Megas' are their species' + 100.)
+    int StatTotal(int id)const{int t=0;if(id>=0&&id<(int)personal.size()&&personal[id].size()>=6)for(int i=0;i<6;i++)t+=personal[id][i];return t;}
+    // An HG-Engine form's name. The engine names none, so its species' with what kind of form it
+    // is: a Mega Evolution (its stats 100 more than its species', as every Mega's; X and Y by their
+    // Mega Stones' names when there are two), a Primal Reversion (Kyogre's and Groudon's), or which
+    // of its species' forms it is.
+    std::string FormName(int id)const
+    {
+        const int base=engine.Base(id);
+        if(base==id)return Name(species,id,"SPECIES"); // (an unused one: no species)
+        const auto forms=engine.Forms(base);
+        const int n=FormIndex(id,base);
+        std::string label=BareFormName(id,base);
+        // (Two of a species' forms with one name, as Mega Meowstic's male and female: their numbers too.)
+        for(int f:forms)if(f!=id&&BareFormName(f,base)==label)return label+" (Form "+std::to_string(n)+")";
+        return label;
+    }
+    std::string BareFormName(int id,int base)const
+    {
+        const std::string name=Name(species,base,"SPECIES");
+        const auto forms=engine.Forms(base);
+        // (Kyogre's and Groudon's 100 stronger forms are their Primal Reversions.)
+        const bool plus100=StatTotal(id)==StatTotal(base)+100;
+        if(plus100&&(base==382||base==383))return "Primal "+name;
+        // (Its Mega Stone: an item named for the species, its first four letters then "...ITE",
+        // with an X, Y or Z after when it has more than one: Charizardite X, Mewtwonite Y.)
+        auto upper=[](std::string t){for(char& ch:t)ch=(char)std::toupper((unsigned char)ch);return t;};
+        const std::string stem=upper(name).substr(0,4);
+        std::vector<std::string> stones;
+        if(plus100)for(const auto& item:items)
+        {
+            const std::string u=upper(item);
+            if(u.size()<=stem.size()+3||u.rfind(stem,0)!=0)continue;
+            const size_t ite=u.rfind("ITE");
+            if(ite==std::string::npos||ite<stem.size())continue;
+            const std::string after=u.substr(ite+3);
+            if(after.empty()||after==" X"||after==" Y"||after==" Z")stones.push_back(after);
+        }
+        // (A Mega: 100 stronger, and reverting after battle or with a stone of its own. The engine
+        // marks the Megas as reverting since 2025; its earlier builds marked only the forms battles
+        // change, as Castform's, so a stone named for the species tells them.)
+        auto mega=[&](int f){return StatTotal(f)==StatTotal(base)+100&&(engine.formReverts.empty()||engine.Reverts(f)||!stones.empty());};
+        if(plus100&&mega(id))
+        {
+            std::vector<int> megas;for(int f:forms)if(mega(f))megas.push_back(f);
+            std::string suffix;
+            if(megas.size()>1&&stones.size()==megas.size())
+                for(size_t i=0;i<megas.size();i++)if(megas[i]==id)suffix=stones[i];
+            return "Mega "+name+suffix;
+        }
+        return name+" (Form "+std::to_string(FormIndex(id,base))+")";
+    }
+    // (Its form number: the game's own, from its species' list of forms when the ROM has one, else
+    // its place among them.)
+    int FormIndex(int id,int base)const
+    {
+        if(engine.FormNumber(id))return engine.FormNumber(id);
+        const auto forms=engine.Forms(base);
+        for(size_t i=0;i<forms.size();i++)if(forms[i]==id)return (int)i+1;
+        return 0;
+    }
+    // The Pokedex's own numbering: HG-Engine's later Pokemon by their national numbers, not their
+    // places in the ROM (Victini 494, kept at 544); its forms none.
+    int DexCount(int maxSpecies)const{return engine.on?engine.nationalCount:maxSpecies;}
+    int DexSpecies(int number)const{return engine.on?engine.Internal(number):number;}
+    int DexNumber(int id)const{return engine.on?engine.National(id):id;}
+    bool InDex(int id,int maxSpecies)const{return engine.on?engine.National(id)>0:id>=1&&id<=maxSpecies;}
     std::string Move(int id)const{return id?Name(moves,id,"MOVE"):"NONE";}
     std::string ItemName(int id)const{return id?Name(items,id,"ITEM"):"NONE";}
     std::string PlaceName(int map)const
@@ -298,7 +431,7 @@ struct Metadata
         const auto& b=wildRecords[set];
         auto add=[&](int species,int low,int high,const std::string& method)
         {
-            if(species<1||species>(gen5?649:493)||low<0||high<low||high>100)return;
+            if(species<1||species>(engine.on?engine.count-1:gen5?649:493)||low<0||high<low||high>100)return;
             if((low==0)!=(high==0))return;
             for(auto& entry:out)if(entry.species==species&&entry.method==method)
             {
@@ -368,7 +501,7 @@ struct Metadata
         static const std::vector<Habitat> none;
         if(!habitatsBuilt)
         {
-            habitatsBuilt=true;habitats.assign(gen5?650:494,{});
+            habitatsBuilt=true;habitats.assign(engine.on?engine.count:gen5?650:494,{});
             std::set<int> sets;
             for(int map=0;map<(int)mapRecords.size();map++)
             {
@@ -386,6 +519,14 @@ struct Metadata
                     }
                     if(!merged)habitats[e.species].push_back({place,e.method,e.low,e.high});
                 }
+            }
+            // (An HG-Engine hack's forms in the wild, as regional ones, on their species' page too.)
+            if(engine.on)for(int f=engine.formStart;f<(int)habitats.size();f++)
+            {
+                const int base=engine.Base(f);
+                if(base==f||habitats[f].empty())continue;
+                const std::string tag=" (FORM "+std::to_string(FormIndex(f,base))+")";
+                for(auto h:habitats[f]){h.method+=tag;habitats[base].push_back(h);}
             }
         }
         return id>0&&id<(int)habitats.size()?habitats[id]:none;
@@ -436,7 +577,18 @@ struct Metadata
     struct Learned {int move=0,level=0;};
     std::vector<Learned> LearnedMoves(int id)const
     {
-        std::vector<Learned> out;if(id<0||id>=(int)learnsets.size())return out;auto& b=learnsets[id];
+        std::vector<Learned> out;
+        if(engine.on)
+        {
+            // (HG-Engine: a row for each species, {move, level} each until 0xFFFF. A form with
+            // none of its own, as the Gigantamax ones, learns as its species.)
+            const uint8_t* row=HgEngine::Row(engine.learnsets,engine.learnStride,id);
+            // (A level past 100, as Koraidon's 981 in some builds' data, is never reached: left out.)
+            for(size_t at=0;row&&at+4<=engine.learnStride;at+=4){int move=U16(row+at);if(move==65535)break;if(move&&U16(row+at+2)<=100)out.push_back({move,(int)U16(row+at+2)});}
+            if(out.empty()&&engine.UsedForm(id))return LearnedMoves(engine.Base(id));
+            return out;
+        }
+        if(id<0||id>=(int)learnsets.size())return out;auto& b=learnsets[id];
         for(size_t at=0;Range(b.size(),at,gen5?4:2);at+=gen5?4:2){int value=U16(b.data()+at);if(value==65535)break;out.push_back({gen5?value:value&511,gen5?(int)U16(b.data()+at+2):value>>9});}
         return out;
     }
@@ -459,6 +611,29 @@ struct Metadata
     std::string Evolution(int method,int value)const
     {
         if(gen5 && method==7)return "TRADE WITH THE REQUIRED PARTNER";
+        if(engine.on&&method>26)
+        {
+            // (HG-Engine's own methods, its armips/include/constants.s.)
+            const std::string lv="LEVEL "+std::to_string(value);
+            switch(method)
+            {
+            case 27:return lv+", DAYTIME";
+            case 28:return lv+", NIGHTTIME";
+            case 29:return lv+", AT DUSK";
+            case 30:return lv+", WHILE IT RAINS";
+            case 31:return std::string("LEVEL UP KNOWING A ")+CompanionTypes::Name(value)+"-TYPE MOVE";
+            case 32:return lv+", A DARK-TYPE POKEMON IN THE PARTY";
+            case 33:return "TRADE FOR "+Species(value);
+            case 34:return lv+", AN AMPED NATURE";
+            case 35:return lv+", A LOW KEY NATURE";
+            case 36:return "LAND "+std::to_string(value)+" CRITICAL HITS IN ONE BATTLE";
+            case 37:return "LOSE "+std::to_string(value)+" HP IN BATTLE, THEN GO UNDER THE STONE ARCH";
+            case 47:return lv+", A PARTICULAR FORM";
+            case 48:return "WALK "+std::to_string(value?value:1000)+" STEPS WITH IT OUT";
+            default:if(method>=38&&method<=46)return "SPIN AROUND WHILE IT HOLDS A SWEET";
+                return "SPECIAL EVOLUTION CONDITION";
+            }
+        }
         if(gen5 && method>7)--method;
         const std::string level="LEVEL "+std::to_string(value);
         switch(method)
@@ -496,15 +671,74 @@ struct Metadata
         if(id<=0||id>=(int)moveRecords.size())return {};
         const auto& b=moveRecords[id];if(b.size()<(gen5?6u:7u))return {};
         MoveInfo out;out.type=b[gen5?0:4];if(gen5&&out.type>=9)out.type++;
-        out.category=b[2];if(out.category>2||out.type>17||out.type==9)return {};
+        out.category=b[2];if(out.category>2||out.type>17||(out.type==9&&!CompanionTypes::fairy))return {};
         out.power=b[3];out.accuracy=b[gen5?4:5];out.pp=b[gen5?5:6];out.ready=true;return out;
     }
-    struct TrainerMon {int species=0,level=0,item=0,form=0;std::array<int,4> moves{};bool customMoves=false;};
+    struct TrainerMon {int species=0,level=0,item=0,form=0,ability=0,nature=-1;std::array<int,4> moves{};bool customMoves=false;};
+    // HG-Engine's trainers (its tools/source/trainerdatagen): the header's first byte flags what
+    // each Pokemon has after its IVs, ability slot, level and species (the form in the top 5 bits):
+    // 0x02 an item, 0x01 moves, 0x04 an ability, 0x08 a ball, 0x10 IVs and EVs, 0x20 a nature,
+    // 0x40 a shiny lock, 0x80 more (a word of flags, then what they say); then a ball seal.
+    // (Which extra fields its trainers' Pokemon have: 0 the engine's own since 2026 (the PP counts
+    // 0x80, a nickname 0x100); 1 its earlier builds' (their types 0x80, then the PP counts 0x100 and
+    // the nickname 0x200: armips/include/macros.s, src/field/enemy_party.c, 2024-2025).)
+    int trainerLayout=0;
+    std::vector<TrainerMon> EngineTeam(const Bytes& header,const Bytes& team,int layout=-1)const
+    {
+        std::vector<TrainerMon> out;
+        if(header.size()<4)return out;
+        if(layout<0)layout=trainerLayout;
+        const int flags=header[0],count=header[3]&0x7F;
+        if(count<1||count>6)return out;
+        size_t at=0;bool oddLevel=false;
+        for(int slot=0;slot<count;slot++)
+        {
+            if(!Range(team.size(),at,6))return {};
+            TrainerMon mon;
+            mon.level=U16(team.data()+at+2);const int sp=U16(team.data()+at+4);at+=6;
+            mon.species=sp&0x7FF;mon.form=sp>>11;
+            if(mon.species<1||mon.species>=engine.count)return {};
+            // (A level no Pokemon has (Mirror Gold's own level scaling sets a few): kept as not known,
+            // 0, when every byte of the team is then read exactly.)
+            if(mon.level<1||mon.level>100){mon.level=0;oddLevel=true;}
+            mon.species=engine.FormSpecies(mon.species,mon.form); // (a form: its own record, its own moves)
+            auto take=[&](size_t n){const size_t here=at;at+=n;return Range(team.size(),here,n)?team.data()+here:nullptr;};
+            if(flags&0x02){auto b=take(2);if(!b)return {};mon.item=U16(b);}
+            mon.customMoves=flags&0x01;
+            if(flags&0x01){auto b=take(8);if(!b)return {};for(int n=0;n<4;n++)mon.moves[n]=U16(b+n*2);}
+            if(flags&0x04){auto b=take(2);if(!b)return {};mon.ability=U16(b);}
+            if(flags&0x08)take(2);
+            if(flags&0x10)take(12);
+            if(flags&0x20){auto b=take(1);if(!b)return {};mon.nature=*b;}
+            if(flags&0x40)take(1);
+            if(flags&0x80)
+            {
+                auto b=take(4);if(!b)return {};
+                const uint32_t more=U32(b);
+                static const std::vector<std::pair<uint32_t,size_t>> extra[2]={
+                    {{0x01,4},{0x02,2},{0x04,2},{0x08,2},{0x10,2},{0x20,2},{0x40,2},{0x80,4},{0x100,22}},
+                    {{0x01,4},{0x02,2},{0x04,2},{0x08,2},{0x10,2},{0x20,2},{0x40,2},{0x80,2},{0x100,4},{0x200,22}}};
+                for(const auto& e:extra[layout?1:0])if(more&e.first)take(e.second);
+            }
+            take(2); // (the ball seal)
+            if(!mon.customMoves)
+            {
+                std::vector<int> learned;
+                for(const auto& entry:LearnedMoves(mon.species))if(entry.level<=mon.level&&entry.move>0&&std::find(learned.begin(),learned.end(),entry.move)==learned.end())
+                {if(learned.size()==4)learned.erase(learned.begin());learned.push_back(entry.move);}
+                for(size_t n=0;n<learned.size();n++)mon.moves[n]=learned[n];
+            }
+            out.push_back(mon);
+        }
+        if(oddLevel&&at!=team.size())return {};
+        return Range(team.size(),0,at)?out:std::vector<TrainerMon>{};
+    }
     std::vector<TrainerMon> TrainerTeam(int id)const
     {
         std::vector<TrainerMon> out;
         if(id<=0||id>=(int)trainerData.size()||id>=(int)trainerTeams.size())return out;
         const auto& header=trainerData[id];const auto& team=trainerTeams[id];
+        if(engine.on)return EngineTeam(header,team);
         if(header.size()<4||header[0]>3||header[3]<1||header[3]>6)return out;
         bool moves=header[0]&1,items=header[0]&2;
         size_t stride=8+(moves?8:0)+(items?2:0);
@@ -531,6 +765,39 @@ struct Metadata
         }
         return out;
     }
+    // The trainers that matter most: gym leaders, the Elite Four and Champion, the rival, Team
+    // Rocket's leaders and other named PKMN Trainers (by their class's name, from the ROM).
+    std::vector<int> keyTrainers;
+    std::string TrainerLevels(int id)const
+    {
+        int low=0,high=0;
+        for(const auto& mon:TrainerTeam(id))if(mon.level>0){low=low?std::min(low,mon.level):mon.level;high=std::max(high,mon.level);}
+        if(!low)return "";
+        return "LV "+std::to_string(low)+(high!=low?"-"+std::to_string(high):"");
+    }
+    // (A key trainer's team by its own name, as GUIDE's GYMS and NEXT BOSS name them ("FALKNER",
+    // "LT_SURGE"): the first trainer of that name after its class with a team, a hack's own.)
+    std::vector<TrainerMon> KeyTeam(const std::string& who)const
+    {
+        auto words=[](const std::string& t)
+        {
+            std::vector<std::string> out;std::string w;
+            for(char ch:t+" ")
+            {
+                if(ch==' '||ch=='_'){if(!w.empty())out.push_back(w);w.clear();}
+                else if(std::isalnum((unsigned char)ch))w+=(char)std::toupper((unsigned char)ch);
+            }
+            return out;
+        };
+        const auto want=words(who);
+        if(want.empty())return {};
+        for(int id:keyTrainers)
+        {
+            const auto have=words(Name(trainerNames,id,"TRAINER"));
+            if(have.size()>want.size()&&std::equal(want.begin(),want.end(),have.end()-(std::ptrdiff_t)want.size()))return TrainerTeam(id);
+        }
+        return {};
+    }
     static bool ReferenceMatches(std::string name,const std::string& query)
     {
         for(char& c:name)c=(char)std::toupper((unsigned char)c);
@@ -547,6 +814,12 @@ struct Metadata
         const auto& names=kind==0?species:kind==1?items:kind==2?moves:kind==3?places:trainerNames;
         std::vector<std::pair<int,std::string>> out;
         if(kind<0||kind>4)return out;
+        if(kind==0&&engine.on)
+        {
+            for(int n=1;n<=engine.nationalCount;n++){const int id=engine.Internal(n);const std::string name=Species(id);if(ReferenceMatches(name,query))out.push_back({id,name});}
+            for(int id=engine.formStart;id<engine.count;id++){if(!engine.UsedForm(id))continue;const std::string name=Species(id);if(ReferenceMatches(name,query))out.push_back({id,name});}
+            return out;
+        }
         for(size_t id=kind==3?0:1;id<names.size();id++)
             if(!names[id].empty()&&ReferenceMatches(names[id],query))out.push_back({(int)id,names[id]});
         return out;
@@ -555,6 +828,20 @@ struct Metadata
     {
         std::vector<std::string> out;
         if(id<=0||id>=(int)personal.size())return out;
+        if(engine.on)
+        {
+            // (HG-Engine: two-byte abilities at 0x16 and 0x1A (HeartGold's bytes at 0x16 and 0x17 in
+            // its earlier builds); the hidden one in its own table.)
+            const auto& p=personal[id];if(p.size()<0x1C)return out;
+            const int hidden=id<(int)engine.hidden.size()?engine.hidden[id]:0;
+            const int first=engine.wideAbilities?U16(p.data()+0x16):p[0x16],second=engine.wideAbilities?U16(p.data()+0x1A):p[0x17];
+            for(int a:{first,second,hidden})if(a>0&&a<(int)abilities.size())
+            {
+                std::string line=(a==hidden&&a!=first&&a!=second?"HIDDEN ABILITY: ":"ABILITY: ")+Name(abilities,a,"ABILITY");
+                if(std::find(out.begin(),out.end(),line)==out.end())out.push_back(line);
+            }
+            return out;
+        }
         const auto& p=personal[id];size_t at=gen5?24:22,count=gen5?3:2;
         if(!Range(p.size(),at,count))return out;
         for(size_t i=0;i<count;i++)if(p[at+i])
@@ -564,6 +851,22 @@ struct Metadata
         }
         return out;
     }
+    // (An evolution record's Pokemon. HG-Engine keeps a form in the target's top five bits (Pikachu's
+    // to Alolan Raichu): the form's own record where the engine has one, else the species and its
+    // form's number; and its EVO_DUMMY (49) records are none in play.)
+    int EvoTarget(int raw)const
+    {
+        if(!engine.on)return raw;
+        const int species=raw&0x7FF,form=raw>>11;
+        return form?engine.FormSpecies(species,form):species;
+    }
+    std::string EvoName(int raw)const
+    {
+        const int target=EvoTarget(raw);
+        if(engine.on&&(raw>>11)&&target==(raw&0x7FF))return Species(target)+" (FORM "+std::to_string(raw>>11)+")";
+        return Species(target);
+    }
+    bool EvoNone(int method)const{return !method||(engine.on&&method==49);}
     std::vector<std::string> EvolutionDetails(int id)const
     {
         std::vector<std::string> out;
@@ -571,8 +874,8 @@ struct Metadata
         const auto& records=evolutions[id];
         for(size_t at=0;Range(records.size(),at,6);at+=6)
         {
-            int method=U16(records.data()+at),value=U16(records.data()+at+2),target=U16(records.data()+at+4);
-            if(method&&target)out.push_back("EVOLVES TO "+Species(target)+": "+Evolution(method,value));
+            const int method=U16(records.data()+at),value=U16(records.data()+at+2),raw=U16(records.data()+at+4);
+            if(!EvoNone(method)&&EvoTarget(raw)>0)out.push_back("EVOLVES TO "+EvoName(raw)+": "+Evolution(method,value));
         }
         return out;
     }
@@ -587,7 +890,8 @@ struct Metadata
         for(int s=1;s<(int)evolutions.size();s++)
             for(size_t at=0;at+5<evolutions[s].size();at+=6)
             {
-                const int target=U16(evolutions[s].data()+at+4);
+                if(EvoNone(U16(evolutions[s].data()+at)))continue;
+                const int target=EvoTarget(U16(evolutions[s].data()+at+4));
                 if(target>0&&target<(int)parent.size()&&parent[target]<0)parent[target]=s;
             }
         int root=id;
@@ -608,9 +912,9 @@ struct Metadata
             const auto& records=evolutions[s];
             for(size_t at=0;Range(records.size(),at,6);at+=6)
             {
-                const int method=U16(records.data()+at),value=U16(records.data()+at+2),target=U16(records.data()+at+4);
-                if(!method||target<=0||target>=(int)evolutions.size())continue;
-                std::string line=Species(s)+" -> "+Species(target)+": "+Evolution(method,value);
+                const int method=U16(records.data()+at),value=U16(records.data()+at+2),raw=U16(records.data()+at+4),target=EvoTarget(raw);
+                if(EvoNone(method)||target<=0||target>=(int)evolutions.size())continue;
+                std::string line=Species(s)+" -> "+EvoName(raw)+": "+Evolution(method,value);
                 if(s==id||target==id)line+="  (THIS ONE)";
                 out.push_back(line);
                 stack.push_back(target);
@@ -633,9 +937,9 @@ struct Metadata
             const auto& records=evolutions[s];
             for(size_t at=0;Range(records.size(),at,6);at+=6)
             {
-                const int method=U16(records.data()+at),value=U16(records.data()+at+2),target=U16(records.data()+at+4);
-                if(!method||target<=0||target>=(int)evolutions.size())continue;
-                out.push_back(Species(s)+" -> "+Species(target)+": "+Evolution(method,value));
+                const int method=U16(records.data()+at),value=U16(records.data()+at+2),raw=U16(records.data()+at+4),target=EvoTarget(raw);
+                if(EvoNone(method)||target<=0||target>=(int)evolutions.size())continue;
+                out.push_back(Species(s)+" -> "+EvoName(raw)+": "+Evolution(method,value));
                 stack.push_back(target);
             }
         }
@@ -643,6 +947,8 @@ struct Metadata
     }
     void Load(const Bytes& rom,const std::string& code,const Profile& profile)
     {
+        // (The type chart a game before this one set, a hack's own or a GBA hack's: this game's own from here.)
+        CompanionTypes::fairy=false;CompanionTypes::romChart.clear();
         if(!profile.supported)return;
         gen5=profile.gen5;
         const std::string family=code.substr(0,std::min<size_t>(3,code.size()));
@@ -670,6 +976,13 @@ struct Metadata
         // HGSS item.c LoadItemDescription: msg_0221; Platinum TEXT_BANK_ITEM_DESCRIPTIONS: 391.
         // Black (U) text bank 53 is also identified by UPR ZX's gen5_offsets.ini.
         places=bank(gen5?89:hg?279:433);}
+        // (A hack whose text is laid out otherwise, as Origin HeartGold's (the Japanese game's, its
+        // banks moved): nothing read from it, rather than other text in place of its names.)
+        if(!gen5&&!b2&&(species.size()<494||moves.size()<400||items.size()<400))
+        {
+            unreadable=true;species.clear();moves.clear();items.clear();places.clear();
+            return;
+        }
         regionMap=ReferenceMap(Narc(RomFile(rom,gen5?"a/0/8/5":hg?"a/1/4/4":"graphic/tmap_gra.narc")),gen5,hg);
         if(!gen5){monIcons=Narc(RomFile(rom,hg?"a/0/2/0":"poketool/icongra/pl_poke_icon.narc"));if(!monIcons.empty())iconPalettes=CompanionIcons::Palettes(monIcons[0]);}
         else
@@ -713,7 +1026,18 @@ struct Metadata
                 }
                 return true;
             };
-            if(count>0&&!fits(offset))for(size_t at=0;at+count*24<=arm.size();at+=4)if(fits(at)){offset=at;break;}
+            // (A hack with DSPRE's "dynamic headers" (Heartfelt's): each header its own member of a/0/5/0,
+            // as many as the map names; used first when they all fit, as the ARM9 then keeps old ones.)
+            Bytes dynamic;
+            if(hg)
+            {
+                auto headers=Narc(RomFile(rom,"a/0/5/0"));
+                bool all=count>0&&headers.size()==count;
+                for(size_t n=0;n<headers.size()&&all;n++)all=headers[n].size()==24;
+                if(all){for(const auto& h:headers)dynamic.insert(dynamic.end(),h.begin(),h.end());}
+                if(all){arm.swap(dynamic);offset=0;if(!fits(0)){arm.swap(dynamic);dynamic.clear();}}
+            }
+            if(dynamic.empty()&&count>0&&!fits(offset))for(size_t at=0;at+count*24<=arm.size();at+=4)if(fits(at)){offset=at;break;}
             // UPR ZX gen4_offsets.ini/loadWildMapNames: fixed 24-byte headers, place at +18.
             if(names.size()%16==0&&count>0&&count<=4096&&Range(arm.size(),offset,count*24))
             {
@@ -723,7 +1047,7 @@ struct Metadata
                     const auto* h=arm.data()+offset+n*24;MapRecord record;record.place=h[18];
                     if(record.place>=(int)places.size()){records.clear();break;}
                     record.matrix=U16(h+(hg?4:2));record.encounter=hg?(h[0]==255?-1:h[0]):(U16(h+14)==65535?-1:U16(h+14));
-                    if(hg){unsigned coords=U16(h+2);record.worldX=(coords>>4)&63;record.worldY=coords>>10;}
+                    if(hg){unsigned coords=U16(h+2);record.worldX=(coords>>4)&63;record.worldY=coords>>10;record.scripts=U16(h+6);record.events=U16(h+16);}
                     records.push_back(record);mapped.push_back(record.place);
                 }
                 if(records.size()==count){mapRecords=std::move(records);mapPlaces=std::move(mapped);}
@@ -746,17 +1070,134 @@ struct Metadata
         trainerData=Narc(RomFile(rom,b2?"a/0/9/1":gen5?"a/0/9/2":hg?"a/0/5/5":"poketool/trainer/trdata.narc"));
         trainerTeams=Narc(RomFile(rom,b2?"a/0/9/2":gen5?"a/0/9/3":hg?"a/0/5/6":"poketool/trainer/trpoke.narc"));
         trainerNames=bank(b2?382:gen5?190:hg?729:618);
-        auto trainerClasses=bank(b2?383:gen5?191:hg?730:619);
-        for(size_t id=1;id<trainerNames.size();id++)if(id<trainerData.size()&&trainerData[id].size()>=2)
-        {
-            int cls=trainerData[id][1];
-            if(cls<(int)trainerClasses.size())trainerNames[id]=trainerClasses[cls]+" "+trainerNames[id];
-        }
+        const auto trainerClasses=bank(b2?383:gen5?191:hg?730:619);
         personal=Narc(RomFile(rom,gen5?"a/0/1/6":hg?"a/0/0/2":"poketool/personal/pl_personal.narc"));
         evolutions=Narc(RomFile(rom,gen5?"a/0/1/9":hg?"a/0/3/4":"poketool/personal/evo.narc"));
         learnsets=Narc(RomFile(rom,gen5?"a/0/1/8":hg?"a/0/3/3":"poketool/personal/wotbl.narc"));
         moveRecords=Narc(RomFile(rom,gen5?"a/0/2/1":hg?"a/0/1/1":"poketool/waza/pl_waza_tbl.narc"));
         LoadDex(rom,hg,b2);
+        // (An HG-Engine hack: its own tables in place of HeartGold's.)
+        if(hg&&engine.Load(rom,personal,learnsets,species,std::max(moves.size(),moveRecords.size()),items,abilities.size(),msg))
+        {
+            if(!engine.machines.empty())machineMoves=engine.machines;
+            // (Its item icons: each item's at 2 + 2 x its number, its palette next (hg-engine
+            // src/item.c GetItemNarcData), not HeartGold's table.)
+            if(itemIcons.size()>=items.size()*2+2&&itemIcons[4].size()>4&&!memcmp(itemIcons[4].data(),"RGCN",4)&&itemIcons[5].size()>4&&!memcmp(itemIcons[5].data(),"RLCN",4))
+            {itemIconIds.clear();itemDataIds.clear();for(size_t i=0;i<items.size();i++)itemIconIds.push_back({(int)i*2+2,(int)i*2+3});}
+            // (Its item descriptions: a text bank for each generation's items, 830 then every
+            // fourth to 850 (hg-engine include/constants/file.h), together one for each item.)
+            {
+                std::vector<std::string> all;
+                for(int b=830;b<=850;b+=4){auto t=bank(b);all.insert(all.end(),t.begin(),t.end());}
+                // (A hack's own items after the engine's (Hardlove's Starter Card) have none there.)
+                if(!all.empty()&&all.size()<=items.size()&&all.size()*10>=items.size()*9)itemDescriptions=std::move(all);
+            }
+            if(engine.eggStride)eggMoves.clear();
+            if(!engine.tutorBits.empty()){tutorMoves.clear();tutorBits.clear();}
+            for(size_t row=0;engine.eggStride&&Range(engine.eggs.size(),row*engine.eggStride,engine.eggStride);row++)
+            {
+                std::vector<uint16_t> list;
+                for(size_t at=0;at+2<=engine.eggStride;at+=2){const unsigned m=U16(engine.eggs.data()+row*engine.eggStride+at);if(m==0xFFFF)break;if(m&&m<moveRecords.size())list.push_back((uint16_t)m);}
+                eggMoves.push_back(list);
+            }
+        }
+        // (Its trainers' extra fields: the layout that reads more of the teams that have them.)
+        if(engine.on)
+        {
+            int read[2]={0,0};
+            for(size_t id=1;id<trainerData.size()&&id<trainerTeams.size();id++)
+                if(trainerData[id].size()>=4&&(trainerData[id][0]&0x80))for(int l=0;l<2;l++)read[l]+=!EngineTeam(trainerData[id],trainerTeams[id],l).empty();
+            trainerLayout=read[1]>read[0]?1:0;
+        }
+        // (Each trainer's class before its name; HG-Engine's class is two bytes.)
+        for(size_t id=1;id<trainerNames.size();id++)if(id<trainerData.size()&&trainerData[id].size()>=(engine.on?3u:2u))
+        {
+            const int cls=engine.on?U16(trainerData[id].data()+1):trainerData[id][1];
+            if(cls>=(int)trainerClasses.size())continue;
+            trainerNames[id]=trainerClasses[cls]+" "+trainerNames[id];
+            std::string key=trainerClasses[cls];for(char& ch:key)ch=(char)std::toupper((unsigned char)ch);
+            bool important=false;
+            for(const char* k:{"LEADER","ELITE FOUR","CHAMPION","RIVAL","BOSS","EXECUTIVE","PKMN TRAINER","POKEMON TRAINER"})important=important||key.find(k)!=std::string::npos;
+            if(important&&!TrainerTeam((int)id).empty())keyTrainers.push_back((int)id);
+        }
+        if(hg)
+        {
+            // Each item's pocket (its data's bits 7-10, 7 the key items) and where each item is found:
+            // given, item balls and hidden items, from each map's scripts and events.
+            const auto data=Narc(RomFile(rom,"a/0/1/7"));
+            // (Item i's data: its file in the ARM9's table where there is one (HeartGold's, and the
+            // engine's earlier builds'), else file i (the engine's own, a file for each item).)
+            for(size_t id=0;id<items.size();id++)
+            {
+                const size_t f=itemDataIds.empty()?id:id<itemDataIds.size()?(size_t)itemDataIds[id]:data.size();
+                itemPockets.push_back(f<data.size()&&data[f].size()>=10?(U16(data[f].data()+8)>>7)&15:-1);
+            }
+            std::vector<ItemSpotMap> maps;
+            for(const auto& r:mapRecords)maps.push_back({r.place,r.scripts,r.events});
+            if(!maps.empty()&&!items.empty())
+                itemSpots=FindItemSpots(maps,Narc(RomFile(rom,"a/0/1/2")),Narc(RomFile(rom,"a/0/3/2")),Narc(RomFile(rom,"a/0/2/8")),items.size(),RomArm9(rom));
+        }
+    }
+    // GUIDE's pages. An HG-Engine hack's own HMs and key items, where its scripts and maps put them,
+    // in WHERE IS (before the hand-written ones left there); the hand-written pages that are not
+    // about one of those items around them.
+    mutable std::deque<std::string> guideText; // (the generated pages' text, kept for as long as the pages)
+    std::vector<GuideEntry> Guide(const std::string& code)const
+    {
+        auto pages=GuideFor(code);
+        if(!engine.on||itemSpots.empty())return pages;
+        auto keep=[&](std::string t)->const char*{guideText.push_back(std::move(t));return guideText.back().c_str();};
+        auto bare=[](std::string t){std::string o;for(char ch:t)if(std::isalnum((unsigned char)ch))o+=(char)std::toupper((unsigned char)ch);return o;};
+        std::vector<GuideEntry> made;std::vector<std::string> covered,coveredAt;
+        for(int pass=0;pass<2;pass++)
+            for(int item=1;item<(int)itemSpots.size();item++)
+            {
+                const std::string name=ItemName(item);
+                const bool hm=name.size()>2&&name.rfind("HM",0)==0&&std::isdigit((unsigned char)name[2]);
+                const bool key=item<(int)itemPockets.size()&&itemPockets[item]==7;
+                if((pass==0)!=hm||(!hm&&!key)||itemSpots[item].empty())continue;
+                std::string title=name,answer;
+                if(hm)
+                {
+                    // (Its move: from the engine's own list, or (its earlier builds) HeartGold's, HM01 item 420.)
+                    int machine=-1;
+                    for(int i=0;i<(int)engine.machineItems.size();i++)if(engine.machineItems[i]==item){machine=i;break;}
+                    if(machine<0&&engine.machines.empty()&&item>=328&&item<=427)machine=item-328;
+                    if(machine>=0&&machine<(int)machineMoves.size())title+=" "+Move(machineMoves[machine]);
+                }
+                if(std::find(covered.begin(),covered.end(),bare(name))!=covered.end())continue; // (two items of one name)
+                for(const auto& spot:itemSpots[item])
+                {
+                    const std::string place=Name(places,spot.place,"PLACE");
+                    answer+=(answer.empty()?"":" ")+std::string(spot.how==1?"An item ball in ":spot.how==2?"Hidden in ":"Given in ")+place+".";
+                }
+                const std::string where=Name(places,itemSpots[item][0].place,"PLACE");
+                made.push_back({keep(title),keep(where+"."),keep(answer),"WHERE IS",item});
+                covered.push_back(bare(name));coveredAt.push_back(bare(where));
+            }
+        // (A hand-written page about one of those items is left out, even under its old name: the
+        // same first word and place (DOWSING MCHN, RAINBOW WING), or the BICYCLE.)
+        auto firstWord=[&](const std::string& t){std::string w;for(char ch:t){if(ch==' ')break;w+=(char)std::toupper((unsigned char)ch);}return w;};
+        std::vector<GuideEntry> out;bool placed=false;
+        for(GuideEntry page:pages)
+        {
+            const std::string t=bare(page.title),at=bare(page.hint),w=firstWord(page.title);
+            bool dup=false;
+            for(size_t i=0;i<covered.size()&&!dup;i++)
+            {
+                const std::string& c=covered[i];
+                dup=t==c||(t.size()>c.size()&&t.rfind(c,0)==0&&c.rfind("HM",0)==0)||(t=="BICYCLE"&&c=="BIKE");
+                dup=dup||(w.size()>=4&&at==coveredAt[i]&&bare(w)==c.substr(0,std::min(c.size(),bare(w).size())));
+            }
+            if(dup)continue;
+            // (Its item by HeartGold's number, for the row's HAVE: kept where the hack's item of that
+            // number has the page's name.)
+            if(page.item>0){const std::string n=bare(ItemName(page.item));if(n.empty()||t.rfind(n,0)!=0)page.item=0;}
+            if(!placed&&page.section&&!std::strcmp(page.section,"WHERE IS")){out.insert(out.end(),made.begin(),made.end());placed=true;}
+            out.push_back(page);
+        }
+        if(!placed)out.insert(out.begin(),made.begin(),made.end());
+        return out;
     }
     void LoadDex(const Bytes& rom,bool hg,bool b2)
     {
@@ -836,13 +1277,7 @@ struct Metadata
         if(!gen5)dexSizes=Narc(RomFile(rom,hg?"a/0/7/4":"application/zukanlist/zkn_data/zukan_data_gira.narc"));
         if(dexSizes.size()>2)dexSizes.resize(2);
         // Only the members a front picture uses are kept (the archive also has backs and animations).
-        battlePics=Narc(RomFile(rom,gen5?"a/0/0/4":hg?"a/0/0/4":"poketool/pokegra/pl_pokegra.narc"));
-        const size_t per=gen5?20:6;
-        for(size_t i=0;i<battlePics.size();i++)
-        {
-            size_t k=i%per;bool keep=gen5?(k<=1||k>=18):(k>=2);
-            if(!keep){Bytes().swap(battlePics[i]);}
-        }
+        battlePics=Narc(RomFile(rom,gen5?"a/0/0/4":hg?"a/0/0/4":"poketool/pokegra/pl_pokegra.narc"),gen5?[](size_t i){const size_t k=i%20;return k<=1||k>=18;}:[](size_t i){return i%6>=2;});
     }
 };
 }

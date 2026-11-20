@@ -1138,12 +1138,18 @@ struct App
         objPalTable = 0;
         objPalCount = 0;
         iconTable = 0;
-        compConfig = rom.size() > 0xBD ? GbaCompanion::ConfigFor((const char*)rom.data() + 0xAC, rom[0xBC]) : nullptr;
+        {
+            // (A known hack by its SHA-1 first: its RAM is its own. The ROM as sold, before the widescreen patch.)
+            const std::vector<uint8_t>& id = sold.empty() ? rom : sold;
+            compConfig = id.size() > 0xBD ? GbaCompanion::ConfigFor((const char*)id.data() + 0xAC, id[0xBC], g.sha1.empty() ? Games::Sha1(id) : g.sha1, id.data(), id.size()) : nullptr;
+        }
         gameCode = rom.size() > 0xB0 ? std::string((const char*)rom.data() + 0xAC, 4) : std::string();
         guideShown.assign(GbaGuides::For(gameCode.c_str()).size(), false);
         comp = GbaCompanion::Snapshot();
         dex = GbaDex::Data();
         dexTried = false;
+        CompanionTypes::fairy = false;
+        CompanionTypes::romChart.clear();
         dexPicFor = -1;
         pkWide = pk_wide_configure(doCrc32(sold.data(), sold.size())) != 0;
         {
@@ -2119,6 +2125,12 @@ struct App
     uint32_t EnemyParty() const
     {
         if (!compConfig || gameCode.size() < 3) return 0;
+        // (A hack's own: where it was found, and none where its Pokemon aren't these games' struct.)
+        if (compConfig->sha1)
+        {
+            if (compConfig->layout || compConfig->speciesMask != 0xFFFF) return 0;
+            if (compConfig->enemyParty) return compConfig->enemyParty;
+        }
         const std::string f = gameCode.substr(0, 3);
         return f == "AXV" || f == "AXP" ? compConfig->party + 0x260 : f == "BPE" ? compConfig->party + 0x258 : f == "BPR" || f == "BPG" ? compConfig->party - 0x258 : 0;
     }
@@ -2294,7 +2306,7 @@ struct App
         if (sc != PK_WIDE_SCENE_FIELD && sc != PK_WIDE_SCENE_TEXT) return;
         const uint32_t sb1 = compConfig->staticSaveBlocks ? compConfig->saveBlock1 : core->busRead32(core, compConfig->saveBlock1);
         if (sb1 < 0x02000000 || sb1 >= 0x02040000) return;
-        Explore(core->busRead8(core, sb1 + 4), core->busRead8(core, sb1 + 5));
+        Explore(core->busRead8(core, sb1 + compConfig->locationOff), core->busRead8(core, sb1 + compConfig->locationOff + 1));
         if (exploredDirty && SDL_GetTicks() - exploredSavedAt > 10000) ExploredSave();
     }
     // A save from before the record: the towns the Fly map lists as visited, and the maps beside each, count as seen.
@@ -2859,11 +2871,23 @@ struct App
     // FLY ON > ANY POKEMON: the National Pokedex number picked (Charizard to begin with).
     int FlyMonChosen() const { const int n = std::atoi(set.Get("fly_on_mon").c_str()); return n >= 1 && n <= 493 ? n : 6; }
     // A Pokemon's name by National Pokedex number: the game's own up to #386, then the Sinnoh ones'.
+    // The Pokedex read from the ROM, once; a game with the Fairy type (a hack with the newer Pokemon) takes the type
+    // chart that has it.
+    void LoadDex()
+    {
+        if (dexTried) return;
+        dexTried = true;
+        dex.Load(dexRom);
+        CompanionTypes::fairy = dex.Ready() && dex.Fairy();
+        if (CompanionTypes::fairy) CompanionTypes::romChart = CompanionTypes::ModernChart();
+        else CompanionTypes::romChart.clear();
+    }
     std::string MonName(int national)
     {
-        if (national > 386) return SinnohNames::Name(national);
-        if (!dexTried) { dexTried = true; dex.Load(dexRom); }
+        // (A hack's own Pokemon past Deoxys by its own names; these games' none, so the fourth generation's.)
+        LoadDex();
         const std::string n = dex.Ready() ? dex.Name(dex.Species(national)) : std::string();
+        if (n.empty() && national > 386) return SinnohNames::Name(national);
         return n.empty() ? std::string() : DexTitle(n);
     }
     // FLY ON's preview: the Pokemon as it will carry you (HeartGold's sprite facing you, or Emerald's own), ARGB; kept.
@@ -2959,7 +2983,7 @@ struct App
         }
         if (iconTable < 0x08000000u || national <= 0) return false;
         // (The game's own species number for the National Pokedex one.)
-        if (!dexTried) { dexTried = true; dex.Load(dexRom); }
+        LoadDex();
         int sp = 0;
         if (dex.Ready()) { for (int i = 1; i < std::min(dex.count + 1, iconCount) && !sp; i++) if (dex.Dex(i) == national) sp = i; }
         else if (national <= 251) sp = national;
@@ -3007,7 +3031,7 @@ struct App
     std::vector<char> hgssHas;
     std::vector<int> FlyMonList()
     {
-        if (!dexTried) { dexTried = true; dex.Load(dexRom); }
+        LoadDex();
         std::vector<int> out;
         if (followState == 2 && follow && hgssHas.empty())
         {
@@ -3068,11 +3092,11 @@ struct App
             else if (compConfig && slot >= 0)
             {
                 uint8_t m[100];
-                for (int i = 0; i < 100; i++) m[i] = (uint8_t)core->busRead8(core, compConfig->party + (uint32_t)slot * 100 + (uint32_t)i);
+                for (int i = 0; i < compConfig->monSize; i++) m[i] = (uint8_t)core->busRead8(core, compConfig->party + (uint32_t)(slot * compConfig->monSize + i));
                 GbaCompanion::Mon mon;
-                if (GbaCompanion::Decode(m, mon) && !mon.egg && mon.species)
+                if (GbaCompanion::DecodeMon(m, mon, *compConfig) && !mon.egg && mon.species)
                 {
-                    if (!dexTried) { dexTried = true; dex.Load(dexRom); }
+                    LoadDex();
                     national = dex.Ready() ? dex.Dex(mon.species) : (mon.species <= 251 ? mon.species : 0);
                     shiny = ((mon.otId >> 16) ^ (mon.otId & 0xFFFF) ^ (mon.personality >> 16) ^ (mon.personality & 0xFFFF)) < 8;
                 }
@@ -3276,7 +3300,7 @@ struct App
             fclose(l);
         }
         if (gf != goAt && gf != pageAt) return;
-        if (!dexTried) { dexTried = true; dex.Load(dexRom); }
+        LoadDex();
         flyT = fly.Now();
         if (FILE* l = fopen("fly-log.txt", "a"))
         {
@@ -3349,12 +3373,12 @@ struct App
             if (followTick++ % 30 == 0)
             {
                 uint8_t m[100];
-                for (int i = 0; i < 100; i++) m[i] = (uint8_t)core->busRead8(core, compConfig->party + i);
+                for (int i = 0; i < compConfig->monSize; i++) m[i] = (uint8_t)core->busRead8(core, compConfig->party + (uint32_t)i);
                 GbaCompanion::Mon lead;
                 int national = 0;
-                if (GbaCompanion::Decode(m, lead) && !lead.egg && lead.species)
+                if (GbaCompanion::DecodeMon(m, lead, *compConfig) && !lead.egg && lead.species)
                 {
-                    if (!dexTried) { dexTried = true; dex.Load(dexRom); }
+                    LoadDex();
                     national = dex.Ready() ? dex.Dex(lead.species) : (lead.species <= 251 ? lead.species : 0);
                 }
                 const bool shiny = ((lead.otId >> 16) ^ (lead.otId & 0xFFFF) ^ (lead.personality >> 16) ^ (lead.personality & 0xFFFF)) < 8;
@@ -3617,7 +3641,8 @@ struct App
         if (!level.empty())
         {
             rows.push_back({ "#LEARNS BY LEVEL", "level" });
-            for (const auto& l : level) rows.push_back({ DexTitle(dex.Move(l.move)), "Lv " + std::to_string(std::max(1, l.level)) });
+            // (Level 0: a hack's move learned on evolving, as the newer games show it.)
+            for (const auto& l : level) rows.push_back({ DexTitle(dex.Move(l.move)), l.level == 0 ? std::string("Evo") : "Lv " + std::to_string(l.level) });
         }
         const auto machines = dex.Machines(dexSpecies);
         if (!machines.empty())
@@ -3637,7 +3662,7 @@ struct App
     // pictures from the ROM (gba_dex.h, which COMPANION loads too for names and places).
     void ReadCompanion()
     {
-        if (!dexTried) { dexTried = true; dex.Load(dexRom); }
+        LoadDex();
         comp = GbaCompanion::Snapshot();
         compPics.clear();
         if (!compConfig || !core) return;
@@ -3892,7 +3917,7 @@ struct App
         else if (item == "GUIDE") { if (!guideShown.empty()) GoPage(P_GUIDE, ""); }
         else if (item == "FLY")
         {
-            if (!dexTried) { dexTried = true; dex.Load(dexRom); }
+            LoadDex();
             flyT = fly.Now();
             if (set.Get("fly_on") == "pokemon" && followState == 0) FollowFind();
             if (flyT.result != GbaFly::OK) Toast(GbaFly::Why(flyT.result), 3000);
@@ -4582,13 +4607,13 @@ struct App
     // An app chosen: the page of the pause menu it is (the game paused there), or done at once (REPEL, RESET, ENCOUNTERS).
     void NavUse(int app)
     {
-        auto open = [&](PausePage p) { if (!dexTried) { dexTried = true; dex.Load(dexRom); } navOpen = false; OpenPause(); GoPage(p, ""); navReturn = p; };
+        auto open = [&](PausePage p) { LoadDex(); navOpen = false; OpenPause(); GoPage(p, ""); navReturn = p; };
         auto needCompanion = [&]() { if (!compConfig) Toast("COMPANION ISN'T AVAILABLE FOR THIS GAME"); else ReadCompanion(); return compConfig != nullptr; };
         switch (app)
         {
         case NAV_FLY: // (the Fly page: the towns, and Free Flight)
             if (!fly.Supported()) { Toast("FLY ISN'T AVAILABLE FOR THIS GAME YET"); return; }
-            if (!dexTried) { dexTried = true; dex.Load(dexRom); }
+            LoadDex();
             flyT = fly.Now();
             if (set.Get("fly_on") == "pokemon" && followState == 0) FollowFind();
             if (flyT.result != GbaFly::OK) { Toast(GbaFly::Why(flyT.result), 3000); return; }
@@ -4600,7 +4625,7 @@ struct App
         case NAV_MAP: if (needCompanion()) open(P_PLACE); return;
         case NAV_BAG: if (needCompanion()) open(P_BAG); return;
         case NAV_DEX:
-            if (!dexTried) { dexTried = true; dex.Load(dexRom); }
+            LoadDex();
             if (!dex.Ready() || !dex.count) { Toast("THE POKEDEX ISN'T AVAILABLE FOR THIS GAME"); return; }
             ReadCompanion();
             open(P_DEX);
@@ -4884,7 +4909,7 @@ struct App
         if (item == "POKEDEX")
         {
             // (Read from the ROM the first time; a game whose tables aren't found has none.)
-            if (!dexTried) { dexTried = true; dex.Load(dexRom); fprintf(stderr, "[gba] pokedex: %d species%s\n", dex.count, dex.Ready() ? "" : " (not found)"); }
+            if (!dexTried) { LoadDex(); fprintf(stderr, "[gba] pokedex: %d species%s\n", dex.count, dex.Ready() ? "" : " (not found)"); }
             if (!dex.Ready() || !dex.count) { Toast("THE POKEDEX ISN'T AVAILABLE FOR THIS GAME"); return; }
             ReadCompanion(); // (seen and caught)
             GoPage(P_DEX, "");

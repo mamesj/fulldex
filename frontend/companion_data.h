@@ -133,6 +133,7 @@ inline std::string AsciiChar(uint16_t c, bool gen5)
     case 0x01C4:return ":";
     case 0x01C5:return ";";
     case 0x01D2:return "%";
+    case 0x01E0:return "PK";case 0x01E1:return "MN"; // (the small PK and MN of "PKMN TRAINER")
     default:break;
     }
     if (c == 0x1BE) return "-";
@@ -153,6 +154,7 @@ inline Bytes Crypt(const uint8_t* input, size_t count, uint32_t seed)
 struct Mon
 {
     int species=0, level=0, hp=0, maxHp=0, item=0, nature=0, ability=0;
+    int form=0; // (its form number: block B's byte 0x18, its top five bits)
     uint32_t personality=0, status=0, experience=0;
     bool egg=false;
     std::string nickname;
@@ -161,13 +163,30 @@ struct Mon
     std::array<int,6> iv{},ev{},stats{};
     int slot=-1; // (its place in the party: a slot that did not decode is left out of Snapshot::party)
 };
-inline bool DecodeMon(const uint8_t* raw, size_t length, bool gen5, Mon& result)
+// (hge: an HG-Engine hack's, whose species go up to maxSpecies and whose ability has a ninth bit,
+// the experience's top one: hg-engine include/pokemon.h.)
+inline bool DecodeMon(const uint8_t* raw, size_t length, bool gen5, Mon& result, bool hge=false, int maxSpecies=0)
 {
     if (length < (gen5 ? 0xDCu : 0xECu)) return false;
     const uint32_t pid=U32(raw), flags=U16(raw+4), checksum=U16(raw+6);
     auto valid=[&](const Bytes& b) { uint16_t sum=0;for(size_t i=0;i<128;i+=2)sum+=U16(b.data()+i);return sum==checksum; };
     Bytes blocks(raw+8,raw+136);
     if (!(flags&2)) { auto decrypted=Crypt(raw+8,128,checksum);if(valid(decrypted))blocks=std::move(decrypted); }
+    if (!valid(blocks) && !(flags&2))
+    {
+        // (One the game was part way through decrypting or encrypting as it was read, some of its words
+        // done and the rest not: Heartfelt Gold goes over a party Pokemon so every other frame, and a
+        // read on that beat missed it every time. Each split tried, both ways round; the one that
+        // matches its checksum is it.)
+        const Bytes decrypted=Crypt(raw+8,128,checksum);
+        for(size_t k=2;k<128&&!valid(blocks);k+=2)
+        {
+            Bytes firstDone(raw+8,raw+136);std::copy(decrypted.begin()+k,decrypted.end(),firstDone.begin()+k);
+            if(valid(firstDone)){blocks=std::move(firstDone);break;}
+            Bytes restDone(decrypted);std::copy(raw+8+k,raw+136,restDone.begin()+k);
+            if(valid(restDone)){blocks=std::move(restDone);break;}
+        }
+    }
     if(!valid(blocks))return false;
     static const char* orders[]={"ABCD","ABDC","ACBD","ACDB","ADBC","ADCB","BACD","BADC","BCAD","BCDA","BDAC","BDCA",
         "CABD","CADB","CBAD","CBDA","CDAB","CDBA","DABC","DACB","DBAC","DBCA","DCAB","DCBA"};
@@ -176,14 +195,28 @@ inline bool DecodeMon(const uint8_t* raw, size_t length, bool gen5, Mon& result)
     const uint8_t* b=blocks.data()+(strchr(order,'B')-order)*32;
     const uint8_t* c=blocks.data()+(strchr(order,'C')-order)*32;
     const int species=U16(a);
-    if(species<1 || species>(gen5?649:493))return false;
+    if(species<1 || species>(hge&&maxSpecies>0?maxSpecies:gen5?649:493))return false;
     auto sane=[](const Bytes& p) { return p[4]>=1 && p[4]<=100 && U16(p.data()+8)>0 && U16(p.data()+8)<=999 && U16(p.data()+6)<=U16(p.data()+8); };
     Bytes party(raw+136,raw+length);
     if(!(flags&1)) { auto decrypted=Crypt(raw+136,length-136,pid);if(sane(decrypted))party=std::move(decrypted); }
+    if(!sane(party)&&!(flags&1))
+    {
+        // (The same for its stats, part way through: those words, the level and HP, as one split has them.)
+        const Bytes decrypted=Crypt(raw+136,length-136,pid);
+        for(size_t k=2;k<length-136&&!sane(party);k+=2)
+        {
+            Bytes firstDone(raw+136,raw+length);std::copy(decrypted.begin()+k,decrypted.end(),firstDone.begin()+k);
+            if(sane(firstDone)){party=std::move(firstDone);break;}
+            Bytes restDone(decrypted);std::copy(raw+136+k,raw+length,restDone.begin()+k);
+            if(sane(restDone)){party=std::move(restDone);break;}
+        }
+    }
     if(!sane(party))return false;
     result={};result.species=species;result.personality=pid;result.level=party[4];
     result.hp=U16(party.data()+6);result.maxHp=U16(party.data()+8);result.status=U32(party.data());
     result.item=U16(a+2);result.ability=a[13];result.experience=U32(a+8);result.nature=gen5?b[25]:pid%25;
+    result.form=b[24]>>3;
+    if(hge){result.ability|=(result.experience>>31)<<8;result.experience&=0x1FFFFF;}
     uint32_t iv=U32(b+16);result.egg=(iv>>30)&1;
     result.stats[0]=result.maxHp;
     for(int i=0;i<6;i++) { result.iv[i]=(iv>>(i*5))&31;result.ev[i]=a[16+i];if(i)result.stats[i]=U16(party.data()+8+i*2); }
@@ -208,7 +241,37 @@ struct Profile
     uint32_t system=0;
     bool gen5Battle=false;
     uint32_t battleProc=93; // (the battle's process id: Black and White 93, Black 2 and White 2 0xA7)
+    // (Gen 4: the Pokedex's size, and where its seen bits start after its caught ones at +4.)
+    size_t dexBytes=0x340;uint32_t dexSeen=0x44;
+    bool hge=false; // (an HG-Engine hack's save: UseHgEngineSave)
+    // (A battler's ability two bytes at 0x7A, not one at 0x27: the HG-Engine builds with two-byte
+    // abilities, hg-engine's include/battle.h "moved from 0x27"; Heartfelt's battles in a savestate.)
+    bool battleAbility16=false;
+    bool hgssBattle=false; // (HeartGold's and SoulSilver's battles read: ProfileFor)
 };
+// An HG-Engine hack's save (hg-engine's ALLOW_SAVE_CHANGES, as Heartfelt's): larger bag pockets
+// (include/bag.h: items 165 + 32 + its 48 Mega Stones, key items 92, Poke Balls 26), so what
+// follows the bag is 0x1F0 further on; the Pokedex 0x700 bytes, caught from +4 and seen from +0x400,
+// a bit for each species and form (armips/asm/pokedex.s); the Repel's steps where Heartfelt's
+// saves keep them. Items and Pokemon numbered up to the ROM's.
+inline void UseHgEngineSave(Profile& p,int count)
+{
+    if(!p.hgss)return;
+    p.hge=true;p.maxSpecies=count-1;
+    p.pockets={245,92,101,12,40,64,26,30};
+    p.location+=0x1F0;p.dex+=0x1F0;p.dexBytes=0x700;p.dexSeen=0x400;
+    p.repel=0x7281;
+}
+// (A hack built without the engine's save changes keeps HeartGold's own save: Read finds that and
+// says so, and its profile goes back to HeartGold's, still with the engine's Pokemon.)
+inline Profile WithoutEngineSave(Profile p)
+{
+    if(!p.hge||p.dexBytes!=0x700)return p;
+    p.pockets={165,50,101,12,40,64,24,30};
+    p.location-=0x1F0;p.dex-=0x1F0;p.dexBytes=0x340;p.dexSeen=0x44;
+    p.repel=0x6909;
+    return p;
+}
 inline Profile ProfileFor(const std::string& code, int revision)
 {
     Profile p;
@@ -241,6 +304,9 @@ inline Profile ProfileFor(const std::string& code, int revision)
         p.repelType=0x2192E;
     }
     p.hgss=family=="IPK" || family=="IPG";
+    // (Their battles read on the US and Australian carts, whose field is where Read looks for it, and
+    // the HG-Engine hacks built on them; the other languages' not yet.)
+    p.hgssBattle=p.hgss && code.size()>=4 && code[3]=='E';
     p.misc=family=="IRE" || family=="IRD" ? 0x21100 : 0x21200;
     // (Black 2's found in savestates: the player's map and position at [[0x021410F4]+0x1C]+0x114;
     // White 2's the same instructions' 0x02141134. Their battles not yet mapped.)
@@ -250,9 +316,10 @@ inline Profile ProfileFor(const std::string& code, int revision)
     else if(code=="IRDO" && revision==0){p.system=0x02141134;p.gen5Battle=true;p.battleProc=0xA7;}
     return p;
 }
-// Whether this game's battles are read (Read below: US Platinum's layout, and Black, White, Black 2 and
-// White 2's): BATTLE INFO says so when they are not, instead of waiting for a battle it will never see.
-inline bool BattleMapped(const Profile& p) { return (!p.gen5 && p.pointer==0x021C0794) || (p.gen5 && p.system && p.gen5Battle); }
+// Whether this game's battles are read (Read below: US Platinum's layout, US HeartGold's and SoulSilver's
+// with the HG-Engine hacks on them, and Black, White, Black 2 and White 2's): BATTLE INFO says so when
+// they are not, instead of waiting for a battle it will never see.
+inline bool BattleMapped(const Profile& p) { return (!p.gen5 && (p.pointer==0x021C0794 || p.hgssBattle)) || (p.gen5 && p.system && p.gen5Battle); }
 struct Item {int id=0,quantity=0,pocket=0;};
 inline const char* PocketName(const Profile& profile,int pocket)
 {
@@ -275,12 +342,14 @@ inline int StepPocket(const Profile& profile,int pocket,int direction)
 struct Battler
 {
     int species=0,level=0,hp=0,maxHp=0,type1=-1,type2=-1,ability=0,item=0;
+    int form=0; // (its form number in battle, HeartGold's and SoulSilver's: an HG-Engine hack's Mega or regional form)
     uint32_t status=0;bool statusKnown=false;
     std::array<int,4> moves{},pp{};
 };
 struct Snapshot
 {
     bool supported=false,ready=false,dexReady=false,locationLive=false,trainerBattle=false;
+    bool heartGoldSave=false; // (an HG-Engine hack's save in HeartGold's own layout: see WithoutEngineSave)
     std::string message;
     int map=0,x=0,y=0,exitMap=-1,exitX=-1,exitY=-1,repel=0,invalidSlots=0,badges=0;
     int64_t money=-1; // (the trainer's money; -1 not read)
@@ -326,8 +395,9 @@ inline uint32_t FindSave(const Profile& p,const Reader& read)
     }
     return 0;
 }
-inline Snapshot Read(const Profile& p,const Reader& read)
+inline Snapshot Read(const Profile& given,const Reader& read)
 {
+    Profile p=given;
     Snapshot s;s.supported=p.supported;
     if(!p.supported){s.message="NO VERIFIED COMPANION PROFILE FOR THIS VERSION";return s;}
     auto bytes=[&](uint32_t at,size_t count){Bytes v;if(!count||!MainRange(at,count))return v;v.resize(count);if(!read(at,v.data(),count))v.clear();return v;};
@@ -342,17 +412,25 @@ inline Snapshot Read(const Profile& p,const Reader& read)
         if(base){auto head=bytes(base+p.party,4);if(head.size()!=4||U32(head.data())!=6)base=FindSave(p,read);}
     }
     else base=FindSave(p,read);
+    if(p.hge&&p.dexBytes==0x700)
+    {
+        // (An HG-Engine hack's save in HeartGold's own layout: its Pokedex where HeartGold keeps it.)
+        auto magic=[&](uint32_t at){auto v=bytes(at,4);return v.size()==4&&U32(v.data())==0xBEEFCAFE;};
+        const Profile old=WithoutEngineSave(p);
+        if(!base&&!p.pointer)base=FindSave(old,read);
+        if(base&&!magic(base+p.dex)&&magic(base+old.dex)){p=old;s.heartGoldSave=true;}
+    }
     if(!base){s.message="START OR LOAD A GAME TO READ ITS DATA";return s;}
     auto head=bytes(base+p.party,8);
     if(head.size()!=8||U32(head.data())!=6||U32(head.data()+4)>6){s.message="PARTY DATA IS NOT READY";return s;}
     int count=U32(head.data()+4),stride=p.gen5?0xDC:0xEC;
     auto party=bytes(base+p.party+8,count*stride);
     if(party.size()!=(size_t)count*stride){s.message="PARTY DATA IS UNAVAILABLE";return s;}
-    for(int i=0;i<count;i++){Mon mon;if(DecodeMon(party.data()+i*stride,stride,p.gen5,mon)){mon.slot=i;s.party.push_back(mon);}else s.invalidSlots++;}
+    for(int i=0;i<count;i++){Mon mon;if(DecodeMon(party.data()+i*stride,stride,p.gen5,mon,p.hge,p.maxSpecies)){mon.slot=i;s.party.push_back(mon);}else s.invalidSlots++;}
     s.saveBase=base;
     int slots=0;for(int n:p.pockets)slots+=n;
     auto bag=bytes(base+p.bag,slots*4);
-    if(bag.size()==(size_t)slots*4){int slot=0;for(size_t pocket=0;pocket<p.pockets.size();pocket++)for(int i=0;i<p.pockets[pocket];i++,slot++){int id=U16(bag.data()+slot*4),qty=U16(bag.data()+slot*4+2);if(id && qty && id<2048 && qty<=999)s.items.push_back({id,qty,(int)pocket});}}
+    if(bag.size()==(size_t)slots*4){int slot=0;for(size_t pocket=0;pocket<p.pockets.size();pocket++)for(int i=0;i<p.pockets[pocket];i++,slot++){int id=U16(bag.data()+slot*4),qty=U16(bag.data()+slot*4+2);if(id && qty && id<4096 && qty<=999)s.items.push_back({id,qty,(int)pocket});}}
     auto loc=bytes(base+p.location,0x1C);
     if(loc.size()==0x1C){s.map=p.gen5?U16(loc.data()+4):U32(loc.data());s.x=p.gen5?(int32_t)U32(loc.data()+16)>>16:U32(loc.data()+8);s.y=p.gen5?(int32_t)U32(loc.data()+24)>>16:U32(loc.data()+12);}
     if(!p.gen5)
@@ -387,27 +465,37 @@ inline Snapshot Read(const Profile& p,const Reader& read)
     }
     auto repel=p.repel?bytes(base+p.repel,1):Bytes{};if(!repel.empty())s.repel=repel[0];
     const int setBytes=p.gen5?84:64;
-    auto dex=bytes(base+p.dex,p.gen5?8+setBytes*5:0x340);
-    if(!dex.empty()&&U32(dex.data())==0xBEEFCAFE){s.dexReady=true;s.seen.resize(p.maxSpecies+1);s.caught.resize(p.maxSpecies+1);auto bit=[&](int at,int id){return (dex[at+(id-1)/8]>>((id-1)%8))&1;};for(int id=1;id<=p.maxSpecies;id++){bool seen=p.gen5?false:bit(4+64,id);bool caught=bit(p.gen5?8:4,id);if(p.gen5)for(int set=1;set<=4;set++)seen=seen||bit(8+set*setBytes,id);s.seen[id]=seen||caught;s.caught[id]=caught;}}
+    auto dex=bytes(base+p.dex,p.gen5?8+setBytes*5:p.dexBytes);
+    if(!dex.empty()&&U32(dex.data())==0xBEEFCAFE){s.dexReady=true;s.seen.resize(p.maxSpecies+1);s.caught.resize(p.maxSpecies+1);auto bit=[&](int at,int id){return (dex[at+(id-1)/8]>>((id-1)%8))&1;};for(int id=1;id<=p.maxSpecies&&(p.gen5||4+(id-1)/8<p.dexSeen);id++){bool seen=p.gen5?false:bit(p.dexSeen,id);bool caught=bit(p.gen5?8:4,id);if(p.gen5)for(int set=1;set<=4;set++)seen=seen||bit(8+set*setBytes,id);s.seen[id]=seen||caught;s.caught[id]=caught;}}
     // Only battle layouts mapped in the source reference are enabled.
     uint32_t battle=0;
-    if(!p.gen5 && p.pointer==0x021C0794)
+    if(!p.gen5 && (p.pointer==0x021C0794 || p.hgssBattle))
     {
-        uint32_t fs=pointer(0x021C07DC),manager=MainRange(fs,4)?pointer(fs):0;
+        // (The battle is the field's application while it runs: [[field]+4], its template's start
+        // function first. Platinum's checked against its template's own; HeartGold's and SoulSilver's,
+        // an HG-Engine hack's too, by the overlay that template loads, the battle's 12 (Heartfelt's
+        // battles in a savestate). Its data is the battle system: +0x2C the battle's type, +0x30 its
+        // context, hg-engine's include/battle.h as Platinum's.)
+        const bool hg=p.hgssBattle;
+        uint32_t fs=pointer(hg?0x021D4158:0x021C07DC),manager=MainRange(fs,4)?pointer(fs):0;
         uint32_t child=MainRange(manager,8)?pointer(manager+4):0;
-        if(MainRange(child,0x20)&&pointer(child)==pointer(0x020EA358))
+        if(MainRange(child,0x20)&&(hg?pointer(child+0x0C)==12&&(pointer(child)&1):pointer(child)==pointer(0x020EA358)))
         {
             uint32_t system=pointer(child+0x1C);
             if(MainRange(system,0x34)){battle=pointer(system+0x30);s.trainerBattle=(pointer(system+0x2C)&1)!=0;}
         }
+        // (The four battlers' Pokemon at +0x2D40, 0xC0 each: the player's first, the foe's, then the
+        // second of each in a double battle. Its ability a byte at 0x27; two at 0x7A in an HG-Engine
+        // hack with two-byte abilities, and its form at 0x26's low five bits.)
         auto mons=MainRange(battle,0x2D40+4*0xC0)?bytes(battle+0x2D40,4*0xC0):Bytes{};
         if(!mons.empty())for(int i=0;i<4;i++)
         {
             const auto* b=mons.data()+i*0xC0;Battler m;m.species=U16(b);m.level=b[0x34];m.hp=U32(b+0x4C);m.maxHp=U32(b+0x50);
             m.status=U32(b+0x6C);m.statusKnown=true;
-            m.type1=b[0x24];m.type2=b[0x25];m.ability=b[0x27];m.item=U16(b+0x78);
+            m.type1=b[0x24];m.type2=b[0x25];m.ability=p.battleAbility16?U16(b+0x7A):b[0x27];m.item=U16(b+0x78);
+            if(hg)m.form=b[0x26]&0x1F;
             for(int j=0;j<4;j++){m.moves[j]=U16(b+0x0C+j*2);m.pp[j]=b[0x2C+j];}
-            if(m.species<1||m.species>493||m.level<1||m.level>100||m.hp<0||m.maxHp<1||m.hp>m.maxHp)m={};
+            if(m.species<1||m.species>p.maxSpecies||m.level<1||m.level>100||m.hp<0||m.maxHp<1||m.hp>m.maxHp)m={};
             s.battlers.push_back(m);
         }
     }
