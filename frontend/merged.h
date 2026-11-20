@@ -441,7 +441,16 @@ inline void MergedPrepareInsetWindows(Scene& scene, const ScreenImage& top)
         const uint8_t outer = LayerClass(top.flags[y * 256 + x]);
         if (outer != LAYER_3D && outer != LAYER_BACKDROP) return false;
         for (int k = 1; k <= 3; k++)
-            if (LayerClass(top.flags[y * 256 + x + dir * k]) & 0x0F) return true;
+        {
+            const uint8_t flag = top.flags[y * 256 + x + dir * k];
+            if (!(LayerClass(flag) & 0x0F)) continue;
+            // (The same layer at the other side's edge: a band across the whole width scrolled by a pixel or
+            // more, as HeartGold's and SoulSilver's Fly sky, not a box with the world on both sides of it.)
+            const int ox = side ? 0 : 255, odir = side ? 1 : -1;
+            for (int j = 0; j <= 3; j++)
+                if (top.flags[y * 256 + ox + odir * j] == flag) return false;
+            return true;
+        }
         return false;
     };
     for (int side = 0; side < 2; ++side)
@@ -536,6 +545,33 @@ inline EdgeContinuation MergedEdgeContinuation(const Scene& scene, const ScreenI
                     if (c.pattern && c.row < 0) c.row = y;
                     return c;
                 }
+    }
+    // A sprite across the edge of a band that is continued from the next column in (the Fly sky's streaks in
+    // HeartGold and SoulSilver, in the outermost column or the next): the row goes on as
+    // the nearest band row without a sprite at its edge, where the band goes on both above and below it.
+    if (borrow && top.flags && (LayerClass(top.flags[sy * 256 + sx]) == LAYER_3D || LayerClass(top.flags[sy * 256 + sx]) == LAYER_OBJ))
+    {
+        bool sprite = false;
+        for (int k = 0; k < 16 && !sprite; k++)
+            sprite = LayerClass(top.flags[sy * 256 + (side ? 255 - k : k)]) == LAYER_OBJ;
+        if (sprite)
+        {
+            EdgeContinuation band[2]; int dist[2] = { 99, 99 };
+            for (int dir = -1; dir <= 1; dir += 2)
+                for (int d = 1; d <= 8; d++)
+                {
+                    const int y = sy + dir * d;
+                    if (y < 0 || y >= 192) break;
+                    bool clear = true;
+                    for (int k = 0; k < 16 && clear; k++)
+                        clear = LayerClass(top.flags[y * 256 + (side ? 255 - k : k)]) != LAYER_OBJ;
+                    if (!clear) continue;
+                    const EdgeContinuation c = MergedEdgeContinuation(scene, top, y, side, false);
+                    if (!c.none()) { band[dir > 0] = c; dist[dir > 0] = d; }
+                    break;
+                }
+            if (dist[0] < 99 && dist[1] < 99) return band[dist[1] < dist[0]];
+        }
     }
     if (scene.edgeWindow[side][sy]) return none;
     const uint8_t cls = LayerClass(top.flags[sy * 256 + sx]);
