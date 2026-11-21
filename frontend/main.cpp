@@ -8982,12 +8982,25 @@ int main(int argc, char** argv)
                 freeFlight.hgssState = 2;
                 std::error_code ec;
                 const std::filesystem::path dir = std::filesystem::path(opt.rom).parent_path();
+                // (A HeartGold or SoulSilver by its name first: a hack on their code, Heartfelt Gold say, may hold other
+                // Pokemon's pictures at the same places.)
+                std::vector<std::filesystem::path> roms;
                 for (const auto& e : std::filesystem::directory_iterator(dir, ec))
                 {
                     std::string ext = e.path().extension().string();
                     for (char& ch : ext) ch = (char)tolower((unsigned char)ch);
-                    if (ext == ".nds" && freeFlight.hgss.Open(e.path().string())) { freeFlight.hgssState = 1; fprintf(stderr, "[freeflight] sprites from %s\n", e.path().string().c_str()); break; }
+                    if (ext == ".nds") roms.push_back(e.path());
                 }
+                auto plain = [](const std::filesystem::path& f) {
+                    std::string n = f.filename().string();
+                    for (char& ch : n) ch = (char)tolower((unsigned char)ch);
+                    for (char& ch : n) if (ch == ' ' || ch == '_' || ch == '-') ch = ' ';
+                    return (n.find("heartgold") != std::string::npos || n.find("heart gold") != std::string::npos ||
+                            n.find("soulsilver") != std::string::npos || n.find("soul silver") != std::string::npos) ? 0 : 1;
+                };
+                std::stable_sort(roms.begin(), roms.end(), [&](const auto& a, const auto& b) { return plain(a) < plain(b); });
+                for (const auto& r : roms)
+                    if (freeFlight.hgss.Open(r.string())) { freeFlight.hgssState = 1; fprintf(stderr, "[freeflight] sprites from %s\n", r.string().c_str()); break; }
             }
             if (nat != freeFlight.mountNational)
             {
