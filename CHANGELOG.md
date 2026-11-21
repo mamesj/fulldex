@@ -1,7 +1,7 @@
 # Changelog
 
 
-## Next update (not released yet)
+## FullDex 1.7.1 (not released yet)
 
 - **Repel Prompt** (DS and GBA games; Settings > Display, on to start). When a Repel wears off and the Bag has another, FullDex Nav opens on its Repel app: A uses the strongest one, B closes it. In the GBA games the watch waits until you close the game's "REPEL's effect wore off..." text. Black 2 and White 2 already ask by themselves, so nothing changes there.
 - **European Platinum: Fly and Open PC** from FullDex Nav and the Companion (the European cart, CPUE rev 10, uses the US cart's code at the same places). European HeartGold and SoulSilver already had them.
@@ -14,8 +14,13 @@
 - **Spanish Platinum's FIGHT button fits inside its outline** (#177). Beside the wider message box of a translated game the button is narrower than the game's own, and it was drawn at full width, over its outline, its ends unshaded when another button was chosen.
 - **Free Flight in Platinum** (Companion, FLY, FREE FLIGHT; US and European English carts): fly over the map yourself, through trees, water, mountains and cliffs, into the next route or town, its name, music and wild Pokémon changing as you cross. The D-pad steers and B lands on the nearest place you can stand (it glides on a little to find one). The camera rises while you fly and the edges of the map keep you in. No wild battles, trainers or doors on the way. It asks what Fly asks: a Pokémon that knows Fly, and you ride it: the Pokémon that knows Fly carries you, in its own sprite from your HeartGold or SoulSilver (in the same ROMs folder), facing the way you fly, with its shadow on the ground below. Without HeartGold or SoulSilver you fly as yourself, raised above the ground.
 - **Platinum's weather reaches the edges in widescreen.** The sandstorm's dust (Route 228), the blizzard's snow (Route 216 and 217) and falling ash are a background layer as well as falling specks, and only the specks went on beside the 4:3 picture. Cloudy weather, heavy rain, thunder, fog and deep fog no longer leave a dark line down each edge of the 4:3 picture.
+- **Android: a big ROMs folder no longer leaves a black screen** (#232). FullDex walks the folder once and only looks again in the folders that hold games. Settings > GAME LIST > ROMS FOLDER picks the folder again.
+- **Report A Bug: the details, ready to paste** (Settings in the pause menu, and About in the launcher). It copies the version, platform, game, display settings and the last 200 lines of `game.log` to the clipboard, and writes `diagnostics.txt` beside the log for attaching. Nothing is sent anywhere: paste it into Discord or a GitHub issue.
+- **3DS games: setting up from a folder on another drive works again** (#235, PR #236 by OzWookiee). Short paths are copied without the long-path prefix that some drives refuse, and a failed copy says which step failed and why.
+- **3DS games: the Mega Evolution button is back in battles** (#199). It was hidden in every battle but Rotation Battles' own rule.
+- **3DS games: building a game no longer stops at one part that fails to compile** (#204). That part is built again on its own, then without optimisation, and the rest goes on.
 
-## FullDex 1.7 (not released yet)
+## FullDex 1.7 (20 November 2026)
 
 - **Pokémon X, Y, Ultra Sun and Ultra Moon (3DS beta).** FullDex lists a .3ds dump of any of them with your ROMs and plays it the same way as Omega Ruby and Alpha Sapphire: on a PC the game's code is built once from your dump (about 5 minutes), on a phone too. Each keeps its own save (pokemonx.sav, pokemony.sav, ultrasun.sav, ultramoon.sav) with your other saves.
 - **The 3DS games on your Switch, set up from FullDex on a Windows PC.** In a 3DS game's Game Options, Put On My Switch finds the Switch's SD card in the PC, builds the game from your own dump (5 to 10 minutes) and copies it to the card, with the shaders the Switch saved as missing. The Switch tools download once (about 90 MB). On the Switch, a dump that is not set up yet says how. Save To A Folder Instead works without a card.
@@ -67,7 +72,6 @@
 - **iPad: the game list stays still under your finger,** and the system keyboard no longer covers the list's own (thanks moomof, #219).
 - **Game Options in the launcher** keeps its focus and opens the selected game's menu under the button (#191).
 - **About > Credits:** OzWookiee, Saiborg23 and elripalda.
-- **Report A Bug: the details, ready to paste** (Settings in the pause menu, and About in the launcher). It copies the version, platform, game, display settings and the last 200 lines of `game.log` to the clipboard, and writes `diagnostics.txt` beside the log for attaching. Nothing is sent anywhere: paste it into Discord or a GitHub issue.
 
 ## FullDex 1.6 (16 November 2026)
 
