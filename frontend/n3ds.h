@@ -536,6 +536,8 @@ inline void AddAndroid(const std::vector<std::string>& romDirs, const std::strin
         while (dirent* e = readdir(d))
         {
             std::string path = dir + "/" + e->d_name;
+            // (By name first: a stat for each of thousands of other files is slow on a phone, #232.)
+            if (!EndsWith(path, ".3ds") && !EndsWith(path, ".cci") && !EndsWith(path, ".cia")) continue;
             if (!IsFile(path)) continue;
             const Title* t = Check(path);
             if (!t || have(*t)) continue;

@@ -564,7 +564,9 @@ std::vector<Launcher::Game> FindGames(const Folders& fo, std::map<std::string, s
         }
         g.art = it->second;
     };
-    std::vector<std::string> romDirs = RomLibrary::Folders(fo.roms, HacksFolder(fo));
+    // (Walked once: the GBA pass below uses the same folders.)
+    const std::vector<std::string> libraryDirs = RomLibrary::Folders(fo.roms, HacksFolder(fo));
+    std::vector<std::string> romDirs = libraryDirs;
     if (std::find(romDirs.begin(), romDirs.end(), fo.dir) == romDirs.end()) romDirs.push_back(fo.dir);
     // (AppImage: the ROMs beside it and in a roms folder beside it, #150.)
     for (const std::string& extra : BesideAppFolders(fo))
@@ -605,7 +607,7 @@ std::vector<Launcher::Game> FindGames(const Folders& fo, std::map<std::string, s
     TakeInbox(fo);
     const size_t ds = games.size();
     GbaGames::AddWithGbaFolder(fo.roms, fo.saves, games, artCache);
-    for (const std::string& sub : RomLibrary::Folders(fo.roms, HacksFolder(fo)))
+    for (const std::string& sub : libraryDirs)
     {
         if (sub == fo.roms) continue;
         const auto path = std::filesystem::u8path(sub);
@@ -1053,6 +1055,26 @@ int PickGame(Folders& fo, std::vector<Launcher::Game>& games, int selected, bool
         if (folderFirst > 0) { F.dItems.push_back("Previous Folders"); F.dPaths.push_back("#previous"); }
         if (first + pageSize < (int)dirs.size()) { F.dItems.push_back("More Folders"); F.dPaths.push_back("#next"); }
     };
+    // Choose ROMs Folder: the ROMs page and Settings > ROMS FOLDER (#232: hard to find on the ROMs page alone).
+    auto pickRomFolder = [&]() {
+#ifdef __ANDROID__
+                // Keep saves at their current location when changing the shared ROM library.
+                SetConfigValues(fo.cfg, {{"saves_folder", fo.saves}});
+                chooseRomFolder();
+#elif defined(_WIN32)
+                const std::string dir = PickFolder(window, L"Choose the folder containing your ROMs");
+                if (!dir.empty()) useRomFolder(dir);
+#elif defined(__linux__)
+                const auto picked = LinuxFolderPicker::Choose(fo.roms, "Choose the folder containing your ROMs");
+                if (picked.available)
+                {
+                    if (!picked.path.empty()) useRomFolder(picked.path);
+                }
+                else { folderBrowse = fo.roms; folderFirst = 0; showRomFolder(); }
+#else
+                folderBrowse = fo.roms; folderFirst = 0; showRomFolder();
+#endif
+    };
     std::string pictureBrowse, pictureRom;
     int pictureFirst = 0, pictureStep = 1;
     auto showPictureFolder = [&]() {
@@ -1434,6 +1456,7 @@ int PickGame(Folders& fo, std::vector<Launcher::Game>& games, int selected, bool
         if (key && !strncmp(key, "list_", 5)) Launcher::LoadLook(fo.cfg, fo.art, theme, background);
         if(key && !strcmp(key,"list_sort"))reorderLibrary();
         if(key && !strcmp(key,"!favourite"))toggleFavourite();
+        if (key && !strcmp(key, "!roms_folder") && Launcher::CanChooseRomFolder()) { pickRomFolder(); return; }
         if (key && !strcmp(key, "!ra_login"))
         {
             if (raState->busy) return;
@@ -1697,23 +1720,7 @@ int PickGame(Folders& fo, std::vector<Launcher::Game>& games, int selected, bool
                     if (F.pact < 0) { if (Launcher::RomActions() > 0) F.pact = 0; return; }
                     if (Launcher::CanChooseRomFolder() && F.pact == 0)
                     {
-#ifdef __ANDROID__
-                        // Keep saves at their current location when changing the shared ROM library.
-                        SetConfigValues(fo.cfg, {{"saves_folder", fo.saves}});
-                        chooseRomFolder();
-#elif defined(_WIN32)
-                        const std::string dir = PickFolder(window, L"Choose the folder containing your ROMs");
-                        if (!dir.empty()) useRomFolder(dir);
-#elif defined(__linux__)
-                        const auto picked = LinuxFolderPicker::Choose(fo.roms, "Choose the folder containing your ROMs");
-                        if (picked.available)
-                        {
-                            if (!picked.path.empty()) useRomFolder(picked.path);
-                        }
-                        else { folderBrowse = fo.roms; folderFirst = 0; showRomFolder(); }
-#else
-                        folderBrowse = fo.roms; folderFirst = 0; showRomFolder();
-#endif
+                        pickRomFolder();
                         return;
                     }
                     if (F.prow < 0 || F.prow >= (int)roms.size()) return;
@@ -3587,6 +3594,7 @@ int PickGame(Folders& fo, std::vector<Launcher::Game>& games, int selected, bool
             for (Launcher::Setting& it : page.items)
             {
                 if (it.key && !strcmp(it.key, "!ra_login") && !it.values.empty()) it.values[0].second = raAccountShown();
+                if (it.key && !strcmp(it.key, "!roms_folder") && !it.values.empty() && it.values[0].second == "CHOOSE" && !fo.roms.empty()) it.values[0].second = fo.roms;
                 if (it.key && !strcmp(it.key, "!folders") && !it.values.empty() && it.values[0].second == "TIDY") it.values[0].second = FoldersShown(fo);
                 if (it.key && (!strcmp(it.key, "!states_folder") || !strcmp(it.key, "!cheats_folder") || !strcmp(it.key, "!settings_folder")) && !it.values.empty() && it.values[0].second == "FULLDEX'S") it.values[0].second = OwnFolderShown(fo, it.key);
 #ifdef __ANDROID__

@@ -8200,6 +8200,10 @@ inline std::vector<Setting> SettingsList()
                   "CHECKS GITHUB FOR A NEW VERSION. CHOOSE AGAIN TO INSTALL IT: IT IS CHECKED AGAINST THE RELEASE SHA256SUMS.TXT "
                   "AND THE OLD VERSION IS KEPT IN THE UPDATE FOLDER. YOUR ROMS / SAVES AND SETTINGS STAY AS THEY ARE." });
 #endif
+#if !defined(__SWITCH__) && !defined(SSR_IOS)
+    l.push_back({ "!roms_folder", "ROMS FOLDER", { { "", "CHOOSE" } }, "",
+                  "WHERE FULLDEX LOOKS FOR YOUR ROMS, AND IN THE FOLDERS INSIDE IT. CHOOSE TO PICK ANOTHER FOLDER. THE ROMS PAGE HAS THIS TOO." });
+#endif
 #if !defined(__ANDROID__) && !defined(__SWITCH__) && !defined(SSR_IOS)
     l.push_back({ "!saves_folder", "SAVES FOLDER", { { "", "BESIDE THE ROMS" } }, "",
                   "WHERE YOUR SAVES ARE KEPT. CHOOSE A FOLDER OF YOUR OWN: YOUR SAVES AND FULLDEX FILES ARE COPIED THERE (NOTHING THERE IS REPLACED / THE OLD FOLDER STAYS AS IT IS) "
@@ -8415,6 +8419,7 @@ inline int GroupOf(const Setting& s)
     if (s.key && (!strcmp(s.key, "!updates") || !strcmp(s.key, "!releases"))) return 8;
     if (s.key && !strcmp(s.key,"!favourite")) return 6;
     if (s.key && !strcmp(s.key, "!saves_folder")) return 6; // (GAME LIST)
+    if (s.key && !strcmp(s.key, "!roms_folder")) return 6;
     if (s.key && (!strcmp(s.key, "!folders") || !strcmp(s.key, "!states_folder") || !strcmp(s.key, "!cheats_folder") || !strcmp(s.key, "!settings_folder"))) return 6;
     if (!s.key) return !strcmp(s.name, "KEYS AND BUTTONS") ? 3 : !strcmp(s.name, "RELEASE NOTES") ? 8 : 7;
     if (!strncmp(s.key,"extra_",6)) return 9;
