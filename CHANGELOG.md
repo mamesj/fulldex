@@ -20,6 +20,9 @@
 - **Switch: no more crash when fast forward or LOWER RES WHEN BUSY changes the 3D picture's size** (#129). The memory of the old picture was freed while the screen could still be showing it; it is now kept a moment longer. The same goes for the PC, Android and the other platforms, where it could show a wrong frame.
 - **Platinum's party screen keeps its blue-grey sides** (#245). With the third Pokémon of the left column chosen, the bars beside the screen turned orange.
 - **GBA Ruby and Sapphire are listed as games, not ROM hacks** (#238, PR #240 by OzWookiee). Their cartridge codes were missing, so every revision went into the ROMHACKS tab.
+- **3DS games: kanji in Japanese** (#239, X, Y, Omega Ruby and Alpha Sapphire). Characters the game takes from the console's own font (every kanji, and some words on the language screen) showed as grey boxes or not at all: the font was put where the game's next block of memory covers part of it. Without a font dumped from a 3DS there is now a built-in one with every common kanji (Noto Sans JP), where before it had only English letters.
+- **Omega Ruby and Alpha Sapphire: the battle buttons stay still in a single battle** (#242). They moved up whenever your Pokémon's HP box showed and back down while the text box hid it. They still go up above the HP boxes in double, triple and rotation battles.
+- **Omega Ruby and Alpha Sapphire: the X menu's cursor no longer hops** while it moves between buttons on a phone (#243).
 - **3DS games: the Mega Evolution button shows in ordinary battles** (#199), not only in the Battle Maison.
 - **3DS games: building a game no longer stops at one part that fails to compile** (#204). That part is built again on its own, then without optimisation, and the rest goes on.
 
