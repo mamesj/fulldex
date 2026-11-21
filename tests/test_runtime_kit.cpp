@@ -61,6 +61,31 @@ int main(int argc, char** argv)
     assert(fs::remove(fs::u8path(broken.folder)/"tools"));
     assert(N3ds::MakeFolder(root.string(),broken));
     assert(Read(fs::u8path(broken.folder)/"tools/w64devkit-x64.7z.exe")=="compiler archive");
+
+    // Ultra Sun and Ultra Moon's add-on: the kit's SDL2.dll in front of the program's own (SDL2_real.dll).
+    Put(kit/"SDL2.dll","add-on");
+    Put(kit/"SDL2_real.dll","program's SDL2");
+    Launcher::Game older=game;                     // made before the kit had the add-on
+    older.folder=(root/"3ds/00040000001B5000").string();
+    Put(fs::u8path(N3ds::Exe(older.folder)),"existing executable");
+    Put(fs::u8path(older.folder)/"SDL2.dll","program's SDL2");
+    assert(N3ds::MakeFolder(root.string(),older));
+    assert(Read(fs::u8path(older.folder)/"SDL2.dll")=="add-on");
+    assert(Read(fs::u8path(older.folder)/"SDL2_real.dll")=="program's SDL2");
+    Launcher::Game fresh=game;                     // made now: a copy of the kit
+    fresh.folder=(root/"3ds/00040000001B5100").string();
+    assert(N3ds::MakeFolder(root.string(),fresh));
+    assert(Read(fs::u8path(fresh.folder)/"SDL2.dll")=="add-on");
+    assert(Read(fs::u8path(fresh.folder)/"SDL2_real.dll")=="program's SDL2");
+    Launcher::Game byHand=game;                    // an add-on put in by hand is kept
+    byHand.folder=(root/"3ds/000400000011C500").string();
+    Put(fs::u8path(N3ds::Exe(byHand.folder)),"existing executable");
+    Put(fs::u8path(byHand.folder)/"SDL2.dll","another add-on");
+    Put(fs::u8path(byHand.folder)/"SDL2_real.dll","program's SDL2");
+    assert(N3ds::MakeFolder(root.string(),byHand));
+    assert(Read(fs::u8path(byHand.folder)/"SDL2.dll")=="another add-on");
+    assert(N3ds::MakeFolder(root.string(),older));   // and once in, it stays
+    assert(Read(fs::u8path(older.folder)/"SDL2.dll")=="add-on");
 #ifdef _WIN32
     // The #208 log's install directory is 219 characters. Its source compiler path
     // fits MAX_PATH; the per-title copy grows to 267 characters and must still copy.
