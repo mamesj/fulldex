@@ -1,10 +1,12 @@
 #include "folders.h"
+#include "memory_link.h"
 // MANAGE SAVES (a game's menu): one game's saves on a page of their own, the Hub's page 3 (HubMode
 // 3), its list on the left and its save states on the right (below, on an upright phone).
 //  - Game Save: when it was saved, its size, whether it looks right (Health) and how it stands with
 //    the cloud; A on it: sync now, choose which save to keep, or go back to the newest good backup.
 //  - Restore A Backup (the backups folder beside the saves, as the game makes them), Export Save (a
 //    copy in the exports folder), Import Save (from the import folder, or a file chosen on Windows),
+//    Memory Link (Black 2 and White 2: a Black or White save's memories, memory_link.h),
 //    Play From Quick Save, Undo Delete (a slot deleted here), Open Saves Folder, Delete Save.
 //  - The ten slots of the game's SAVE and LOAD pages as cards, with their pictures: Play From Slot
 //    starts the game straight from one (--state-load), Delete Slot keeps it as .deleted until Undo.
@@ -14,12 +16,13 @@
 // The platform does what only it can (Saves().request): open a folder, choose a file (Windows),
 // start the game from a state (PlayState). Included by launcher.h, inside namespace Launcher.
 
-enum { SV_SAVE, SV_RESTORE, SV_EXPORT, SV_IMPORT, SV_QUICK, SV_UNDO, SV_FOLDER, SV_DELETE };
+enum { SV_SAVE, SV_RESTORE, SV_EXPORT, SV_IMPORT, SV_QUICK, SV_UNDO, SV_FOLDER, SV_DELETE, SV_LINK };
 struct SaveHealth { int state = 0; std::string label, why; }; // 0 no save yet, 1 looks right, 2 a problem
 struct SavesState
 {
     std::string rom, name, save, cloudKey; // the game's ROM and name, its save, that save as cloud saves name it
     bool ds = true;
+    bool link = false;      // Black 2 or White 2: the Memory Link row
     size_t want = 0;        // the save's size when not a DS or GBA game's (Omega Ruby / Alpha Sapphire: 472 KB)
     std::string deleted;    // the slot deleted last (kept as <slot>.deleted until Undo Delete)
     std::string request;    // for the platform: "#folder:<dir>", "#play:<state>", "#replay" ("" nothing)
@@ -31,6 +34,7 @@ struct SavesState
     Glass::Picture thumb[10];
     long long thumbAt[10] = {};
     long long healthAt = -2; SaveHealth health; // (worked out again when the save changes)
+    long long linkAt = -2; std::string linkSub;  // (the Memory Link row's line, the same way)
 };
 inline SavesState& Saves() { static SavesState s; return s; }
 inline bool SavesDs() { return Saves().ds; }
@@ -177,8 +181,9 @@ inline void SavesSay(const std::string& m) { Saves().msg = m; Hub().version++; }
 inline void SavesFor(const Game& g, const std::string& save)
 {
     SavesState& s = Saves();
-    if (s.rom != g.rom || s.save != save) { s.deleted.clear(); for (long long& t : s.thumbAt) t = -1; s.healthAt = -2; }
+    if (s.rom != g.rom || s.save != save) { s.deleted.clear(); for (long long& t : s.thumbAt) t = -1; s.healthAt = -2; s.linkAt = -2; }
     s.rom = g.rom; s.name = ShortName(g); s.save = save; s.cloudKey = HubSavePath(g); s.ds = g.platform == DS; s.want = g.platform == N3DS ? 0x76000 : 0;
+    s.link = g.platform == DS && (g.code.rfind("IRE", 0) == 0 || g.code.rfind("IRD", 0) == 0);
 }
 // Manage Saves chosen in a game's menu: its page.
 inline void OpenSaves(const Game& g, const std::string& save)
@@ -201,6 +206,7 @@ inline std::vector<int> SavesRowIds()
 {
     const SavesState& s = Saves();
     std::vector<int> r = { SV_SAVE, SV_RESTORE, SV_EXPORT, SV_IMPORT };
+    if (s.link) r.push_back(SV_LINK);
     if (s.ds && StateSlots::Exists(SavesStatePath())) r.push_back(SV_QUICK);
     if (!s.deleted.empty() && SvExists(s.deleted + ".deleted")) r.push_back(SV_UNDO);
     r.push_back(SV_FOLDER);
@@ -238,6 +244,51 @@ inline std::vector<std::string> SavesImports()
     return r;
 }
 inline std::string SvFile(const std::string& p) { const size_t k = p.find_last_of("/\\"); return k == std::string::npos ? p : p.substr(k + 1); }
+// MEMORY LINK: the Black and White saves the row can read (the games' own, any in the saves folder
+// whose ROM is not listed, and any in the import folder), each said as who played it.
+struct SvLinkFrom { std::string label, path; };
+inline std::vector<SvLinkFrom> SavesLinkSources()
+{
+    std::vector<std::pair<std::string, std::string>> files; // (where it is from, its path)
+    auto bw = [](const std::string& code) { return code.rfind("IRB", 0) == 0 || code.rfind("IRA", 0) == 0; };
+    for (const HubGame& g : HubGames()) if (g.g->platform == DS && bw(g.g->code)) files.push_back({ g.name, g.path });
+    for (const KnownGame& k : KnownGames())
+        if (bw(k.code)) { std::string n = k.name; if (n.rfind("Pokemon ", 0) == 0) n = n.substr(8); files.push_back({ n, SvDir(Saves().save) + "/" + k.save }); }
+    for (const std::string& f : SavesImports()) files.push_back({ SvFile(f), f });
+    std::vector<SvLinkFrom> r;
+    std::vector<std::string> seen;
+    for (const auto& f : files)
+    {
+        const std::string key = std::filesystem::u8path(f.second).lexically_normal().u8string();
+        if (r.size() >= 6 || std::find(seen.begin(), seen.end(), key) != seen.end() || !SvExists(f.second)) continue;
+        seen.push_back(key);
+        MemoryLink::Source src;
+        std::string why;
+        if (!MemoryLink::ReadBlackWhite(SaveBackups::Read(f.second), src, why)) continue;
+        const std::string v = MemoryLink::VersionName(src.version);
+        r.push_back({ src.name + "'s " + v + (f.first == v ? std::string() : "  \xC2\xB7  " + f.first), f.second });
+    }
+    return r;
+}
+// Who a save is linked with: "Hilbert's Black" ("" nobody).
+inline std::string SavesLinkedWith(const std::vector<unsigned char>& save)
+{
+    std::string with;
+    for (const MemoryLink::Player& p : MemoryLink::LinkedWith(save)) with += (with.empty() ? "" : " and ") + p.name + "'s " + MemoryLink::VersionName(p.version);
+    return with;
+}
+inline const std::string& SavesLinkSub()
+{
+    SavesState& s = Saves();
+    const long long at = SvTime(s.save) ^ SvSize(s.save);
+    if (at != s.linkAt)
+    {
+        s.linkAt = at;
+        const std::string with = SavesLinkedWith(SaveBackups::Read(s.save));
+        s.linkSub = with.empty() ? "A Black or White save's memories, as the Unova Link brings them" : "Linked with " + with;
+    }
+    return s.linkSub;
+}
 
 // A on a row of the page.
 inline bool SavesEnter(int row)
@@ -311,6 +362,22 @@ inline bool SavesEnter(int row)
         SavesDialog(17, "Import Save", std::string(files.empty() ? "Put a .sav (or a DeSmuME .dsv) in the import folder beside your saves, then choose it here."
                                                                 : "Choose the save to bring in.")
                                        + " Your save as it is now is backed up first" + (cloud ? ", and the new one goes up to the cloud." : "."), items, paths, 0);
+    }
+    else if (id == SV_LINK)
+    {
+        if (!has) { SavesSay("There is no save for " + s.name + " yet: play it and save once, then link it."); return true; }
+        std::vector<std::string> items, paths;
+        for (const SvLinkFrom& f : SavesLinkSources()) { items.push_back(f.label); paths.push_back("#link:" + f.path); }
+        std::string msg;
+        if (items.empty())
+        {
+            msg = "There is no Black or White save here to link. Play Black or White and save in it, or put a Black or White save (.sav) in the import folder beside your saves.";
+            items.push_back("Open Import Folder"); paths.push_back("#folder:" + SvDir(s.save) + "/import");
+        }
+        else msg = "The Unova Link's Memory Link, without a second DS: choose your Black or White save, and " + s.name + " gets its memories as it does over the wireless. Your save is backed up first" +
+                   (cloud ? ", and goes up to the cloud." : ".") + " The Black or White save is only read.";
+        items.push_back("Close"); paths.push_back("#close");
+        SavesDialog(17, "Memory Link", msg, items, paths, 0);
     }
     else if (id == SV_QUICK) s.request = "#play:" + SavesStatePath();
     else if (id == SV_UNDO)
@@ -433,6 +500,33 @@ inline void SavesPick(const std::string& pick)
         after("Imported " + SvFile(f) + ". Your save before it is in the backups.");
         return;
     }
+    if (pick.rfind("#link:", 0) == 0 || pick.rfind("#linkanyway:", 0) == 0)
+    {
+        const bool anyway = pick[5] != ':';
+        const std::string f = pick.substr(anyway ? 12 : 6);
+        MemoryLink::Source src;
+        std::string why;
+        if (!MemoryLink::ReadBlackWhite(SaveBackups::Read(f), src, why)) { close(); SavesSay("Not linked: " + SvFile(f) + ". " + why); return; }
+        const std::string who = src.name + "'s " + MemoryLink::VersionName(src.version);
+        std::vector<unsigned char> d = SaveBackups::Read(s.save);
+        const MemoryLink::Result r = MemoryLink::Link(d, src, anyway, MemoryLink::NewSeed());
+        if (r.outcome == MemoryLink::Failed) { close(); SavesSay("Not linked: " + r.why); return; }
+        if (r.outcome == MemoryLink::AsksFirst)
+        {
+            // (As the game asks: another player's save would take the place of the one linked.)
+            SavesDialog(18, "Link " + who + "?", s.name + " is linked with " + SavesLinkedWith(d) + ". " + who + " is another player's save: its memories replace theirs where the two differ. Your save is backed up first.",
+                        { "Link " + who, "Cancel" }, { "#linkanyway:" + f, "#close" }, 1);
+            return;
+        }
+        if (r.outcome == MemoryLink::Unchanged) { close(); SavesSay(s.name + " already has everything from " + who + ": nothing changed."); return; }
+        if (SavesBackUp(s.save).empty()) { close(); SavesSay("Not linked: your save could not be backed up first."); return; }
+        std::string error;
+        if (!SaveBackups::Replace(s.save, d, error)) { close(); SavesSay("Not linked: " + error); return; }
+        fprintf(stderr, "[launcher] memory link: %s into %s\n", f.c_str(), s.save.c_str());
+        after("Linked with " + who + (r.newMemories ? ": new memories are open." : ".") + " Your save before it is in the backups.");
+        return;
+    }
+    if (pick.rfind("#folder:", 0) == 0) { close(); s.request = pick; return; }
     if (pick == "#delete")
     {
         {
@@ -619,8 +713,9 @@ inline void DrawSavesPage(Canvas& c, bool solid, float u, int L, int R, int top,
     const int n = (int)ids.size();
     F.prow = std::max(0, std::min(F.prow, n - 1));
     if (!s.ds) F.pact = -1;
-    const int gap = (int)(18 * u), pad = (int)(14 * u);
-    const int rowH = (int)((stk ? 46 : 60) * u), rg = (int)((stk ? 6 : 8) * u);
+    const int gap = (int)(18 * u), pad = (int)(14 * u), rg = (int)((stk ? 6 : 8) * u);
+    // (Nine rows, Black 2's Memory Link with a quick save and Undo Delete, close up to fit the panel.)
+    const int rowH = stk ? (int)(46 * u) : std::max((int)(46 * u), std::min((int)(60 * u), (bottom - top - 2 * pad + rg) / std::max(1, n) - rg));
     const int lw = stk ? R - L : std::max((int)(330 * u), (int)((R - L - gap) * 0.42f));
     const int lh = stk ? std::min(bottom - top, 2 * pad + n * (rowH + rg) - rg) : bottom - top;
     const SaveHealth& hl = SavesHealth();
@@ -657,6 +752,7 @@ inline void DrawSavesPage(Canvas& c, bool solid, float u, int L, int R, int top,
         case SV_RESTORE: name = "Restore A Backup"; icon = Glass::I_REWIND; sub = backups.empty() ? "None yet: one is made each time the game starts" : std::to_string(backups.size()) + (backups.size() == 1 ? " backup" : " backups") + "   \xC2\xB7   newest " + SvBackupWhen(backups[0].label); break;
         case SV_EXPORT: name = "Export Save"; icon = Glass::I_CHEVRON_U; sub = "A copy in the exports folder"; break;
         case SV_IMPORT: name = "Import Save"; icon = Glass::I_CHEVRON_D; sub = SavesCanPick() ? "A file you choose, or from the import folder" : "From the import folder beside your saves"; break;
+        case SV_LINK: name = "Memory Link"; icon = Glass::I_SPARKLE; sub = SavesLinkSub(); break;
         case SV_QUICK: name = "Play From Quick Save"; icon = Glass::I_PLAY; sub = "Saved " + StateSlots::Friendly(SavesStatePath()); break;
         case SV_UNDO: name = "Undo Delete"; icon = Glass::I_REWIND; sub = "The slot deleted last comes back"; break;
         case SV_FOLDER: name = "Open Saves Folder"; icon = Glass::I_LAYERS; sub = SvDir(s.save); break;
