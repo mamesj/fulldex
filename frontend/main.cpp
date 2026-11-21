@@ -5781,17 +5781,17 @@ int main(int argc, char** argv)
     struct FreeFlightDs
     {
         bool supported = false, on = false, bWas = false;
-        uint32_t addr[4] = {}, saved[4] = {};
+        uint32_t addr[5] = {}, saved[5] = {};
         // The game's: the four functions' first words (checked before patching), its FieldSystem pointer and the offsets
         // to the player's map object and the map matrix, the three functions the landing asks (Thumb), the field the
         // landing's job runs in (ownGame: one pk_nds_call_frame is not already given, Diamond / Pearl's).
-        uint32_t orig[4] = {}, fsPtr = 0, terrColl = 0, tileBeh = 0, surfable = 0;
+        uint32_t orig[5] = {}, fsPtr = 0, terrColl = 0, tileBeh = 0, surfable = 0;
         int family = -1; // (kFfFamilies: Platinum, Diamond / Pearl, HeartGold / SoulSilver; 3 Black / White, 4 Black 2 / White 2)
-        int npatch = 4;  // (functions patched while flying: Gen 5 two)
+        int npatch = 5;  // (functions patched while flying: Gen 5 one)
         uint32_t g5GetAt = 0; // (Gen 5: MAP_ATTR_GetAt, the landing's question)
         // What each function's start becomes while flying: movs r0, #0; bx lr, or a second word too (orig2 / saved2 the
         // words it replaced).
-        uint32_t patchWord[4] = { 0x47702000u, 0x47702000u, 0x47702000u, 0x47702000u }, patchWord2[4] = {}, orig2[4] = {}, saved2[4] = {};
+        uint32_t patchWord[5] = { 0x47702000u, 0x47702000u, 0x47702000u, 0x47702000u, 0x47702000u }, patchWord2[5] = {}, orig2[5] = {}, saved2[5] = {};
         int offAvatar = 0x3C, offMapObj = 0x30, offMatrix = 0x2C, offLand = 0xA92;
         bool resolved = false;
         bool followerWasHidden = false; // (HeartGold / SoulSilver's following Pokemon, hidden while flying)
@@ -5818,6 +5818,16 @@ int main(int argc, char** argv)
         // The clouds (as the GBA games' Free Flight): where the sheet is, in the top screen's pixels, and the player's last
         // place in the world (its units: 16 a tile, a pixel at the game's own camera).
         double cloudX = 0, cloudY = 0;
+        // The player riding (the game's own surfing pose, from its cart: HgssFollow::Source::RiderArgb), N, S, W, E.
+        std::vector<uint32_t> rider[4];
+        int riderFemale = -1; // (the gender loaded; -1 none)
+        bool riderOk = false;
+        // EXPLORED: the maps (Gen 4 map headers, Gen 5 zones) the player has stood on, noted while playing
+        // (<save>.explored, 8192 bits, the last one set once a save from before is seeded); while flying, clouds cover the
+        // rest and the void past the map's edges.
+        std::vector<uint8_t> explored = std::vector<uint8_t>(1024, 0);
+        bool exploredDirty = false;
+        int offObjMan = 0x38, offRunning = 0x68;
         int32_t cloudPrevX = 0, cloudPrevZ = 0;
         bool cloudPrev = false;
         bool moving = false;
@@ -5837,6 +5847,26 @@ int main(int argc, char** argv)
             }
         }
         freeFlight.supported = freeFlight.family >= 0;
+        // (Gen 4's struct offsets, as kFfFamilies below: for noting the maps walked on before any flight.)
+        static const int offs[3][6] = { { 0x3C, 0x30, 0x38, 0x2C, 0xA92, 0x68 }, { 0x38, 0x2C, 0x34, 0x28, 0xA92, 0x64 }, { 0x40, 0x30, 0x3C, 0x30, 0x964, 0x6C } };
+        if (freeFlight.family >= 0 && freeFlight.family < 3)
+        {
+            const int* o = offs[freeFlight.family];
+            freeFlight.offAvatar = o[0]; freeFlight.offMapObj = o[1]; freeFlight.offObjMan = o[2]; freeFlight.offMatrix = o[3]; freeFlight.offLand = o[4]; freeFlight.offRunning = o[5];
+        }
+        else if (freeFlight.family >= 3)
+        {
+            if (const PkNdsFieldGame* g = pk_nds_field_game(gameCode.c_str(), companionRevision)) freeFlight.fsPtr = g->fieldSystemPtr;
+        }
+        if (freeFlight.supported && !opt.noSave)
+        {
+            if (FILE* ef = fopen((opt.save + ".explored").c_str(), "rb"))
+            {
+                std::vector<uint8_t> b(1024);
+                if (fread(b.data(), 1, 1024, ef) == 1024) freeFlight.explored = b;
+                fclose(ef);
+            }
+        }
     }
     int flyCheckJob=0,flyJob=0,flyWait=0,flySlot=-1,flyBackPage=0;
     uint32_t flyPersonality=0;
@@ -8753,12 +8783,13 @@ int main(int argc, char** argv)
     // Free Flight's families. Each function by its code in the US cart (pret's names: Platinum's PlayerAvatar_CheckCollision,
     // FieldSystem_CheckForTrainersWantingBattle, Field_CheckWildEncounter, Field_ProcessStep, TerrainCollisionManager_
     // CheckCollision / _GetTileBehavior, TileBehavior_IsSurfable; HeartGold's TryGetSeenByNpcTrainers, FieldSystem_
-    // CheckWildEncounter / _ProcessStep, sub_020548C0, GetMetatileBehavior, MetatileBehavior_IsSurfableWater): its first 32
+    // CheckWildEncounter / _ProcessStep, sub_020548C0, GetMetatileBehavior, MetatileBehavior_IsSurfableWater; last, each one's
+    // Field_CheckMapTransition, also patched): its first 32
     // bytes (16 for the last, a pool word after), BLs not compared, found once in main RAM. So every language, revision and
     // hack with the same code is covered; the first four are the ones patched while flying. The structs (pret's decomps):
     // FieldSystem's player avatar, map object manager, map matrix and running field map; the avatar's map object; the
     // matrix's land ids (its map headers from 6).
-    struct FfFamily { const char* sig[7]; int offAvatar, offMapObj, offObjMan, offMatrix, offLand, offRunning; };
+    struct FfFamily { const char* sig[8]; int offAvatar, offMapObj, offObjMan, offMatrix, offLand, offRunning; };
     static const FfFamily kFfFamilies[3] = {
         { { "f8b5051c0e1c171c002400f04df80a21009008420ad001200443281c311c3a1c",
             "f8b596b0051cef6b0c1cae6b10a90091311c3a1c002300f085f8002802d116b0",
@@ -8766,21 +8797,24 @@ int main(int argc, char** argv)
             "f8b50321051c9ff613fa012806d1281c78f008f9002801d00120f8bd281c0921",
             "18b581b0c46d00ab6468a04700280ad000a80088c0130006010e012001400906",
             "18b581b0c46d00ab6468a047002807d000a8008801b00006000e0006000e18bd",
-            "0349095c0120014200d100207047c046" }, 0x3C, 0x30, 0x38, 0x2C, 0xA92, 0x68 },
+            "0349095c0120014200d100207047c046",
+            "78b58bb00d1c03216a56091f061c8a4202d10bb0002078bd04219ff6c9fb0128" }, 0x3C, 0x30, 0x38, 0x2C, 0xA92, 0x68 },
         { { "f8b5051c0e1c171c002400f045f80a21009008420ad001200443281c311c3a1c",
             "f8b596b0051caf6b0c1c6e6b10a90091311c3a1c002300f085f8002802d116b0",
             "10b582b0041c01a900aa00f0cbfbe0686df6a2fc86f66cfc012813d10199009a",
             "f8b5051c69f06cfb002801d00120f8bda86b7cf6dffa021ca96b281c0ef0dcfa",
             "18b581b0846d00ab6468a04700280ad000a80088c0130006010e012001400906",
             "18b581b0846d00ab6468a047002807d000a8008801b00006000e0006000e18bd",
-            "0349095c0120014200d100207047c046" }, 0x38, 0x2C, 0x34, 0x28, 0xA92, 0x64 },
+            "0349095c0120014200d100207047c046",
+            "70b58ab00d1c03216a56091f061c8a4202d10ab0002070bd69f06afe002802d0" }, 0x38, 0x2C, 0x34, 0x28, 0xA92, 0x64 },
         { { "f8b5051c0e1c171c002400f033f80a21009008420ad001200443281c311c3a1c",
             "f8b596b0051c2f6c0c1cee6b10a90091311c3a1c002300f085f8002802d116b0",
             "10b582b0041c7e3001881d48814206d2201c7e300088411c201c7e300180201c",
             "f8b50621051c81f69bfc002806d0281c6df02afd002801d00120f8bd286c75f6",
             "18b581b0046e00ab6468a04700280ad000a80088c0130006010e012001400906",
             "18b581b0046e00ab6468a047002807d000a8008801b00006000e0006000e18bd",
-            "0349095c0120014200d100207047c046" }, 0x40, 0x30, 0x3C, 0x30, 0x964, 0x6C },
+            "0349095c0120014200d100207047c046",
+            "70b58ab00d1c05216a56891f061c8a4202d10ab0002070bd04a903aa00f080fc" }, 0x40, 0x30, 0x3C, 0x30, 0x964, 0x6C },
     };
     // A function's address by its code (one match in main RAM), or 0.
     auto ffFindCode = [&](const char* hex) -> uint32_t {
@@ -8855,17 +8889,19 @@ int main(int argc, char** argv)
         if (freeFlight.resolved)
         {
             bool same = true;
-            for (int i = 0; i < 4; i++) if (ffRead32(freeFlight.addr[i]) != freeFlight.orig[i] && ffRead32(freeFlight.addr[i]) != freeFlight.patchWord[i]) same = false;
+            for (int i = 0; i < freeFlight.npatch; i++) if (ffRead32(freeFlight.addr[i]) != freeFlight.orig[i] && ffRead32(freeFlight.addr[i]) != freeFlight.patchWord[i]) same = false;
             if (same) return true;
         }
         freeFlight.resolved = false;
-        uint32_t at[7];
-        for (int i = 0; i < 7; i++)
+        uint32_t at[8];
+        for (int i = 0; i < 8; i++)
         {
             at[i] = ffFindCode(fam.sig[i]);
             if (!at[i]) { fprintf(stderr, "[freeflight] function %d not found (or found twice)\n", i); return false; }
         }
-        for (int i = 0; i < 4; i++) { freeFlight.addr[i] = at[i]; freeFlight.orig[i] = ffRead32(at[i]); }
+        // (The fifth: Field_CheckMapTransition, a door or a cave walked into as the D-pad pushes against it.)
+        freeFlight.npatch = 5;
+        for (int i = 0; i < 5; i++) { freeFlight.addr[i] = at[i < 4 ? i : 7]; freeFlight.orig[i] = ffRead32(freeFlight.addr[i]); freeFlight.orig2[i] = ffRead32(freeFlight.addr[i] + 4); }
         freeFlight.terrColl = at[4] | 1; freeFlight.tileBeh = at[5] | 1; freeFlight.surfable = at[6] | 1;
         freeFlight.offAvatar = fam.offAvatar; freeFlight.offMapObj = fam.offMapObj; freeFlight.offMatrix = fam.offMatrix; freeFlight.offLand = fam.offLand;
         auto isFieldSystem = [&](uint32_t fs) {
@@ -8908,6 +8944,74 @@ int main(int argc, char** argv)
         const uint32_t fs = ffFieldSystem(), fo = fs ? ffRead32(fs + 0xE4) : 0;
         return ffMain(fo) ? fo : 0u;
     };
+    // EXPLORED (see FreeFlightDs): a map id's bit, set and read; written to <save>.explored a while after it changes.
+    auto ffExplored = [&](int id) { return id >= 0 && id < 8191 && ((freeFlight.explored[(size_t)id >> 3] >> (id & 7)) & 1); };
+    auto ffExplore = [&](int id) {
+        if (id < 0 || id >= 8191 || ffExplored(id)) return;
+        freeFlight.explored[(size_t)id >> 3] |= (uint8_t)(1 << (id & 7));
+        freeFlight.exploredDirty = true;
+    };
+    auto ffExploredSave = [&]() {
+        if (!freeFlight.exploredDirty || opt.noSave) return;
+        if (FILE* ef = fopen((opt.save + ".explored").c_str(), "wb")) { fwrite(freeFlight.explored.data(), 1, 1024, ef); fclose(ef); }
+        freeFlight.exploredDirty = false;
+    };
+    // The map id of a block of the overworld's matrix (32 x 32 tiles): -1 the void (none, or past the edges), -2 not the
+    // overworld (a building or cave's own matrix: no clouds of this kind).
+    auto ffBlockId = [&](int bx, int bz) -> int {
+        if (freeFlight.family >= 3)
+        {
+            const uint32_t gs = ffFieldSystem(), fm = gs ? ffRead32(gs + 0x20) : 0, gd = ffMain(fm) ? ffRead32(fm + 8) : 0, mx = ffMain(gd) ? ffRead32(gd + 0x1B0) : 0;
+            if (!ffMain(mx)) return -2;
+            const int w = ffRead16(mx + 8), h = ffRead16(mx + 10);
+            if (w <= 0 || h <= 0 || w * h > 2000) return -2;
+            if (bx < 0 || bz < 0 || bx >= w || bz >= h) return -1;
+            const int zone = ffRead16(mx + 0x14 + 2 * (bx + bz * w));
+            return zone == 0xFFFF ? -1 : zone;
+        }
+        const uint32_t fs = ffFieldSystem(), mm = fs ? ffRead32(fs + freeFlight.offMatrix) : 0;
+        if (!ffMain(mm) || ffRead8(mm + 2) != 0) return -2;
+        const int w = ffRead8(mm), h = ffRead8(mm + 1);
+        if (bx < 0 || bz < 0 || bx >= w || bz >= h) return -1;
+        const int i = bx + bz * w, header = ffRead16(mm + 6 + 2 * i);
+        return header == 0 || ffRead16(mm + freeFlight.offLand + 2 * i) == 0xFFFF ? -1 : header;
+    };
+    // Gen 4: the FieldSystem's pointer before any flight (the cart's known one, else found by its struct), for noting
+    // the maps walked on. Tried again now and then while there is none.
+    auto ffIsFieldSystem = [&](uint32_t fs) {
+        if (!ffMain(fs)) return false;
+        const uint32_t av = ffRead32(fs + freeFlight.offAvatar), man = ffRead32(fs + freeFlight.offObjMan);
+        if (!ffMain(av) || !ffMain(man)) return false;
+        const uint32_t mo = ffRead32(av + freeFlight.offMapObj);
+        return ffMain(mo) && ffRead32(mo + 0xB4) == man && ffRead32(fs + freeFlight.offRunning) != 0;
+    };
+    auto ffTrackField = [&]() {
+        if (freeFlight.family >= 3) return freeFlight.fsPtr != 0;
+        if (freeFlight.family < 0) return false;
+        if (freeFlight.fsPtr && ffIsFieldSystem(ffRead32(freeFlight.fsPtr))) return true;
+        static uint32_t lastScan = 0;
+        if (freeFlight.fsPtr == 0 && frame - lastScan < 600 && lastScan) return false;
+        lastScan = frame ? frame : 1;
+        const PkNdsFieldGame* known = pk_nds_field_game(gameCode.c_str(), companionRevision);
+        if (known && ffIsFieldSystem(ffRead32(known->fieldSystemPtr))) { freeFlight.fsPtr = known->fieldSystemPtr; return true; }
+        if (freeFlight.fsPtr) return false; // (it was right once: the field is just not up now)
+        for (uint32_t pp = 0x02100000; pp < 0x021E0000; pp += 4)
+            if (ffIsFieldSystem(ffRead32(pp))) { freeFlight.fsPtr = pp; return true; }
+        return false;
+    };
+    // A save from before the record: the towns FLY can take you to, and the blocks round each, count as seen.
+    auto ffExploredSeed = [&]() {
+        if (freeFlight.explored[1023] & 0x80) return;
+        freeFlight.explored[1023] |= 0x80;
+        freeFlight.exploredDirty = true;
+        for (int i : flyOpen)
+        {
+            if (!flyGame.spots || i < 0 || i >= flyGame.count) continue;
+            const int bx = flyGame.spots[i].x / 32, bz = flyGame.spots[i].z / 32;
+            for (int dz = -1; dz <= 1; dz++)
+                for (int dx = -1; dx <= 1; dx++) ffExplore(ffBlockId(bx + dx, bz + dz));
+        }
+    };
     auto stopFreeFlight = [&](bool restore) {
         if (!freeFlight.on) return;
         if (restore)
@@ -8935,6 +9039,7 @@ int main(int argc, char** argv)
                 if (const uint32_t fo = ffFollower(); fo && !freeFlight.followerWasHidden) { uint32_t st = ffRead32(fo) & ~(1u << 9); memcpy(nds->MainRAM + (fo & nds->MainRAMMask), &st, 4); }
             }
         }
+        ffExploredSave();
         fprintf(stderr, "[freeflight] frame %u: landed\n", (unsigned)frame);
     };
     auto startFreeFlight = [&]() {
@@ -9014,6 +9119,21 @@ int main(int argc, char** argv)
                 if (freeFlight.hgssState == 1 && nat > 0 && !freeFlight.hgss.MonArgb(nat, false, freeFlight.mountSize, freeFlight.mount)) freeFlight.mountSize = 0;
             }
             fprintf(stderr, "[freeflight] flying on #%d: %s\n", nat, freeFlight.mountSize ? "its sprite" : "no sprite, the player instead");
+        }
+        ffExploredSeed();
+        // The player on its back: the cart's own surfing pose (Gen 4; Black / White's are drawn otherwise: none yet).
+        freeFlight.riderOk = false;
+        if (freeFlight.family < 3 && freeFlight.mountSize > 0)
+        {
+            const uint32_t fs = ffFieldSystem(), av = fs ? ffRead32(fs + freeFlight.offAvatar) : 0;
+            const int female = ffMain(av) ? (int)(ffRead32(av + (freeFlight.family == 0 ? 0x20 : 0x1C)) & 1) : 0;
+            if (female != freeFlight.riderFemale)
+            {
+                HgssFollow::Source cart;
+                freeFlight.riderFemale = cart.OpenFiles(opt.rom) && cart.RiderArgb(female != 0, freeFlight.rider) ? female : -2;
+            }
+            freeFlight.riderOk = freeFlight.riderFemale >= 0;
+            fprintf(stderr, "[freeflight] rider: %s\n", freeFlight.riderOk ? (female ? "heroine" : "hero") : "not found");
         }
         freeFlight.bWas = true; // (the B that chose it does not land at once)
         fprintf(stderr, "[freeflight] frame %u: taking off\n", (unsigned)frame);
@@ -12794,6 +12914,14 @@ int main(int argc, char** argv)
                     }
                 }
                 testFrames++;
+                // EXPLORED: the map under the player noted twice a second (flying too: the clouds clear as you reach a
+                // place), the file written every ten seconds while it changes.
+                if (freeFlight.supported && !opt.lockstep && frame % 30 == 0 && ffTrackField())
+                {
+                    int tx = 0, tz = 0;
+                    if (ffPlayerTile(tx, tz) && tx >= 0 && tz >= 0) ffExplore(ffBlockId(tx / 32, tz / 32));
+                    if (frame % 600 == 0) ffExploredSave();
+                }
                 if (freeFlight.on && ffRead32(freeFlight.addr[freeFlight.npatch - 1]) != freeFlight.patchWord[freeFlight.npatch - 1] && ffRead32(freeFlight.addr[freeFlight.npatch - 1]) != freeFlight.orig[freeFlight.npatch - 1]) stopFreeFlight(false); // (the field's overlay went)
                 if (!freeFlight.on && freeFlight.resolved && freeFlight.family >= 3 && frame % 30 == 0) pk_nds_call_gen5_hold_events(nds.get(), freeFlight.game, false);
                 if (!freeFlight.on && freeFlight.resolved && frame % 30 == 0)
@@ -14063,6 +14191,45 @@ int main(int argc, char** argv)
             };
             const int core = (int)(strength * 0.7f * 255), rim = core * 5 / 9;
             const int ox = (int)std::floor(freeFlight.cloudX), oy = (int)std::floor(freeFlight.cloudY);
+            // EXPLORED: where each top-screen pixel is in the world (the player at (128, 106) of the top screen, zoomed out
+            // about its middle, 16 of its pixels a tile at the game's own camera), its block of the map matrix, and the
+            // blocks not yet stood on (and the void past the edges) under thick cloud, eased from block to block.
+            const float zz = std::max(1.0f, freeFlight.zoom);
+            const float ancX = 128.0f, ancY = 96 + 10 / zz;
+            double wx0 = 0, wz0 = 0;
+            bool fogOn = false;
+            int fogBX = 0, fogBZ = 0;
+            float fogGrid[9][9] = {};
+            {
+                const uint32_t mo = ffMapObject();
+                if (mo)
+                {
+                    wx0 = (double)(int32_t)ffRead32(mo + (freeFlight.family >= 3 ? 0x44 : 0x70)) / 4096.0;
+                    wz0 = (double)(int32_t)ffRead32(mo + (freeFlight.family >= 3 ? 0x4C : 0x78)) / 4096.0;
+                    fogBX = (int)std::floor(wx0 / 512) - 4; fogBZ = (int)std::floor(wz0 / 512) - 4;
+                    for (int j = 0; j < 9; j++)
+                        for (int i = 0; i < 9; i++)
+                        {
+                            const int id = ffBlockId(fogBX + i, fogBZ + j);
+                            if (id == -2) { fogOn = false; goto noFog; }
+                            fogGrid[j][i] = id == -1 || !ffExplored(id) ? 1.0f : 0.0f;
+                        }
+                    fogOn = true;
+                }
+            }
+            noFog:
+            auto fogAt = [&](int gx, int gy) {
+                if (!fogOn) return 0.0f;
+                const double wx = wx0 + (gx - ancX) * zz, wz = wz0 + (gy - ancY) * zz;
+                const double fx = wx / 512 - 0.5 - fogBX, fz = wz / 512 - 0.5 - fogBZ;
+                const int i0 = (int)std::floor(fx), j0 = (int)std::floor(fz);
+                if (i0 < 0 || j0 < 0 || i0 > 7 || j0 > 7) return 1.0f;
+                const float tx = (float)(fx - i0), tz = (float)(fz - j0);
+                auto sm = [](float t) { t = std::clamp((t - 0.25f) * 2.0f, 0.0f, 1.0f); return t * t * (3 - 2 * t); }; // (from a quarter of a block either side of its edge)
+                const float a = fogGrid[j0][i0] + (fogGrid[j0][i0 + 1] - fogGrid[j0][i0]) * sm(tx);
+                const float b = fogGrid[j0 + 1][i0] + (fogGrid[j0 + 1][i0 + 1] - fogGrid[j0 + 1][i0]) * sm(tx);
+                return a + (b - a) * sm(tz);
+            };
             // (Worked out a top-screen pixel at a time, a block of output pixels each.)
             const int y0 = std::max(0, v.originY > 0 ? (int)v.originY : 0), y1 = std::min(outH, (int)(v.originY + 192 * v.unit));
             // (The colours of a row of top-screen pixels, spread over the output's columns; each output row laid over what's
@@ -14085,12 +14252,15 @@ int main(int argc, char** argv)
                         {
                             lastGx = gx;
                             const int m = at(gx + ox, gy + oy);
-                            if (m < 40) col = 0;
+                            const float fog = fogAt(gx, gy);
+                            // (Thick cloud: as solid as the fog, its puffs' own shapes at its edge.)
+                            const int fa = fog <= 0.01f ? 0 : (int)(strength * 255 * std::clamp(fog * 2.4f - 0.7f + (m - 110) / 255.0f * 1.2f, 0.0f, 1.0f));
+                            if (m < 40 && fa <= 8) col = 0;
                             else
                             {
                                 const bool under = at(gx + ox, gy + oy + 3) < m - 30; // (the cloud thins below: its shaded side)
-                                const uint32_t al = (uint32_t)(m >= 140 ? core : rim);
-                                col = (al << 24) | (under ? 0xCEDCF0u : 0xF8FAFFu);
+                                const int al = std::max(m >= 140 ? core : m >= 40 ? rim : 0, fa);
+                                col = ((uint32_t)al << 24) | (under && fa < 160 ? 0xCEDCF0u : m >= 140 ? 0xF8FAFFu : m >= 60 ? 0xEDF1F8u : 0xDFE6F1u);
                             }
                         }
                         rowCols[(size_t)x] = col;
@@ -14117,7 +14287,8 @@ int main(int argc, char** argv)
             const float gx = 128 + (ax - 128) / z, gy = 96 + (ay - 96) / z; // (the ground under the player, zoomed out about the middle)
             const float lift = freeFlight.lift * 0.9f / z;
             const int S = freeFlight.mountSize;
-            const float px = v.unit / z * (S == 64 ? 1.0f : 1.25f); // (output pixels a sprite pixel)
+            // (Output pixels a sprite pixel: a small one drawn larger, more so with the player on its back.)
+            const float px = v.unit / z * (S == 64 ? 1.0f : freeFlight.riderOk ? 1.6f : 1.25f);
             // Shadow: a soft dark ellipse.
             {
                 const float sw = 18.0f * v.unit / z, sh = 7.0f * v.unit / z;
@@ -14156,6 +14327,30 @@ int main(int argc, char** argv)
                 }
             }
             Glass::Mark(canvas, std::max(0, x0), std::max(0, y0), std::min(outW, x1), std::min(outH, y1));
+            // The player on its back, sitting as the game draws them surfing (N, S, W, E), at the game's own scale, the
+            // seat a little above the Pokemon's middle (SSR_FF_SEAT=<fraction of its height>), bobbing with it.
+            if (freeFlight.riderOk)
+            {
+                static float seat = 0.47f;
+                static const bool seatSet = [] { if (const char* a = getenv("SSR_FF_SEAT")) seat = (float)atof(a); return true; }();
+                (void)seatSet;
+                const int rk = freeFlight.facing == 0 ? 0 : freeFlight.facing == 1 ? 1 : freeFlight.facing == 2 ? 2 : 3;
+                const std::vector<uint32_t>& ri = freeFlight.rider[rk];
+                const float rp = v.unit / z, rw = 32 * rp;
+                const float rl = left + w / 2 - rw / 2, rt = top + w * seat - rw * 0.8f;
+                const int rx0 = (int)rl, ry0 = (int)rt, rx1 = (int)(rl + rw), ry1 = (int)(rt + rw);
+                for (int y = std::max(0, ry0); y < std::min(outH, ry1); y++)
+                {
+                    const int sy = std::clamp((int)((y - rt) / rp), 0, 31);
+                    for (int x = std::max(0, rx0); x < std::min(outW, rx1); x++)
+                    {
+                        const int sx = std::clamp((int)((x - rl) / rp), 0, 31);
+                        const uint32_t c = ri[(size_t)sy * 32 + sx];
+                        if (c >> 24) canvas.px[(size_t)y * canvas.w + x] = c;
+                    }
+                }
+                Glass::Mark(canvas, std::max(0, rx0), std::max(0, ry0), std::min(outW, rx1), std::min(outH, ry1));
+            }
             overlayUsed = true;
         }
         if (frame < toastUntil)

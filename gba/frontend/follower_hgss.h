@@ -145,6 +145,64 @@ public:
         return true;
     }
 
+    // Any DS cart's files (no HeartGold check), for RiderArgb.
+    bool OpenFiles(const std::string& path)
+    {
+        Close();
+        f = fopen(path.c_str(), "rb");
+        if (!f) return false;
+        Bytes h = Read(0, 0x200);
+        if (h.size() < 0x200) return Fail();
+        fnt = U32(&h[0x40]); fntSize = U32(&h[0x44]); fat = U32(&h[0x48]); fatSize = U32(&h[0x4C]);
+        if (fntSize > 0x400000) return Fail();
+        fntData = Read(fnt, fntSize);
+        return fntData.size() == fntSize ? true : Fail();
+    }
+
+    // The player sitting, as the game draws them surfing (the DS games' Free Flight seats them on the Pokemon flown on):
+    // the cart's own overworld textures (HeartGold / SoulSilver's a/0/8/1, Diamond / Pearl / Platinum's
+    // data/mmodel/mmodel.narc) named swimhero / swimheroine (Platinum pl_swimhiro / pl_swimhiroine). Four frames, N, S,
+    // W, E, of 32 x 32 ARGB (0 where clear). After OpenFiles.
+    bool RiderArgb(bool female, std::vector<uint32_t> out[4]) const
+    {
+        long id = FileId("a/0/8/1");
+        if (id < 0) id = FileId("data/mmodel/mmodel.narc");
+        if (id < 0) return false;
+        const std::vector<Bytes> all = Narc(ReadFile((uint32_t)id));
+        const char* want[2] = { female ? "swimheroine" : "swimhero", female ? "pl_swimhiroine" : "pl_swimhiro" };
+        struct Tex { int num; size_t off; int w, h, fmt; };
+        for (const Bytes& b : all)
+        {
+            std::vector<Tex> texs;
+            std::vector<std::pair<std::string, size_t>> pals;
+            if (!Btx(b, texs, pals) || pals.empty() || (pals[0].first != want[0] && pals[0].first != want[1])) continue;
+            const size_t palOff = pals[0].second;
+            if (palOff + 32 > b.size()) return false;
+            uint32_t argb[16];
+            for (int i = 0; i < 16; i++)
+            {
+                const unsigned c = b[palOff + i * 2] | b[palOff + i * 2 + 1] << 8;
+                const unsigned r = c & 31, g = (c >> 5) & 31, bl = (c >> 10) & 31;
+                argb[i] = i == 0 ? 0u : 0xFF000000u | (r << 3 | r >> 2) << 16 | (g << 3 | g >> 2) << 8 | (bl << 3 | bl >> 2);
+            }
+            for (int k = 0; k < 4; k++)
+            {
+                const Tex* t = nullptr;
+                for (const Tex& x : texs) if (x.num == k + 1) t = &x;
+                if (!t || t->fmt != 3 || t->w != 32 || t->h != 32 || t->off + 512 > b.size()) return false;
+                out[k].assign(32 * 32, 0);
+                for (int y = 0; y < 32; y++)
+                    for (int x = 0; x < 32; x++)
+                    {
+                        const uint8_t v = b[t->off + (size_t)(y * 32 + x) / 2];
+                        out[k][(size_t)y * 32 + x] = argb[(x & 1) ? v >> 4 : v & 15];
+                    }
+            }
+            return true;
+        }
+        return false;
+    }
+
 private:
     // The table's file is the first of a species' only up to Unown: the files of some species' other forms and females
     // come in between later on, and the table counts only some of them (worked out against HeartGold's own files).
