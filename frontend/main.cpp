@@ -12874,8 +12874,9 @@ int main(int argc, char** argv)
                             int pick = -1;
                             for (int i = 0; i < freeFlight.nTiles && pick < 0 && freeFlight.family >= 3; i++)
                             {
-                                // (Gen 5: none ~0; its flags the high half: bit 0 blocked. SSR_FF_G5WATER: flags that are water.)
-                                static const unsigned g5water = getenv("SSR_FF_G5WATER") ? (unsigned)strtoul(getenv("SSR_FF_G5WATER"), nullptr, 0) : 0u;
+                                // (Gen 5: none ~0; its flags the high half: bit 0 blocked, 0x02 / 0x04 water (a pond in White: 0x16;
+                                // ground 0x80, trees 0x81). SSR_FF_G5WATER: other water flags, for tests.)
+                                static const unsigned g5water = getenv("SSR_FF_G5WATER") ? (unsigned)strtoul(getenv("SSR_FF_G5WATER"), nullptr, 0) : 0x06u;
                                 const uint32_t a = res[i], flags = a >> 16;
                                 const bool none = a == 0xFFFFFFFFu, blocked = (flags & 1) != 0, water = (flags & g5water) != 0;
                                 fprintf(stderr, "[freeflight] ground %d,%d: attribute %08X\n", freeFlight.tx[i], freeFlight.tz[i], a);
