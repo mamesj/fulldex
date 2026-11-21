@@ -288,7 +288,7 @@ const Gen5Fns WHITE2 = {
     },
 };
 
-// Diamond / Pearl (pk_nds_dp_ops_game): raw calls only, no functions for actions.
+// A field for raw calls only (Free Flight builds one for a cart without its own: Diamond / Pearl, other languages).
 const CallFns NONE = {};
 
 struct Pending {

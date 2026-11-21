@@ -5786,8 +5786,11 @@ int main(int argc, char** argv)
         // to the player's map object and the map matrix, the three functions the landing asks (Thumb), the field the
         // landing's job runs in (ownGame: one pk_nds_call_frame is not already given, Diamond / Pearl's).
         uint32_t orig[4] = {}, fsPtr = 0, terrColl = 0, tileBeh = 0, surfable = 0;
-        int offAvatar = 0x3C, offMapObj = 0x30, offMatrix = 0x2C;
+        int family = -1; // (kFfFamilies: Platinum, Diamond / Pearl, HeartGold / SoulSilver)
+        int offAvatar = 0x3C, offMapObj = 0x30, offMatrix = 0x2C, offLand = 0xA92;
+        bool resolved = false;
         const PkNdsFieldGame* game = nullptr;
+        PkNdsFieldGame own = {};
         bool ownGame = false;
         float zoom = 1.0f;
         uint32_t since = 0;
@@ -5809,50 +5812,15 @@ int main(int argc, char** argv)
         bool moving = false;
     } freeFlight;
     {
-        // PlayerAvatar_CheckCollision, FieldSystem_CheckForTrainersWantingBattle, Field_CheckWildEncounter (overlay 5),
-        // Field_ProcessStep (overlay 5); TerrainCollisionManager_CheckCollision / _GetTileBehavior, TileBehavior_IsSurfable
-        // (pret/pokeplatinum's names; each cart's from its function table, data/funcs, the same code).
-        const int rev = companionRevision;
-        auto use = [&](const uint32_t a[7], const uint32_t o[4], const PkNdsFieldGame* g) {
-            if (!g || !g->fieldSystemPtr) return;
-            for (int i = 0; i < 4; i++) { freeFlight.addr[i] = a[i]; freeFlight.orig[i] = o[i]; }
-            freeFlight.terrColl = a[4] | 1; freeFlight.tileBeh = a[5] | 1; freeFlight.surfable = a[6] | 1;
-            freeFlight.game = g; freeFlight.fsPtr = g->fieldSystemPtr;
-            freeFlight.supported = true;
-        };
-        static const uint32_t platOrig[4] = { 0x1C05B5F8u, 0xB096B5F8u, 0xB082B510u, 0x2103B5F8u };
-        static const uint32_t dpOrig[4] = { 0x1C05B5F8u, 0xB096B5F8u, 0xB082B510u, 0x1C05B5F8u };
-        if (gameCode == "CPUE" && (rev == 1 || rev == 10))
+        // The game's family by its code; the functions and the FieldSystem are found when it takes off (ffResolve).
+        if (gameCode.size() == 4)
         {
-            static const uint32_t a[7] = { 0x02060B7C, 0x02067A84, 0x021D249C, 0x021D2884, 0x02054F68, 0x02054F94, 0x0205DB58 };
-            use(a, platOrig, pk_nds_field_game(gameCode.c_str(), rev));
+            const std::string f = gameCode.substr(0, 3);
+            if (f == "CPU") freeFlight.family = 0;
+            else if (f == "ADA" || f == "APA") freeFlight.family = 1;
+            else if (f == "IPK" || f == "IPG") freeFlight.family = 2;
         }
-        else if (gameCode == "CPUS" && rev == 0)
-        {
-            static const uint32_t a[7] = { 0x02060C20, 0x02067B28, 0x021D269C, 0x021D2A84, 0x0205500C, 0x02055038, 0x0205DBFC };
-            use(a, platOrig, pk_nds_field_game(gameCode.c_str(), rev));
-        }
-        else if (gameCode.size() == 4 && gameCode[0] == 'A' && (gameCode[1] == 'D' || gameCode[1] == 'P') && gameCode[2] == 'A' && rev == 5)
-        {
-            // Diamond / Pearl rev 5: the German, Italian, Spanish and French carts share their ARM9 (overlay 5 apart).
-            // pret/pokediamond: playerAvatar at FieldSystem 0x38, its map object at 0x2C, the map matrix at 0x28.
-            static const uint32_t us[7] = { 0x02056B74, 0x0205C598, 0x021D8954, 0x021D8D24, 0x0204A6B4, 0x0204A6E0, 0x0205481C };
-            uint32_t a[7] = { 0x02056BE4, 0x0205C608, 0, 0, 0x0204A724, 0x0204A750, 0x0205488C };
-            switch (gameCode[3])
-            {
-            case 'D': a[2] = 0x021D8A94; a[3] = 0x021D8E64; break;
-            case 'I': a[2] = 0x021D8A34; a[3] = 0x021D8E04; break;
-            case 'S': a[2] = 0x021D8AF4; a[3] = 0x021D8EC4; break;
-            case 'F': a[2] = 0x021D8AD4; a[3] = 0x021D8EA4; break;
-            }
-            const uint32_t* at = gameCode[3] == 'E' ? us : a;
-            if (at[2])
-            {
-                use(at, dpOrig, pk_nds_dp_ops_game(gameCode.c_str()));
-                freeFlight.offAvatar = 0x38; freeFlight.offMapObj = 0x2C; freeFlight.offMatrix = 0x28;
-                freeFlight.ownGame = true;
-            }
-        }
+        freeFlight.supported = freeFlight.family >= 0;
     }
     int flyCheckJob=0,flyJob=0,flyWait=0,flySlot=-1,flyBackPage=0;
     uint32_t flyPersonality=0;
@@ -8749,7 +8717,118 @@ int main(int argc, char** argv)
         const int cx = x / 32, cz = z / 32;
         if (cx >= w || cz >= h) return false;
         const int i = cx + cz * w;
-        return ffRead16(mm + 6 + 2 * i) != 0 && ffRead16(mm + 0xA92 + 2 * i) != 0xFFFF;
+        return ffRead16(mm + 6 + 2 * i) != 0 && ffRead16(mm + freeFlight.offLand + 2 * i) != 0xFFFF;
+    };
+    // Free Flight's families. Each function by its code in the US cart (pret's names: Platinum's PlayerAvatar_CheckCollision,
+    // FieldSystem_CheckForTrainersWantingBattle, Field_CheckWildEncounter, Field_ProcessStep, TerrainCollisionManager_
+    // CheckCollision / _GetTileBehavior, TileBehavior_IsSurfable; HeartGold's TryGetSeenByNpcTrainers, FieldSystem_
+    // CheckWildEncounter / _ProcessStep, sub_020548C0, GetMetatileBehavior, MetatileBehavior_IsSurfableWater): its first 32
+    // bytes (16 for the last, a pool word after), BLs not compared, found once in main RAM. So every language, revision and
+    // hack with the same code is covered; the first four are the ones patched while flying. The structs (pret's decomps):
+    // FieldSystem's player avatar, map object manager, map matrix and running field map; the avatar's map object; the
+    // matrix's land ids (its map headers from 6).
+    struct FfFamily { const char* sig[7]; int offAvatar, offMapObj, offObjMan, offMatrix, offLand, offRunning; };
+    static const FfFamily kFfFamilies[3] = {
+        { { "f8b5051c0e1c171c002400f04df80a21009008420ad001200443281c311c3a1c",
+            "f8b596b0051cef6b0c1cae6b10a90091311c3a1c002300f085f8002802d116b0",
+            "10b582b0041c01a900aa00f0e9fbe0687ef69af998f6ecfc012813d10199009a",
+            "f8b50321051c9ff613fa012806d1281c78f008f9002801d00120f8bd281c0921",
+            "18b581b0c46d00ab6468a04700280ad000a80088c0130006010e012001400906",
+            "18b581b0c46d00ab6468a047002807d000a8008801b00006000e0006000e18bd",
+            "0349095c0120014200d100207047c046" }, 0x3C, 0x30, 0x38, 0x2C, 0xA92, 0x68 },
+        { { "f8b5051c0e1c171c002400f045f80a21009008420ad001200443281c311c3a1c",
+            "f8b596b0051caf6b0c1c6e6b10a90091311c3a1c002300f085f8002802d116b0",
+            "10b582b0041c01a900aa00f0cbfbe0686df6a2fc86f66cfc012813d10199009a",
+            "f8b5051c69f06cfb002801d00120f8bda86b7cf6dffa021ca96b281c0ef0dcfa",
+            "18b581b0846d00ab6468a04700280ad000a80088c0130006010e012001400906",
+            "18b581b0846d00ab6468a047002807d000a8008801b00006000e0006000e18bd",
+            "0349095c0120014200d100207047c046" }, 0x38, 0x2C, 0x34, 0x28, 0xA92, 0x64 },
+        { { "f8b5051c0e1c171c002400f033f80a21009008420ad001200443281c311c3a1c",
+            "f8b596b0051c2f6c0c1cee6b10a90091311c3a1c002300f085f8002802d116b0",
+            "10b582b0041c7e3001881d48814206d2201c7e300088411c201c7e300180201c",
+            "f8b50621051c81f69bfc002806d0281c6df02afd002801d00120f8bd286c75f6",
+            "18b581b0046e00ab6468a04700280ad000a80088c0130006010e012001400906",
+            "18b581b0046e00ab6468a047002807d000a8008801b00006000e0006000e18bd",
+            "0349095c0120014200d100207047c046" }, 0x40, 0x30, 0x3C, 0x30, 0x964, 0x6C },
+    };
+    // A function's address by its code (one match in main RAM), or 0.
+    auto ffFindCode = [&](const char* hex) -> uint32_t {
+        uint8_t b[32], m[32];
+        const int n = (int)strlen(hex) / 2;
+        for (int i = 0; i < n; i++) { unsigned v = 0; sscanf(hex + 2 * i, "%2x", &v); b[i] = (uint8_t)v; m[i] = 0xFF; }
+        for (int i = 0; i + 3 < n;)
+        {
+            const int h1 = b[i] | b[i + 1] << 8, h2 = b[i + 2] | b[i + 3] << 8;
+            if ((h1 & 0xF800) == 0xF000 && (h2 & 0xE800) == 0xE800) { m[i] = m[i + 1] = m[i + 2] = m[i + 3] = 0; i += 4; }
+            else i += 2;
+        }
+        const uint8_t* ram = nds->MainRAM;
+        const size_t size = std::min<size_t>((size_t)nds->MainRAMMask + 1, 0x400000);
+        uint32_t found = 0;
+        int hits = 0;
+        for (size_t o = 0; o + n <= size; o += 2)
+        {
+            if (ram[o] != b[0] || ram[o + 1] != b[1]) continue;
+            int k = 2;
+            while (k < n && (ram[o + k] & m[k]) == (b[k] & m[k])) k++;
+            if (k == n) { found = 0x02000000u + (uint32_t)o; if (++hits > 1) return 0; }
+        }
+        return found;
+    };
+    // The functions, the FieldSystem's static pointer (the cart's known one, else a word in the static data that points at
+    // a FieldSystem: its avatar's map object's manager is the FieldSystem's) and the field for the landing's job (the
+    // cart's own, else one of raw calls with that pointer and the field map's main as it runs now). False: not here.
+    auto ffResolve = [&]() {
+        if (freeFlight.family < 0) return false;
+        const FfFamily& fam = kFfFamilies[freeFlight.family];
+        if (freeFlight.resolved)
+        {
+            bool same = true;
+            for (int i = 0; i < 4; i++) if (ffRead32(freeFlight.addr[i]) != freeFlight.orig[i] && ffRead32(freeFlight.addr[i]) != ffPatch) same = false;
+            if (same) return true;
+        }
+        freeFlight.resolved = false;
+        uint32_t at[7];
+        for (int i = 0; i < 7; i++)
+        {
+            at[i] = ffFindCode(fam.sig[i]);
+            if (!at[i]) { fprintf(stderr, "[freeflight] function %d not found (or found twice)\n", i); return false; }
+        }
+        for (int i = 0; i < 4; i++) { freeFlight.addr[i] = at[i]; freeFlight.orig[i] = ffRead32(at[i]); }
+        freeFlight.terrColl = at[4] | 1; freeFlight.tileBeh = at[5] | 1; freeFlight.surfable = at[6] | 1;
+        freeFlight.offAvatar = fam.offAvatar; freeFlight.offMapObj = fam.offMapObj; freeFlight.offMatrix = fam.offMatrix; freeFlight.offLand = fam.offLand;
+        auto isFieldSystem = [&](uint32_t fs) {
+            if (!ffMain(fs)) return false;
+            const uint32_t av = ffRead32(fs + fam.offAvatar), man = ffRead32(fs + fam.offObjMan);
+            if (!ffMain(av) || !ffMain(man)) return false;
+            const uint32_t mo = ffRead32(av + fam.offMapObj);
+            return ffMain(mo) && ffRead32(mo + 0xB4) == man && ffRead32(fs + fam.offRunning) != 0;
+        };
+        const PkNdsFieldGame* known = pk_nds_field_game(gameCode.c_str(), companionRevision);
+        uint32_t ptr = known && isFieldSystem(ffRead32(known->fieldSystemPtr)) ? known->fieldSystemPtr : 0;
+        for (uint32_t p = 0x02100000; !ptr && p < 0x021E0000; p += 4)
+            if (isFieldSystem(ffRead32(p))) ptr = p;
+        if (!ptr) { fprintf(stderr, "[freeflight] no FieldSystem found\n"); return false; }
+        freeFlight.fsPtr = ptr;
+        if (known && known->fieldSystemPtr == ptr) { freeFlight.game = known; freeFlight.ownGame = false; }
+        else
+        {
+            const uint32_t fs = ffRead32(ptr), pm = ffRead32(fs), parent = ffMain(pm) ? ffRead32(pm) : 0, main = ffMain(parent) ? ffRead32(parent + 4) : 0;
+            if (!main || main == PK_NDS_HOOK_ADDR) { fprintf(stderr, "[freeflight] field map's main not readable now\n"); return false; }
+            freeFlight.own = PkNdsFieldGame{};
+            freeFlight.own.name = "Free Flight";
+            freeFlight.own.fieldSystemPtr = ptr;
+            freeFlight.own.offProcessManager = 0x00;
+            freeFlight.own.offTask = 0x10;
+            freeFlight.own.offPlayerAvatar = fam.offAvatar;
+            freeFlight.own.offRunningFieldMap = fam.offRunning;
+            freeFlight.own.fieldMapMain = main;
+            freeFlight.own.callSet = 11;
+            freeFlight.game = &freeFlight.own; freeFlight.ownGame = true;
+        }
+        fprintf(stderr, "[freeflight] %s: functions %08X %08X %08X %08X, FieldSystem at %08X%s\n", gameCode.c_str(), at[0], at[1], at[2], at[3], ptr, freeFlight.ownGame ? " (own field for the landing)" : "");
+        freeFlight.resolved = true;
+        return true;
     };
     auto stopFreeFlight = [&](bool restore) {
         if (!freeFlight.on) return;
@@ -8773,6 +8852,12 @@ int main(int argc, char** argv)
     auto startFreeFlight = [&]() {
         if (!freeFlight.supported) { fprintf(stderr, "[freeflight] not in this game (%s rev %d)\n", gameCode.c_str(), companionRevision); say("FREE FLIGHT: NOT IN THIS GAME YET"); return false; }
         if (freeFlight.on) return true;
+        if (!ffResolve()) { say("FREE FLIGHT: NOT HERE"); return false; }
+        // Outdoors only: the overworld's own map matrix (id 0; a building, a cave, a gate has one of its own).
+        {
+            const uint32_t fs = ffFieldSystem(), mm = fs ? ffRead32(fs + freeFlight.offMatrix) : 0;
+            if (!ffMain(mm) || ffRead8(mm + 2) != 0) { fprintf(stderr, "[freeflight] not outdoors (matrix %d)\n", ffMain(mm) ? ffRead8(mm + 2) : -1); say("FREE FLIGHT: NOT HERE"); return false; }
+        }
         // (Each a function's first instruction, a push: the field's overlay is the one loaded.)
         for (int i = 0; i < 4; i++)
         {
@@ -12591,7 +12676,7 @@ int main(int argc, char** argv)
                 }
                 testFrames++;
                 if (freeFlight.on && ffRead32(freeFlight.addr[2]) != ffPatch) stopFreeFlight(false); // (the field's overlay went)
-                if (!freeFlight.on && freeFlight.supported && frame % 30 == 0)
+                if (!freeFlight.on && freeFlight.resolved && frame % 30 == 0)
                     for (int i = 0; i < 2; i++)
                         if (ffRead32(freeFlight.addr[i]) == ffPatch) ffWrite32(freeFlight.addr[i], freeFlight.orig[i]);
                 if (freeFlight.on)

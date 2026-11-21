@@ -110,9 +110,6 @@ extern "C" {
 /** The table entry for this cart (its header's game code and revision), or NULL. */
 const PkNdsFieldGame* pk_nds_field_game(const char code[4], int revision);
 
-/** Diamond / Pearl (ADAx / APAx: E, D, I, S, F): their field for pk_nds_call_ops only (no actions), or NULL. */
-const PkNdsFieldGame* pk_nds_dp_ops_game(const char code[4]);
-
 /** The table entry for this cart from its bytes (header, and for a hack sharing a retail header its code: Origin
  * HeartGold's IPKJ), or NULL. */
 const PkNdsFieldGame* pk_nds_field_game_rom(const uint8_t* rom, uint32_t romLen);
