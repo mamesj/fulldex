@@ -14230,6 +14230,80 @@ int main(int argc, char** argv)
                 const float b = fogGrid[j0 + 1][i0] + (fogGrid[j0 + 1][i0 + 1] - fogGrid[j0 + 1][i0]) * sm(tx);
                 return a + (b - a) * sm(tz);
             };
+            // The thick cloud: a sea of cumulus tops seen from above, fixed to the world (a 128 x 128 wrapped field of a few hundred
+            // round puffs, a texel 6 of the world's pixels): each puff a dome, lit from the top left, its valleys bluer. Where it
+            // stops follows the puffs' own outlines (higher ones reach further out), with a rim a shade darker and the cloud's
+            // shadow on the ground beside it, down and to the right.
+            static std::vector<float> bankH;
+            static std::vector<uint8_t> bankLit;
+            constexpr int BN = 128;
+            if (bankH.empty())
+            {
+                bankH.assign(BN * BN, 0.0f);
+                uint32_t seed = 0x2545F491u;
+                auto rnd = [&]() { seed = seed * 1664525u + 1013904223u; return (seed >> 8) / 16777216.0; };
+                for (int p = 0; p < 320; p++)
+                {
+                    const double cx = rnd() * BN, cy = rnd() * BN, r = 3 + rnd() * rnd() * 9;
+                    for (int y = (int)(cy - r) - 1; y <= (int)(cy + r) + 1; y++)
+                        for (int x = (int)(cx - r) - 1; x <= (int)(cx + r) + 1; x++)
+                        {
+                            const double dx = (x - cx) / r, dy = (y - cy) / r, q = 1 - (dx * dx + dy * dy);
+                            if (q <= 0) continue;
+                            const float hv = (float)(std::sqrt(q) * (0.35 + r * 0.065));
+                            float& h = bankH[(size_t)((y & (BN - 1)) * BN + (x & (BN - 1)))];
+                            if (hv > h) h = hv;
+                        }
+                }
+                // (Smoothed twice, so the puffs swell into each other instead of meeting in creases.)
+                for (int pass = 0; pass < 2; pass++)
+                {
+                    std::vector<float> sm(BN * BN);
+                    for (int y = 0; y < BN; y++)
+                        for (int x = 0; x < BN; x++)
+                        {
+                            float t = 0;
+                            for (int dy = -1; dy <= 1; dy++)
+                                for (int dx = -1; dx <= 1; dx++) t += bankH[(size_t)(((y + dy) & (BN - 1)) * BN + ((x + dx) & (BN - 1)))];
+                            sm[(size_t)(y * BN + x)] = t / 9;
+                        }
+                    bankH.swap(sm);
+                }
+                bankLit.assign(BN * BN, 0);
+                auto H = [&](int x, int y) { return bankH[(size_t)((y & (BN - 1)) * BN + (x & (BN - 1)))]; };
+                for (int y = 0; y < BN; y++)
+                    for (int x = 0; x < BN; x++)
+                    {
+                        float lit = 0.64f + (H(x - 1, y - 1) - H(x + 1, y + 1)) * 2.6f;
+                        lit *= 0.72f + 0.28f * std::min(1.0f, H(x, y) / 0.45f);
+                        bankLit[(size_t)(y * BN + x)] = (uint8_t)(std::clamp(lit, 0.0f, 1.0f) * 255);
+                    }
+            }
+            // (The bank at a top-screen pixel: its height (0..~1) and light, bilinear.)
+            auto bankAt = [&](int gx, int gy, float& h, float& lit) {
+                const double wx = wx0 + (gx - ancX) * zz, wz = wz0 + (gy - ancY) * zz;
+                const double fx = wx / 6.0, fz = wz / 6.0;
+                const int ix = (int)std::floor(fx), iz = (int)std::floor(fz);
+                const float tx = (float)(fx - ix), tz = (float)(fz - iz);
+                auto idx = [&](int x, int y) { return (size_t)((y & (BN - 1)) * BN + (x & (BN - 1))); };
+                const size_t a = idx(ix, iz), b = idx(ix + 1, iz), c = idx(ix, iz + 1), d = idx(ix + 1, iz + 1);
+                h = (bankH[a] * (1 - tx) + bankH[b] * tx) * (1 - tz) + (bankH[c] * (1 - tx) + bankH[d] * tx) * tz;
+                lit = ((bankLit[a] * (1 - tx) + bankLit[b] * tx) * (1 - tz) + (bankLit[c] * (1 - tx) + bankLit[d] * tx) * tz) / 255.0f;
+            };
+            // (How far inside the bank: > 0 covered.)
+            auto bankCover = [&](int gx, int gy, float& h, float& lit) {
+                const float fog = fogAt(gx, gy);
+                if (fog <= 0.01f) { h = 0; lit = 0; return -1.0f; }
+                bankAt(gx, gy, h, lit);
+                return fog * 2.0f - 1.05f + h * 0.9f;
+            };
+            auto mix = [](uint32_t a, uint32_t b, float t) {
+                t = std::clamp(t, 0.0f, 1.0f);
+                const int r = (int)(((a >> 16) & 255) + (((int)((b >> 16) & 255) - (int)((a >> 16) & 255)) * t));
+                const int g = (int)(((a >> 8) & 255) + (((int)((b >> 8) & 255) - (int)((a >> 8) & 255)) * t));
+                const int bl = (int)((a & 255) + (((int)(b & 255) - (int)(a & 255)) * t));
+                return (uint32_t)(r << 16 | g << 8 | bl);
+            };
             // (Worked out a top-screen pixel at a time, a block of output pixels each.)
             const int y0 = std::max(0, v.originY > 0 ? (int)v.originY : 0), y1 = std::min(outH, (int)(v.originY + 192 * v.unit));
             // (The colours of a row of top-screen pixels, spread over the output's columns; each output row laid over what's
@@ -14252,15 +14326,30 @@ int main(int argc, char** argv)
                         {
                             lastGx = gx;
                             const int m = at(gx + ox, gy + oy);
-                            const float fog = fogAt(gx, gy);
-                            // (Thick cloud: as solid as the fog, its puffs' own shapes at its edge.)
-                            const int fa = fog <= 0.01f ? 0 : (int)(strength * 255 * std::clamp(fog * 2.4f - 0.7f + (m - 110) / 255.0f * 1.2f, 0.0f, 1.0f));
-                            if (m < 40 && fa <= 8) col = 0;
+                            float bh = 0, blit = 0;
+                            const float cover = fogOn ? bankCover(gx, gy, bh, blit) : -1.0f;
+                            if (cover > 0)
+                            {
+                                // The bank: lit tops white, valleys blue-grey, a darker rim just inside its edge.
+                                uint32_t c = mix(0xAFBCD6u, 0xFBFCFFu, blit);
+                                if (cover < 0.07f) c = mix(c, 0x9AA9C6u, 0.55f);
+                                const float edge = std::min(1.0f, cover / 0.03f);
+                                col = ((uint32_t)(strength * 255 * edge) << 24) | c;
+                            }
                             else
                             {
-                                const bool under = at(gx + ox, gy + oy + 3) < m - 30; // (the cloud thins below: its shaded side)
-                                const int al = std::max(m >= 140 ? core : m >= 40 ? rim : 0, fa);
-                                col = ((uint32_t)al << 24) | (under && fa < 160 ? 0xCEDCF0u : m >= 140 ? 0xF8FAFFu : m >= 60 ? 0xEDF1F8u : 0xDFE6F1u);
+                                // Outside it: the thin clouds, and the bank's shadow on the ground (the bank as it is up and
+                                // to the left).
+                                float sh = 0, sl = 0;
+                                const bool shadow = fogOn && bankCover(gx - 4, gy - 6, sh, sl) > 0;
+                                const uint32_t sa = shadow ? (uint32_t)(strength * 70) : 0;
+                                if (m < 40) col = sa ? (sa << 24) | 0x1A2438u : 0;
+                                else
+                                {
+                                    const bool under = at(gx + ox, gy + oy + 3) < m - 30; // (the cloud thins below: its shaded side)
+                                    const int al = m >= 140 ? core : rim;
+                                    col = ((uint32_t)al << 24) | (under ? 0xCEDCF0u : 0xF8FAFFu);
+                                }
                             }
                         }
                         rowCols[(size_t)x] = col;
