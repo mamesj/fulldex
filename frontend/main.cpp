@@ -13263,7 +13263,19 @@ int main(int argc, char** argv)
             if(testFlyAt>=0&&menu.open&&menuPage==PAGE_FLY)
             {
                 if(!testTownsAt){testTownsAt=testFrames;fprintf(stderr,"[fly] test: %zu towns open\n",flyOpen.size());}
-                else if(testFrames>=testTownsAt+60&&testFlyTown<(int)flyOpen.size())
+                else if(testFrames>=testTownsAt+60&&testFlyTown<0)
+                {
+                    // (,-1: the FREE FLIGHT row, as chosen by hand.)
+                    // (Moved to it, as by hand: the page starts on the first town when there are towns.)
+                    int at=-1;
+                    for(int i=0;i<(int)menuIds.size();i++)if(menuIds[i]==M_FREEFLIGHT)at=i;
+                    const bool row=at>=0;
+                    fprintf(stderr,"[fly] test: FREE FLIGHT row %s (selected %d, the row %d)\n",row?"there":"missing",menu.selected,at);
+                    if(row)menu.selected=at;
+                    if(row&&startFreeFlight()){menu.open=false;swallowMenuButtons=true;}
+                    testFlyAt=-1;
+                }
+                else if(testFrames>=testTownsAt+60&&testFlyTown>=0&&testFlyTown<(int)flyOpen.size())
                 {fprintf(stderr,"[fly] test: town %d (spot %d)\n",testFlyTown,flyOpen[testFlyTown]);if(flyTo(flyOpen[testFlyTown]))menu.open=false;testFlyAt=-1;}
             }
         }
