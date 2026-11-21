@@ -369,6 +369,40 @@ const PkNdsFieldGame* pk_nds_field_game_rom(const uint8_t* rom, uint32_t romLen)
 
 static const PkNdsFieldGame* portGame(const char code[4], int revision);
 
+// Diamond / Pearl, for jobs of raw calls only (Free Flight's landing): no actions, so not given by pk_nds_field_game.
+// pret/pokediamond's field_system.h (processManager 0x00, taskManager 0x10, playerAvatar 0x38; the running field map at
+// 0x64, Platinum's 0x68 four lower like the rest) and each cart's sFieldSystem (InitFieldSystemContinue's pool word) and
+// FieldMap_Main (overlay 5), from the US, German, Italian, Spanish and French rev 5 carts' code (Diamond and Pearl
+// alike). callSet 11: pk_nds_call's empty set.
+const PkNdsFieldGame* pk_nds_dp_ops_game(const char code[4])
+{
+    struct Row { char lang; uint32_t fs, main; };
+    static const Row rows[] = {
+        { 'E', 0x021C5A08, 0x021D767D }, { 'D', 0x021C5B48, 0x021D77BD }, { 'I', 0x021C5AE8, 0x021D775D },
+        { 'S', 0x021C5BA8, 0x021D781D }, { 'F', 0x021C5B88, 0x021D77FD },
+    };
+    static PkNdsFieldGame games[5];
+    static int made = 0;
+    if (!code || code[0] != 'A' || (code[1] != 'D' && code[1] != 'P') || code[2] != 'A') return 0;
+    if (!made) {
+        for (int i = 0; i < 5; i++) {
+            memset(&games[i], 0, sizeof games[i]);
+            games[i].name = "Diamond / Pearl";
+            games[i].fieldSystemPtr = rows[i].fs;
+            games[i].offProcessManager = 0x00;
+            games[i].offTask = 0x10;
+            games[i].offPlayerAvatar = 0x38;
+            games[i].offRunningFieldMap = 0x64;
+            games[i].fieldMapMain = rows[i].main;
+            games[i].callSet = 11;
+        }
+        made = 1;
+    }
+    for (int i = 0; i < 5; i++)
+        if (rows[i].lang == code[3]) return &games[i];
+    return 0;
+}
+
 const PkNdsFieldGame* pk_nds_field_game(const char code[4], int revision)
 {
     // (European Platinum, CPUE rev 10: the US rev 1 cart's code at the same addresses.)

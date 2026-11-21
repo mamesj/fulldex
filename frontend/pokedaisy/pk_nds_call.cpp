@@ -288,6 +288,9 @@ const Gen5Fns WHITE2 = {
     },
 };
 
+// Diamond / Pearl (pk_nds_dp_ops_game): raw calls only, no functions for actions.
+const CallFns NONE = {};
+
 struct Pending {
     int seq;
     uint32_t parent;   // the field map's ApplicationManager the hook sits in (Gen 5: the GameSystem)
@@ -394,6 +397,7 @@ const CallFns* fnsFor(const PkNdsFieldGame* game)
     case 2: return &HEARTGOLD;
     case 7: return &ORIGIN_HEARTGOLD;
     case 8: return &PLATINUM_FR;
+    case 11: return &NONE;
     default:
         if (game->callSet >= 100 && game->callSet < 200) return portFns(game->callSet - 100);
         if (game->callSet >= 300 && game->callSet < 400) return portPlatinumFns(game->callSet - 300);
@@ -651,6 +655,7 @@ int pk_nds_call_action(const PkNdsCallMemory& mem, const PkNdsFieldGame* game, i
     u32 scriptLen = 0;
     switch (action) {
     case PK_NDS_ACTION_PC:
+        if (!f->scriptEnvironmentNew && !f->scriptManagerSet) return 0;
         if (f->scriptEnvironmentNew) {
             hgScriptJob(o, *f, fs, *game);
             script = PK_NDS_HEARTGOLD_PC;
@@ -757,6 +762,7 @@ int pk_nds_call_script(const PkNdsCallMemory& mem, const PkNdsFieldGame* game, c
 {
     const CallFns* f = fnsFor(game);
     if (!f || (pending.seq && pending.state == 0) || !bytes || len == 0 || len > PK_NDS_SCRIPT_MAX) return 0;
+    if (!f->scriptEnvironmentNew && !f->scriptManagerSet) return 0;
     u32 parent = freeFieldParent(mem, game);
     if (!parent) return 0;
     Ops o;

@@ -5782,13 +5782,21 @@ int main(int argc, char** argv)
     {
         bool supported = false, on = false, bWas = false;
         uint32_t addr[4] = {}, saved[4] = {};
+        // The game's: the four functions' first words (checked before patching), its FieldSystem pointer and the offsets
+        // to the player's map object and the map matrix, the three functions the landing asks (Thumb), the field the
+        // landing's job runs in (ownGame: one pk_nds_call_frame is not already given, Diamond / Pearl's).
+        uint32_t orig[4] = {}, fsPtr = 0, terrColl = 0, tileBeh = 0, surfable = 0;
+        int offAvatar = 0x3C, offMapObj = 0x30, offMatrix = 0x2C;
+        const PkNdsFieldGame* game = nullptr;
+        bool ownGame = false;
         float zoom = 1.0f;
         uint32_t since = 0;
         // Landing (B): 1 settling (no keys for a few frames), 2 asking the game about the ground under and around
         // (job), 3 gliding to the spot it found.
         int landing = 0, landWait = 0, landJob = 0, lastDir = 0;
         int targetX = 0, targetZ = 0;
-        int tx[7] = {}, tz[7] = {};
+        int tx[8] = {}, tz[8] = {}, nTiles = 0;
+        int ring = 0; // (0: the ground under and beside; then rings of 8 further out, see kRings)
         int seekFromX = 0, seekFromZ = 0, seekDir = 0, seekTries = 0;
         float lift = 0; // (the player raised, in the game's units, above the ground: flying over the trees)
         // The Pokemon flown on, in the player's place: the party's flyer as HeartGold / SoulSilver's following
@@ -5801,12 +5809,49 @@ int main(int argc, char** argv)
         bool moving = false;
     } freeFlight;
     {
+        // PlayerAvatar_CheckCollision, FieldSystem_CheckForTrainersWantingBattle, Field_CheckWildEncounter (overlay 5),
+        // Field_ProcessStep (overlay 5); TerrainCollisionManager_CheckCollision / _GetTileBehavior, TileBehavior_IsSurfable
+        // (pret/pokeplatinum's names; each cart's from its function table, data/funcs, the same code).
         const int rev = companionRevision;
+        auto use = [&](const uint32_t a[7], const uint32_t o[4], const PkNdsFieldGame* g) {
+            if (!g || !g->fieldSystemPtr) return;
+            for (int i = 0; i < 4; i++) { freeFlight.addr[i] = a[i]; freeFlight.orig[i] = o[i]; }
+            freeFlight.terrColl = a[4] | 1; freeFlight.tileBeh = a[5] | 1; freeFlight.surfable = a[6] | 1;
+            freeFlight.game = g; freeFlight.fsPtr = g->fieldSystemPtr;
+            freeFlight.supported = true;
+        };
+        static const uint32_t platOrig[4] = { 0x1C05B5F8u, 0xB096B5F8u, 0xB082B510u, 0x2103B5F8u };
+        static const uint32_t dpOrig[4] = { 0x1C05B5F8u, 0xB096B5F8u, 0xB082B510u, 0x1C05B5F8u };
         if (gameCode == "CPUE" && (rev == 1 || rev == 10))
         {
-            const uint32_t a[4] = { 0x02060B7C, 0x02067A84, 0x021D249C, 0x021D2884 };
-            for (int i = 0; i < 4; i++) freeFlight.addr[i] = a[i];
-            freeFlight.supported = true;
+            static const uint32_t a[7] = { 0x02060B7C, 0x02067A84, 0x021D249C, 0x021D2884, 0x02054F68, 0x02054F94, 0x0205DB58 };
+            use(a, platOrig, pk_nds_field_game(gameCode.c_str(), rev));
+        }
+        else if (gameCode == "CPUS" && rev == 0)
+        {
+            static const uint32_t a[7] = { 0x02060C20, 0x02067B28, 0x021D269C, 0x021D2A84, 0x0205500C, 0x02055038, 0x0205DBFC };
+            use(a, platOrig, pk_nds_field_game(gameCode.c_str(), rev));
+        }
+        else if (gameCode.size() == 4 && gameCode[0] == 'A' && (gameCode[1] == 'D' || gameCode[1] == 'P') && gameCode[2] == 'A' && rev == 5)
+        {
+            // Diamond / Pearl rev 5: the German, Italian, Spanish and French carts share their ARM9 (overlay 5 apart).
+            // pret/pokediamond: playerAvatar at FieldSystem 0x38, its map object at 0x2C, the map matrix at 0x28.
+            static const uint32_t us[7] = { 0x02056B74, 0x0205C598, 0x021D8954, 0x021D8D24, 0x0204A6B4, 0x0204A6E0, 0x0205481C };
+            uint32_t a[7] = { 0x02056BE4, 0x0205C608, 0, 0, 0x0204A724, 0x0204A750, 0x0205488C };
+            switch (gameCode[3])
+            {
+            case 'D': a[2] = 0x021D8A94; a[3] = 0x021D8E64; break;
+            case 'I': a[2] = 0x021D8A34; a[3] = 0x021D8E04; break;
+            case 'S': a[2] = 0x021D8AF4; a[3] = 0x021D8EC4; break;
+            case 'F': a[2] = 0x021D8AD4; a[3] = 0x021D8EA4; break;
+            }
+            const uint32_t* at = gameCode[3] == 'E' ? us : a;
+            if (at[2])
+            {
+                use(at, dpOrig, pk_nds_dp_ops_game(gameCode.c_str()));
+                freeFlight.offAvatar = 0x38; freeFlight.offMapObj = 0x2C; freeFlight.offMatrix = 0x28;
+                freeFlight.ownGame = true;
+            }
         }
     }
     int flyCheckJob=0,flyJob=0,flyWait=0,flySlot=-1,flyBackPage=0;
@@ -6857,7 +6902,7 @@ int main(int argc, char** argv)
         else if(menuPage==PAGE_QUICK_ACTIONS)
         {
             add(M_OPEN_PC,"OPEN PC","");
-            if(flyGame.Supported())add(M_FLY,"FLY","");
+            if(flyGame.Supported()||freeFlight.supported)add(M_FLY,"FLY","");
             add(M_NOTHING,"ONLY WHILE THE FIELD IS FREE","",true);
             add(M_NOTHING,"OTHER ACTIONS NEED FURTHER MAPPING","",true);
             add(M_BACK,"BACK","");
@@ -7215,7 +7260,7 @@ int main(int argc, char** argv)
                        "Game actions from here, as opening the PC, in versions they have been checked with.", "Each one still asks you to choose it.");
                 if (cfg.quickActions && pokeActions.Supported() && !opt.lockstep)
                     link(M_OPEN_PC, "OPEN PC", Glass::I_CHIP, Menu::P_NONE, "", "Open the PC's boxes from here.");
-                if (cfg.quickActions && pokeActions.Supported() && flyGame.Supported() && !opt.lockstep)
+                if (cfg.quickActions && ((pokeActions.Supported() && flyGame.Supported()) || freeFlight.supported) && !opt.lockstep)
                     link(M_FLY, "FLY", Glass::I_GLOBE, Menu::P_NONE, "", "Fly to a town you have been to, as the move does.", "A Pok\xC3\xA9" "mon in your party must know Fly.");
             }
             else if(menuPage==PAGE_REFERENCE)
@@ -7843,7 +7888,7 @@ int main(int argc, char** argv)
                     menu.items.back().icon=Glass::I_GLOBE;
                     menu.items.back().desc="Fly over the map yourself, through trees, water and mountains. The D-pad steers and B lands.";
                 }
-                section("FLY TO",Glass::I_GLOBE);
+                if(!flyOpen.empty())section("FLY TO",Glass::I_GLOBE);
                 for(int i:flyOpen)
                 {
                     const std::string name=companionMetadata.PlaceName(PokeFly::NameMap(flyGame,i));
@@ -7887,7 +7932,7 @@ int main(int argc, char** argv)
                     it.desc = where;
                     it.tip = companionMetadata.regionMap.Ready() ? "A or tap: the full map." : "";
                 }
-                if (cfg.quickActions && pokeActions.Supported() && flyGame.Supported() && !opt.lockstep)
+                if (cfg.quickActions && ((pokeActions.Supported() && flyGame.Supported()) || freeFlight.supported) && !opt.lockstep)
                 {
                     const Companion::Mon* flyer = PokeFly::Flyer(snap);
                     add(M_FLY, "FLY", flyer ? flyer->nickname : std::string(), true);
@@ -8679,25 +8724,26 @@ int main(int argc, char** argv)
     const uint32_t ffPatch = 0x47702000u; // movs r0, #0; bx lr
     // (The four functions' first words in the cart, checked before taking off. A save state taken mid-flight keeps
     // the ARM9's two patched: they are put back when one is loaded, see below.)
-    const uint32_t ffOriginal[4] = { 0x1C05B5F8u, 0xB096B5F8u, 0xB082B510u, 0x2103B5F8u };
     // (Platinum's FieldSystem, its player and map matrix: pret/pokeplatinum's field_system.h (mapMatrix 0x2C,
     // playerAvatar 0x3C), player_avatar.h (mapObject 0x30), map_object.c (x 0x64, z 0x6C), map_matrix.h (width,
     // height, then MapMatrixData: its map header ids from 0x06 and land data ids from 0xA92, 30 x 30 at most).)
     auto ffRead16 = [&](uint32_t a) { uint16_t v = 0; memcpy(&v, nds->MainRAM + (a & nds->MainRAMMask), 2); return v; };
     auto ffRead8 = [&](uint32_t a) { return nds->MainRAM[a & nds->MainRAMMask]; };
     auto ffMain = [](uint32_t a) { return a >= 0x02000000u && a < 0x02800000u; };
-    auto ffFieldSystem = [&]() { const uint32_t fs = ffRead32(0x021C07DC); return ffMain(fs) ? fs : 0u; };
+    auto ffFieldSystem = [&]() { const uint32_t fs = freeFlight.fsPtr ? ffRead32(freeFlight.fsPtr) : 0u; return ffMain(fs) ? fs : 0u; };
+    auto ffMapObject = [&]() {
+        const uint32_t fs = ffFieldSystem(), av = fs ? ffRead32(fs + freeFlight.offAvatar) : 0, mo = ffMain(av) ? ffRead32(av + freeFlight.offMapObj) : 0;
+        return ffMain(mo) ? mo : 0u;
+    };
     auto ffPlayerTile = [&](int& x, int& z) {
-        const uint32_t fs = ffFieldSystem(); if (!fs) return false;
-        const uint32_t av = ffRead32(fs + 0x3C); if (!ffMain(av)) return false;
-        const uint32_t mo = ffRead32(av + 0x30); if (!ffMain(mo)) return false;
+        const uint32_t mo = ffMapObject(); if (!mo) return false;
         x = (int)ffRead32(mo + 0x64); z = (int)ffRead32(mo + 0x6C);
         return true;
     };
     // A tile inside the map: in the matrix, on a piece with land (not the void past the edges, "Mystery Zone").
     auto ffInsideMap = [&](int x, int z) {
         const uint32_t fs = ffFieldSystem(); if (!fs) return true;
-        const uint32_t mm = ffRead32(fs + 0x2C); if (!ffMain(mm)) return true;
+        const uint32_t mm = ffRead32(fs + freeFlight.offMatrix); if (!ffMain(mm)) return true;
         const int w = ffRead8(mm), h = ffRead8(mm + 1);
         if (x < 0 || z < 0 || w <= 0 || h <= 0) return false;
         const int cx = x / 32, cz = z / 32;
@@ -8715,7 +8761,7 @@ int main(int argc, char** argv)
         freeFlight.lift = 0;
         if (restore)
         {
-            const uint32_t fs = ffFieldSystem(), av = fs ? ffRead32(fs + 0x3C) : 0, mo = ffMain(av) ? ffRead32(av + 0x30) : 0;
+            const uint32_t mo = ffMapObject();
             if (ffMain(mo))
             {
                 const int32_t y = 0; memcpy(nds->MainRAM + ((mo + 0x8C) & nds->MainRAMMask), &y, 4);
@@ -8731,7 +8777,7 @@ int main(int argc, char** argv)
         for (int i = 0; i < 4; i++)
         {
             const uint32_t v = ffRead32(freeFlight.addr[i]);
-            if (v != ffOriginal[i]) { fprintf(stderr, "[freeflight] %08X holds %08X, not a function's start\n", freeFlight.addr[i], v); say("FREE FLIGHT: NOT HERE"); return false; }
+            if (v != freeFlight.orig[i]) { fprintf(stderr, "[freeflight] %08X holds %08X, not a function's start\n", freeFlight.addr[i], v); say("FREE FLIGHT: NOT HERE"); return false; }
             freeFlight.saved[i] = v;
         }
         for (int i = 0; i < 4; i++) ffWrite32(freeFlight.addr[i], ffPatch);
@@ -8771,6 +8817,13 @@ int main(int argc, char** argv)
         return true;
     };
     auto startFly = [&]() {
+        // (Diamond / Pearl: the game's FLY isn't mapped, so the page holds Free Flight alone.)
+        if(!flyGame.Supported())
+        {
+            if(freeFlight.supported){flyOpen.clear();menu.open=true;goPage(PAGE_FLY,M_FREEFLIGHT);}
+            else flySay(PokeFly::Message(PokeFly::Result::NOT_NOW));
+            return false;
+        }
         readCompanion(true);
         const Companion::Mon* flyer=PokeFly::Flyer(companionSnapshot);
         // (Test runs: SSR_TEST_FLY=<frame>,<n>,1 lets the party's first Pokemon fly without the move.)
@@ -9022,6 +9075,7 @@ int main(int argc, char** argv)
             if (testMusicOffAt && rc_frame == testMusicOffAt) gameMusic.Music = 0;
             gameMusic.Apply(); // (MUSIC / SOUND EFFECTS: a change heard at once)
             pokeActions.Frame();
+            if (freeFlight.ownGame) pk_nds_call_frame(nds.get(), freeFlight.game); // (Diamond / Pearl: Free Flight's landing job)
             Achievements::DoFrame(); // (on this thread: it reads the game's memory)
             exclusives.DoFrame();
             const int avail = nds->SPU.GetOutputSize();
@@ -10559,7 +10613,8 @@ int main(int argc, char** argv)
             switch (fdNavUse)
             {
             case FdNav::FLY:
-                if (!canAct || !flyGame.Supported()) say("FLY: NOT IN THIS GAME YET");
+                if (!flyGame.Supported() && freeFlight.supported && !opt.lockstep) { fdNav.open = false; swallowMenuButtons = true; startFly(); }
+                else if (!canAct || !flyGame.Supported()) say("FLY: NOT IN THIS GAME YET");
                 else if (startFly()) { fdNav.open = false; swallowMenuButtons = true; }
                 break;
             case FdNav::PC:
@@ -12526,7 +12581,7 @@ int main(int argc, char** argv)
                 {
                     static int wxAt = -2, wxId = 0;
                     if (wxAt == -2) { wxAt = -1; if (const char* t = getenv("SSR_TEST_WEATHER")) sscanf(t, "%d,%d", &wxAt, &wxId); }
-                    if (wxAt >= 0 && testFrames >= wxAt && freeFlight.supported)
+                    if (wxAt >= 0 && testFrames >= wxAt && freeFlight.supported && gameCode == "CPUE")
                     {
                         const uint32_t fs = ffFieldSystem();
                         const PkNdsOp ops[3] = { { PK_NDS_OP_LOAD32, { fs, 4, 0, 0 } }, { PK_NDS_OP_LOAD32, { PK_NDS_RESULT_REF + 0, 0x0C, 0, 0 } },
@@ -12538,7 +12593,7 @@ int main(int argc, char** argv)
                 if (freeFlight.on && ffRead32(freeFlight.addr[2]) != ffPatch) stopFreeFlight(false); // (the field's overlay went)
                 if (!freeFlight.on && freeFlight.supported && frame % 30 == 0)
                     for (int i = 0; i < 2; i++)
-                        if (ffRead32(freeFlight.addr[i]) == ffPatch) ffWrite32(freeFlight.addr[i], ffOriginal[i]);
+                        if (ffRead32(freeFlight.addr[i]) == ffPatch) ffWrite32(freeFlight.addr[i], freeFlight.orig[i]);
                 if (freeFlight.on)
                 {
                     const bool b = keys & (1u << KEY_B);
@@ -12556,7 +12611,7 @@ int main(int argc, char** argv)
                             if ((keys & (1u << KEY_RIGHT)) && !ffInsideMap(px + 1, pz)) keys &= ~(1u << KEY_RIGHT);
                         }
                         for (int k : { KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT }) if (keys & (1u << k)) freeFlight.lastDir = k;
-                        if (b && !freeFlight.bWas) { freeFlight.landing = 1; freeFlight.landWait = 0; freeFlight.seekTries = 0; }
+                        if (b && !freeFlight.bWas) { freeFlight.landing = 1; freeFlight.landWait = 0; freeFlight.seekTries = 0; freeFlight.ring = 0; }
                     }
                     if (freeFlight.landing == 1)
                     {
@@ -12569,16 +12624,35 @@ int main(int argc, char** argv)
                             int ddx = 0, ddz = 0;
                             if (freeFlight.lastDir == KEY_UP) ddz = -1; else if (freeFlight.lastDir == KEY_DOWN) ddz = 1;
                             else if (freeFlight.lastDir == KEY_LEFT) ddx = -1; else ddx = 1;
-                            const int cand[7][2] = { { 0, 0 }, { ddx, ddz }, { 2 * ddx, 2 * ddz }, { 0, -1 }, { 0, 1 }, { -1, 0 }, { 1, 0 } };
-                            PkNdsOp ops[21];
-                            for (int i = 0; i < 7; i++)
+                            // (First the ground under, the two tiles on the way it was flying and the four beside; if none will do,
+                            // rings further out, 8 tiles each: the 8 directions at that distance. The nearest found is glided to.)
+                            static const int kRings[] = { 0, 2, 4, 7, 10, 14, 19, 25 };
+                            int cand[8][2] = {};
+                            int n = 0;
+                            if (freeFlight.ring == 0)
+                            {
+                                const int c0[7][2] = { { 0, 0 }, { ddx, ddz }, { 2 * ddx, 2 * ddz }, { 0, -1 }, { 0, 1 }, { -1, 0 }, { 1, 0 } };
+                                for (int i = 0; i < 7; i++) { cand[i][0] = c0[i][0]; cand[i][1] = c0[i][1]; }
+                                n = 7;
+                            }
+                            else
+                            {
+                                const int r = kRings[freeFlight.ring];
+                                static const int all[8][2] = { { 0, -1 }, { 0, 1 }, { -1, 0 }, { 1, 0 }, { -1, -1 }, { 1, 1 }, { 1, -1 }, { -1, 1 } };
+                                cand[n][0] = ddx * r; cand[n][1] = ddz * r; n++; // (the way it was flying first)
+                                for (const auto& d : all)
+                                    if (!(d[0] == ddx && d[1] == ddz) && n < 8) { cand[n][0] = d[0] * r; cand[n][1] = d[1] * r; n++; }
+                            }
+                            freeFlight.nTiles = n;
+                            PkNdsOp ops[24];
+                            for (int i = 0; i < n; i++)
                             {
                                 freeFlight.tx[i] = px + cand[i][0]; freeFlight.tz[i] = pz + cand[i][1];
-                                ops[3 * i] = { 0x02054F69u, { fs, (unsigned)freeFlight.tx[i], (unsigned)freeFlight.tz[i], 0 } };
-                                ops[3 * i + 1] = { 0x02054F95u, { fs, (unsigned)freeFlight.tx[i], (unsigned)freeFlight.tz[i], 0 } };
-                                ops[3 * i + 2] = { 0x0205DB59u, { PK_NDS_RESULT_REF + (unsigned)(3 * i + 1), 0, 0, 0 } };
+                                ops[3 * i] = { freeFlight.terrColl, { fs, (unsigned)freeFlight.tx[i], (unsigned)freeFlight.tz[i], 0 } };
+                                ops[3 * i + 1] = { freeFlight.tileBeh, { fs, (unsigned)freeFlight.tx[i], (unsigned)freeFlight.tz[i], 0 } };
+                                ops[3 * i + 2] = { freeFlight.surfable, { PK_NDS_RESULT_REF + (unsigned)(3 * i + 1), 0, 0, 0 } };
                             }
-                            freeFlight.landJob = fs ? pk_nds_call_ops(nds.get(), pk_nds_field_game(gameCode.c_str(), companionRevision), ops, 21) : 0;
+                            freeFlight.landJob = fs ? pk_nds_call_ops(nds.get(), freeFlight.game, ops, 3 * n) : 0;
                             if (freeFlight.landJob) freeFlight.landing = 2;
                             else if (freeFlight.landWait > 120) { fprintf(stderr, "[freeflight] no job: landing as it is\n"); stopFreeFlight(true); }
                         }
@@ -12591,7 +12665,7 @@ int main(int argc, char** argv)
                         if (st > 0 && pk_nds_call_results(freeFlight.landJob, res))
                         {
                             int pick = -1;
-                            for (int i = 0; i < 7 && pick < 0; i++)
+                            for (int i = 0; i < freeFlight.nTiles && pick < 0; i++)
                             {
                                 const bool blocked = res[3 * i] != 0, water = res[3 * i + 2] != 0, none = (res[3 * i + 1] & 0xFF) == 0xFF;
                                 fprintf(stderr, "[freeflight] ground %d,%d: collision %u behaviour %02X water %u\n", freeFlight.tx[i], freeFlight.tz[i], res[3 * i], res[3 * i + 1] & 0xFF, res[3 * i + 2]);
@@ -12599,12 +12673,13 @@ int main(int argc, char** argv)
                             }
                             if (pick == 0) { stopFreeFlight(true); say("LANDED"); }
                             else if (pick > 0) { freeFlight.landing = 3; freeFlight.targetX = freeFlight.tx[pick]; freeFlight.targetZ = freeFlight.tz[pick]; freeFlight.landWait = 0; }
-                            else if (++freeFlight.seekTries <= 12)
+                            else if (freeFlight.ring + 1 < 8)
                             {
-                                freeFlight.landing = 4; freeFlight.seekFromX = px; freeFlight.seekFromZ = pz; freeFlight.seekDir = freeFlight.lastDir;
-                                if (freeFlight.seekTries == 1) say("LOOKING FOR GROUND...");
+                                // Nothing near: the next ring out (asked at once, from the same spot).
+                                freeFlight.ring++; freeFlight.landing = 1; freeFlight.landWait = 14;
+                                if (freeFlight.ring == 1) say("LOOKING FOR GROUND...");
                             }
-                            else { freeFlight.landing = 0; freeFlight.seekTries = 0; say("NO GROUND NEAR: FLY ON A LITTLE"); }
+                            else { freeFlight.landing = 0; freeFlight.ring = 0; say("NO GROUND NEAR: FLY ON A LITTLE"); }
                         }
                         else if (st < 0) freeFlight.landing = 1, freeFlight.landWait = 0;
                     }
@@ -12640,7 +12715,7 @@ int main(int argc, char** argv)
                     // frame the flight ended in: stopFreeFlight has put the player back.)
                     if (freeFlight.on)
                     {
-                        const uint32_t fs = ffFieldSystem(), av = fs ? ffRead32(fs + 0x3C) : 0, mo = ffMain(av) ? ffRead32(av + 0x30) : 0;
+                        const uint32_t mo = ffMapObject();
                         if (ffMain(mo))
                         {
                             freeFlight.facing = (int)ffRead32(mo + 0x28) & 3;
@@ -12662,7 +12737,7 @@ int main(int argc, char** argv)
                     }
                     if (getenv("SSR_FF_LOG") && frame % 20 == 0)
                     {
-                        const uint32_t fs = ffFieldSystem(), mm = fs ? ffRead32(fs + 0x2C) : 0;
+                        const uint32_t fs = ffFieldSystem(), mm = fs ? ffRead32(fs + freeFlight.offMatrix) : 0;
                         fprintf(stderr, "[freeflight] frame %u at %d,%d landing %d keys %03X matrix %dx%d up-inside %d\n", (unsigned)frame, px, pz, freeFlight.landing, (unsigned)keys,
                                 ffMain(mm) ? ffRead8(mm) : -1, ffMain(mm) ? ffRead8(mm + 1) : -1, (int)ffInsideMap(px, pz - 1));
                     }
