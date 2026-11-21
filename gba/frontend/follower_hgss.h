@@ -102,6 +102,49 @@ public:
         return true;
     }
 
+    // The same sprites whole, for the DS games' Free Flight: size 32 or 64, six frames (S, S', N, N', W, W') of
+    // size x size ARGB (0 where clear).
+    bool MonArgb(int national, bool shiny, int& size, std::vector<uint32_t> out[6]) const
+    {
+        if (national < 1 || (size_t)national > table.size()) return false;
+        const uint32_t file = table[national - 1] + Extra(national);
+        if (file >= narc.size()) return false;
+        const Bytes& b = narc[file];
+        struct Tex { int num; size_t off; int w, h, fmt; };
+        std::vector<Tex> texs;
+        std::vector<std::pair<std::string, size_t>> pals;
+        if (!Btx(b, texs, pals) || texs.size() < 8 || pals.empty() || pals[0].first.compare(0, 10, "tsure_poke")) return false;
+        static const int order[6] = { 11, 12, 1, 10, 13, 14 };
+        const size_t palOff = pals[shiny && pals.size() > 1 ? 1 : 0].second;
+        if (palOff + 32 > b.size()) return false;
+        uint32_t argb[16];
+        for (int i = 0; i < 16; i++)
+        {
+            const unsigned c = b[palOff + i * 2] | b[palOff + i * 2 + 1] << 8;
+            const unsigned r = c & 31, g = (c >> 5) & 31, bl = (c >> 10) & 31;
+            argb[i] = i == 0 ? 0u : 0xFF000000u | (r << 3 | r >> 2) << 16 | (g << 3 | g >> 2) << 8 | (bl << 3 | bl >> 2);
+        }
+        size = 0;
+        for (int k = 0; k < 6; k++)
+        {
+            const Tex* t = nullptr;
+            for (const Tex& x : texs) if (x.num == order[k]) t = &x;
+            if (!t || t->fmt != 3 || (t->w != 32 && t->w != 64) || t->w != t->h) return false;
+            const int w = t->w;
+            if (size && size != w) return false;
+            size = w;
+            if (t->off + (size_t)w * w / 2 > b.size()) return false;
+            out[k].assign((size_t)w * w, 0);
+            for (int y = 0; y < w; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    const uint8_t v = b[t->off + (size_t)(y * w + x) / 2];
+                    out[k][(size_t)y * w + x] = argb[(x & 1) ? v >> 4 : v & 15];
+                }
+        }
+        return true;
+    }
+
 private:
     // The table's file is the first of a species' only up to Unown: the files of some species' other forms and females
     // come in between later on, and the table counts only some of them (worked out against HeartGold's own files).

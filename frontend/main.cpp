@@ -22,6 +22,7 @@
 #include <thread>
 #include "sampler.h"
 #include "../gba/frontend/fast_forward_button.h"
+#include "../gba/frontend/follower_hgss.h"
 #include "ssr_os.h"
 #ifdef SSR_NET
 #include "net/Net_Slirp.h" // (NINTENDO WFC's community server: SetWFCRedirect)
@@ -5766,6 +5767,14 @@ int main(int argc, char** argv)
         int tx[7] = {}, tz[7] = {};
         int seekFromX = 0, seekFromZ = 0, seekDir = 0, seekTries = 0;
         float lift = 0; // (the player raised, in the game's units, above the ground: flying over the trees)
+        // The Pokemon flown on, in the player's place: the party's flyer as HeartGold / SoulSilver's following
+        // Pokemon draw it (their sprites, from a HeartGold or SoulSilver among the ROMs), S, S', N, N', W, W'.
+        HgssFollow::Source hgss;
+        int hgssState = 0; // 0 not looked for, 1 found, 2 none
+        int mountNational = 0, mountSize = 0;
+        std::vector<uint32_t> mount[6];
+        int facing = 1; // (DIR_NORTH 0, SOUTH 1, WEST 2, EAST 3)
+        bool moving = false;
     } freeFlight;
     {
         const int rev = companionRevision;
@@ -8667,7 +8676,11 @@ int main(int argc, char** argv)
         if (restore)
         {
             const uint32_t fs = ffFieldSystem(), av = fs ? ffRead32(fs + 0x3C) : 0, mo = ffMain(av) ? ffRead32(av + 0x30) : 0;
-            if (ffMain(mo)) { const int32_t y = 0; memcpy(nds->MainRAM + ((mo + 0x8C) & nds->MainRAMMask), &y, 4); }
+            if (ffMain(mo))
+            {
+                const int32_t y = 0; memcpy(nds->MainRAM + ((mo + 0x8C) & nds->MainRAMMask), &y, 4);
+                if (freeFlight.mountSize > 0) { uint32_t st = ffRead32(mo) & ~(1u << 9); memcpy(nds->MainRAM + (mo & nds->MainRAMMask), &st, 4); }
+            }
         }
         fprintf(stderr, "[freeflight] frame %u: landed\n", (unsigned)frame);
     };
@@ -8685,6 +8698,33 @@ int main(int argc, char** argv)
         freeFlight.on = true;
         freeFlight.landing = 0;
         freeFlight.since = frame;
+        // The Pokemon to fly on: its sprite from a HeartGold or SoulSilver beside this game (the ROMs folder).
+        {
+            readCompanion(true);
+            const Companion::Mon* flyer = PokeFly::Flyer(companionSnapshot);
+            // (Only a Pokemon that flies: the one that knows Fly, as Fly asks; else Staraptor, the bird Platinum's own Fly
+            // shows. Species numbers are the National Pokedex's in the Gen 4 games.)
+            const int nat = flyer && flyer->species > 0 && flyer->species <= 493 ? flyer->species : 398;
+            if (freeFlight.hgssState == 0)
+            {
+                freeFlight.hgssState = 2;
+                std::error_code ec;
+                const std::filesystem::path dir = std::filesystem::path(opt.rom).parent_path();
+                for (const auto& e : std::filesystem::directory_iterator(dir, ec))
+                {
+                    std::string ext = e.path().extension().string();
+                    for (char& ch : ext) ch = (char)tolower((unsigned char)ch);
+                    if (ext == ".nds" && freeFlight.hgss.Open(e.path().string())) { freeFlight.hgssState = 1; fprintf(stderr, "[freeflight] sprites from %s\n", e.path().string().c_str()); break; }
+                }
+            }
+            if (nat != freeFlight.mountNational)
+            {
+                freeFlight.mountNational = nat;
+                freeFlight.mountSize = 0;
+                if (freeFlight.hgssState == 1 && nat > 0 && !freeFlight.hgss.MonArgb(nat, false, freeFlight.mountSize, freeFlight.mount)) freeFlight.mountSize = 0;
+            }
+            fprintf(stderr, "[freeflight] flying on #%d: %s\n", nat, freeFlight.mountSize ? "its sprite" : "no sprite, the player instead");
+        }
         freeFlight.bWas = true; // (the B that chose it does not land at once)
         fprintf(stderr, "[freeflight] frame %u: taking off\n", (unsigned)frame);
         say("FREE FLIGHT: D-PAD TO STEER, B TO LAND");
@@ -12501,9 +12541,20 @@ int main(int argc, char** argv)
                         { freeFlight.landing = 1; freeFlight.landWait = 0; }
                         else { keys |= (1u << dir) | (1u << KEY_B); if (speed < 2) speed = 2; freeFlight.seekDir = dir; }
                     }
-                    // The player raised while flying, coming down on landing (MapObject.spritePosOffset.y, 0x8C).
+                    // The player raised while flying, coming down on landing (MapObject.spritePosOffset.y, 0x8C); hidden under
+                    // the Pokemon flown on while one is drawn (MapObject.status's MAP_OBJ_STATUS_HIDE, 1 << 9).
                     {
                         const uint32_t fs = ffFieldSystem(), av = fs ? ffRead32(fs + 0x3C) : 0, mo = ffMain(av) ? ffRead32(av + 0x30) : 0;
+                        if (ffMain(mo))
+                        {
+                            freeFlight.facing = (int)ffRead32(mo + 0x28) & 3;
+                            freeFlight.moving = (keys & dpad) != 0;
+                            static const bool showPlayer = getenv("SSR_FF_SHOWPLAYER") != nullptr;
+                            uint32_t st = ffRead32(mo);
+                            const bool hide = freeFlight.mountSize > 0 && !showPlayer;
+                            st = hide ? st | (1u << 9) : st & ~(1u << 9);
+                            memcpy(nds->MainRAM + (mo & nds->MainRAMMask), &st, 4);
+                        }
                         const float want = freeFlight.landing == 0 || freeFlight.landing == 4 ? 28.0f : freeFlight.landing == 3 ? 10.0f : 0.0f;
                         freeFlight.lift += (want - freeFlight.lift) * 0.12f;
                         if (ffMain(mo))
@@ -13542,6 +13593,58 @@ int main(int argc, char** argv)
         else if (cfg.encountersShown && !menu.open)
         {
             FdNav::DrawCount(canvas, outW, outH, fdNav.count, touchPadUsed && touchPad.visible ? (int)(outH * 0.135f) : 0);
+            overlayUsed = true;
+        }
+        // FREE FLIGHT: the Pokemon flown on, where the player is (the camera keeps the player in the same place on the
+        // top screen: SSR_FF_ANCHOR=x,y moves where it is drawn, in the top screen's pixels), its shadow on the ground.
+        if (freeFlight.on && freeFlight.mountSize > 0 && effectiveLayout.mode == LayoutMode::Merged && !menu.open)
+        {
+            static float ax = 128, ay = 106;
+            static const bool anchorSet = [] { if (const char* a = getenv("SSR_FF_ANCHOR")) sscanf(a, "%f,%f", &ax, &ay); return true; }();
+            (void)anchorSet;
+            const MergedView v = MergedMakeView(outW, outH);
+            const float z = std::max(1.0f, freeFlight.zoom);
+            const float gx = 128 + (ax - 128) / z, gy = 96 + (ay - 96) / z; // (the ground under the player, zoomed out about the middle)
+            const float lift = freeFlight.lift * 0.9f / z;
+            const int S = freeFlight.mountSize;
+            const float px = v.unit / z * (S == 64 ? 1.0f : 1.25f); // (output pixels a sprite pixel)
+            // Shadow: a soft dark ellipse.
+            {
+                const float sw = 18.0f * v.unit / z, sh = 7.0f * v.unit / z;
+                const float cx = v.originX + gx * v.unit, cy = v.originY + gy * v.unit;
+                const int x0 = (int)(cx - sw), x1 = (int)(cx + sw), y0 = (int)(cy - sh), y1 = (int)(cy + sh);
+                for (int y = std::max(0, y0); y < std::min(outH, y1); y++)
+                    for (int x = std::max(0, x0); x < std::min(outW, x1); x++)
+                    {
+                        const float dx = (x - cx) / sw, dy = (y - cy) / sh, d = dx * dx + dy * dy;
+                        if (d >= 1) continue;
+                        const uint32_t a = (uint32_t)(110 * (1 - d) * std::min(1.0f, freeFlight.lift / 12));
+                        uint32_t& dst = canvas.px[(size_t)y * canvas.w + x];
+                        dst = (dst >> 24) == 0 ? (a << 24) : Glass::Over(dst, a << 24);
+                    }
+                Glass::Mark(canvas, std::max(0, x0), std::max(0, y0), std::min(outW, x1), std::min(outH, y1));
+            }
+            // The sprite: S, N, W (E is W turned over); its second frame every 8 frames while it moves, and a beat of
+            // its wings even when it hovers.
+            int k = freeFlight.facing == 0 ? 2 : freeFlight.facing == 1 ? 0 : 4;
+            const bool flip = freeFlight.facing == 3;
+            if ((frame / (freeFlight.moving ? 6 : 12)) & 1) k++;
+            const std::vector<uint32_t>& img = freeFlight.mount[k];
+            const float w = S * px;
+            const float left = v.originX + gx * v.unit - w / 2, top = v.originY + (gy - lift) * v.unit - w * (S == 64 ? 0.78f : 0.85f);
+            const int x0 = (int)left, y0 = (int)top, x1 = (int)(left + w), y1 = (int)(top + w);
+            for (int y = std::max(0, y0); y < std::min(outH, y1); y++)
+            {
+                const int sy = std::clamp((int)((y - top) / px), 0, S - 1);
+                for (int x = std::max(0, x0); x < std::min(outW, x1); x++)
+                {
+                    int sx = std::clamp((int)((x - left) / px), 0, S - 1);
+                    if (flip) sx = S - 1 - sx;
+                    const uint32_t c = img[(size_t)sy * S + sx];
+                    if (c >> 24) canvas.px[(size_t)y * canvas.w + x] = c;
+                }
+            }
+            Glass::Mark(canvas, std::max(0, x0), std::max(0, y0), std::min(outW, x1), std::min(outH, y1));
             overlayUsed = true;
         }
         if (frame < toastUntil)
