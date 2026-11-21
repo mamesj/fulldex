@@ -9123,16 +9123,26 @@ int main(int argc, char** argv)
             fprintf(stderr, "[freeflight] flying on #%d: %s\n", nat, freeFlight.mountSize ? "its sprite" : "no sprite, the player instead");
         }
         ffExploredSeed();
-        // The player on its back: the cart's own surfing pose (Gen 4; Black / White's are drawn otherwise: none yet).
+        // The player on its back: the cart's own surfing pose.
         freeFlight.riderOk = false;
-        if (freeFlight.family < 3 && freeFlight.mountSize > 0)
+        if (freeFlight.mountSize > 0)
         {
-            const uint32_t fs = ffFieldSystem(), av = fs ? ffRead32(fs + freeFlight.offAvatar) : 0;
-            const int female = ffMain(av) ? (int)(ffRead32(av + (freeFlight.family == 0 ? 0x20 : 0x1C)) & 1) : 0;
+            int female = 0;
+            if (freeFlight.family < 3)
+            {
+                const uint32_t fs = ffFieldSystem(), av = fs ? ffRead32(fs + freeFlight.offAvatar) : 0;
+                female = ffMain(av) ? (int)(ffRead32(av + (freeFlight.family == 0 ? 0x20 : 0x1C)) & 1) : 0;
+            }
+            else if (FILE* sf = fopen(opt.save.c_str(), "rb"))
+            {
+                // (Black / White and Black 2 / White 2: the trainer's gender in the save, its trainer block at 0x19400.)
+                if (fseek(sf, 0x19421, SEEK_SET) == 0) { const int c = fgetc(sf); female = c == 1; }
+                fclose(sf);
+            }
             if (female != freeFlight.riderFemale)
             {
                 HgssFollow::Source cart;
-                freeFlight.riderFemale = cart.OpenFiles(opt.rom) && cart.RiderArgb(female != 0, freeFlight.rider) ? female : -2;
+                freeFlight.riderFemale = cart.OpenFiles(opt.rom) && cart.RiderArgb(female != 0, freeFlight.rider, freeFlight.family >= 3 ? freeFlight.family : -1) ? female : -2;
             }
             freeFlight.riderOk = freeFlight.riderFemale >= 0;
             fprintf(stderr, "[freeflight] rider: %s\n", freeFlight.riderOk ? (female ? "heroine" : "hero") : "not found");

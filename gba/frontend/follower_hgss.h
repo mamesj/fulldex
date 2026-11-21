@@ -161,21 +161,34 @@ public:
 
     // The player sitting, as the game draws them surfing (the DS games' Free Flight seats them on the Pokemon flown on):
     // the cart's own overworld textures (HeartGold / SoulSilver's a/0/8/1, Diamond / Pearl / Platinum's
-    // data/mmodel/mmodel.narc) named swimhero / swimheroine (Platinum pl_swimhiro / pl_swimhiroine). Four frames, N, S,
-    // W, E, of 32 x 32 ARGB (0 where clear). After OpenFiles.
-    bool RiderArgb(bool female, std::vector<uint32_t> out[4]) const
+    // data/mmodel/mmodel.narc) named swimhero / swimheroine (Platinum pl_swimhiro / pl_swimhiroine); Black / White's
+    // a/0/4/9 members 8 and 11 (Hilbert, Hilda), Black 2 / White 2's a/0/4/8 members 211 and 220 (Nate, Rosa): family 3
+    // and 4 (as Free Flight's). Four frames, N, S, W, E, of 32 x 32 ARGB (0 where clear). After OpenFiles.
+    bool RiderArgb(bool female, std::vector<uint32_t> out[4], int family = -1) const
     {
-        long id = FileId("a/0/8/1");
-        if (id < 0) id = FileId("data/mmodel/mmodel.narc");
+        long id = -1;
+        int pick = -1;
+        if (family == 3) { id = FileId("a/0/4/9"); pick = female ? 11 : 8; }
+        else if (family == 4) { id = FileId("a/0/4/8"); pick = female ? 220 : 211; }
+        else
+        {
+            id = FileId("a/0/8/1");
+            if (id < 0) id = FileId("data/mmodel/mmodel.narc");
+        }
         if (id < 0) return false;
         const std::vector<Bytes> all = Narc(ReadFile((uint32_t)id));
         const char* want[2] = { female ? "swimheroine" : "swimhero", female ? "pl_swimhiroine" : "pl_swimhiro" };
         struct Tex { int num; size_t off; int w, h, fmt; };
-        for (const Bytes& b : all)
+        for (size_t n = 0; n < all.size(); n++)
         {
+            if (pick >= 0 && (int)n != pick) continue;
+            const Bytes& b = all[n];
             std::vector<Tex> texs;
             std::vector<std::pair<std::string, size_t>> pals;
-            if (!Btx(b, texs, pals) || pals.empty() || (pals[0].first != want[0] && pals[0].first != want[1])) continue;
+            if (!Btx(b, texs, pals) || pals.empty()) continue;
+            if (pick < 0 && pals[0].first != want[0] && pals[0].first != want[1]) continue;
+            int base = 1; // (frames .1 to .4; Black 2 / White 2's .0 to .3)
+            for (const Tex& x : texs) base = std::min(base, std::max(0, x.num));
             const size_t palOff = pals[0].second;
             if (palOff + 32 > b.size()) return false;
             uint32_t argb[16];
@@ -188,7 +201,7 @@ public:
             for (int k = 0; k < 4; k++)
             {
                 const Tex* t = nullptr;
-                for (const Tex& x : texs) if (x.num == k + 1) t = &x;
+                for (const Tex& x : texs) if (x.num == k + base) t = &x;
                 if (!t || t->fmt != 3 || t->w != 32 || t->h != 32 || t->off + 512 > b.size()) return false;
                 out[k].assign(32 * 32, 0);
                 for (int y = 0; y < 32; y++)
