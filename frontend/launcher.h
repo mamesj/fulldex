@@ -54,6 +54,7 @@
 #include "play_time.h"
 #include "state_slots.h"
 #include "save_backups.h"
+#include "memory_link.h" // (here, outside any namespace: saves_page.h, inside one, includes it too)
 #ifdef SSR_POKEMON_HUB
 #include "pokemon_hub.h"
 #include "companion_rom.h"
