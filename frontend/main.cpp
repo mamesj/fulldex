@@ -5789,6 +5789,7 @@ int main(int argc, char** argv)
         int family = -1; // (kFfFamilies: Platinum, Diamond / Pearl, HeartGold / SoulSilver)
         int offAvatar = 0x3C, offMapObj = 0x30, offMatrix = 0x2C, offLand = 0xA92;
         bool resolved = false;
+        bool followerWasHidden = false; // (HeartGold / SoulSilver's following Pokemon, hidden while flying)
         const PkNdsFieldGame* game = nullptr;
         PkNdsFieldGame own = {};
         bool ownGame = false;
@@ -8830,6 +8831,13 @@ int main(int argc, char** argv)
         freeFlight.resolved = true;
         return true;
     };
+    // HeartGold / SoulSilver's following Pokemon (FieldSystem.followMon.mapObject, 0xE4): hidden while flying, so it isn't
+    // dragged along the ground under the one flown on.
+    auto ffFollower = [&]() -> uint32_t {
+        if (freeFlight.family != 2) return 0;
+        const uint32_t fs = ffFieldSystem(), fo = fs ? ffRead32(fs + 0xE4) : 0;
+        return ffMain(fo) ? fo : 0u;
+    };
     auto stopFreeFlight = [&](bool restore) {
         if (!freeFlight.on) return;
         if (restore)
@@ -8845,6 +8853,7 @@ int main(int argc, char** argv)
             {
                 const int32_t y = 0; memcpy(nds->MainRAM + ((mo + 0x8C) & nds->MainRAMMask), &y, 4);
                 if (freeFlight.mountSize > 0) { uint32_t st = ffRead32(mo) & ~(1u << 9); memcpy(nds->MainRAM + (mo & nds->MainRAMMask), &st, 4); }
+                if (const uint32_t fo = ffFollower(); fo && !freeFlight.followerWasHidden) { uint32_t st = ffRead32(fo) & ~(1u << 9); memcpy(nds->MainRAM + (fo & nds->MainRAMMask), &st, 4); }
             }
         }
         fprintf(stderr, "[freeflight] frame %u: landed\n", (unsigned)frame);
@@ -8866,6 +8875,7 @@ int main(int argc, char** argv)
             freeFlight.saved[i] = v;
         }
         for (int i = 0; i < 4; i++) ffWrite32(freeFlight.addr[i], ffPatch);
+        if (const uint32_t fo = ffFollower()) freeFlight.followerWasHidden = (ffRead32(fo) >> 9) & 1;
         freeFlight.on = true;
         freeFlight.landing = 0;
         freeFlight.since = frame;
@@ -12810,6 +12820,7 @@ int main(int argc, char** argv)
                             const bool hide = freeFlight.mountSize > 0 && !showPlayer;
                             st = hide ? st | (1u << 9) : st & ~(1u << 9);
                             memcpy(nds->MainRAM + (mo & nds->MainRAMMask), &st, 4);
+                            if (const uint32_t fo = ffFollower()) { uint32_t fst = ffRead32(fo) | (1u << 9); memcpy(nds->MainRAM + (fo & nds->MainRAMMask), &fst, 4); }
                         }
                         const float want = freeFlight.landing == 0 || freeFlight.landing == 4 ? 28.0f : freeFlight.landing == 3 ? 10.0f : 0.0f;
                         freeFlight.lift += (want - freeFlight.lift) * 0.12f;
