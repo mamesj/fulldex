@@ -304,6 +304,7 @@ public:
         FreeTargets();
         for (Slot& s : Slots)
             if (s.Mem) dkMemBlockDestroy(s.Mem);
+        for (auto& r : RetiredMem) dkMemBlockDestroy(r.first);
         if (Cmd) dkCmdBufDestroy(Cmd);
         if (DataMem) dkMemBlockDestroy(DataMem);
         if (CmdMem) dkMemBlockDestroy(CmdMem);
@@ -314,10 +315,21 @@ public:
     {
         Slot& s = Slots[slot];
         const u32 size = (u32)w * h * 4;
-        if (s.Mem && s.Size != size)
+        // (Memory given up when the picture grows is kept for a few more pictures before it is freed: a picture can still
+        // be on its way to the screen a frame or three behind (frontend/main.cpp's DrawJobs), and on the Switch freed
+        // memory is gone at once, which crashed there when fast forward or LOWER RES WHEN BUSY changed the size, #129.
+        // A smaller picture uses the memory it has.)
+        TargetCalls++;
+        for (size_t i = 0; i < RetiredMem.size();)
+            if (TargetCalls - RetiredMem[i].second > 12)
+            {
+                dkMemBlockDestroy(RetiredMem[i].first);
+                RetiredMem.erase(RetiredMem.begin() + (std::ptrdiff_t)i);
+            }
+            else i++;
+        if (s.Mem && s.Size < size)
         {
-            // (This slot is not the one on show, nor the one before: GPU3D_Wide.cpp.)
-            dkMemBlockDestroy(s.Mem);
+            RetiredMem.push_back({ s.Mem, TargetCalls });
             s.Mem = nullptr;
         }
         if (!s.Mem)
@@ -332,7 +344,7 @@ public:
     bool Submit(WideGpuFrame& f, int slot) override
     {
         if (f.Vertices.size() > MaxVertices || f.Polygons.size() > MaxPolygons) return false;
-        if (!Slots[slot].Mem || Slots[slot].Size != (u32)f.W * f.H * 4) return false;
+        if (!Slots[slot].Mem || Slots[slot].Size < (u32)f.W * f.H * 4) return false;
         const double t0 = Now();
         if (f.W != W || f.H != H)
         {
@@ -560,7 +572,7 @@ public:
         const double t1 = Now();
         // (Cached memory: lines the processor read before are dropped, so that it reads the
         // graphics chip's picture.)
-        dkMemBlockFlushCpuCache(Slots[slot].Mem, 0, Slots[slot].Size);
+        dkMemBlockFlushCpuCache(Slots[slot].Mem, 0, std::min(Slots[slot].Size, (u32)W * H * 4));
         const double t2 = Now();
         T.Wait += t1 - t0;
         T.Flush += t2 - t1;
@@ -674,7 +686,7 @@ private:
     bool SlotImage(int slot)
     {
         Slot& s = Slots[slot];
-        if (!s.Mem || s.Size != (u32)W * H * 4) return false;
+        if (!s.Mem || s.Size < (u32)W * H * 4) return false;
         if (s.ImageW == W && s.ImageH == H) return true;
         DkImageLayoutMaker lm;
         dkImageLayoutMakerDefaults(&lm, Sh->Device);
@@ -692,6 +704,8 @@ private:
         return true;
     }
     Slot Slots[3];
+    std::vector<std::pair<DkMemBlock, u64>> RetiredMem; // (given up at a size change, and when: see Target)
+    u64 TargetCalls = 0;
     struct Times
     {
         double Copy = 0, Record = 0, Wait = 0, Flush = 0;

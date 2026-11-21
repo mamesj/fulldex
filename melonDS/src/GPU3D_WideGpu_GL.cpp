@@ -203,8 +203,23 @@ public:
 
     u32* Target(int slot, int w, int h) override
     {
-        Slots[slot].resize((size_t)w * h);
-        return Slots[slot].data();
+        std::vector<u32>& v = Slots[slot];
+        const size_t n = (size_t)w * h;
+        // (Memory given up when the picture grows is kept for a few more pictures before it is freed: a picture can still
+        // be on its way to the screen a frame or three behind (frontend/main.cpp's DrawJobs), and on the Switch freed
+        // memory is gone at once, which crashed there when fast forward or LOWER RES WHEN BUSY changed the size, #129.
+        // A smaller picture uses the memory it has.)
+        TargetCalls++;
+        for (size_t i = 0; i < RetiredBufs.size();)
+            if (TargetCalls - RetiredBufs[i].second > 12) RetiredBufs.erase(RetiredBufs.begin() + (std::ptrdiff_t)i);
+            else i++;
+        if (v.capacity() < n && !v.empty())
+        {
+            RetiredBufs.emplace_back(std::move(v), TargetCalls);
+            v = std::vector<u32>();
+        }
+        v.resize(n);
+        return v.data();
     }
 
     bool Submit(WideGpuFrame& f, int slot) override
@@ -409,6 +424,8 @@ private:
     int W = 0, H = 0;
     ClipControlFn ClipControl = nullptr;
     std::vector<u32> Slots[3];
+    std::vector<std::pair<std::vector<u32>, u64>> RetiredBufs; // (given up at a size change, and when: see Target)
+    u64 TargetCalls = 0;
     u64 TexVersion = 0;
 };
 }

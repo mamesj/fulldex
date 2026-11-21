@@ -173,9 +173,23 @@ struct WideAccess
         WideBuffer& b = Bufs[Next];
         b.Pixels = gpu ? WideGpuCurrent->Target(Next, W, H) : nullptr;
         b.OnGpu = b.Pixels != nullptr;
+        // (As the graphics chip renderers' Target: memory given up when the picture grows is freed a few pictures
+        // later, as one can still be on its way to the screen, #129.)
+        static std::vector<std::pair<std::vector<u32>, u32>> retired;
+        static u32 calls = 0;
+        calls++;
+        for (size_t i = 0; i < retired.size();)
+            if (calls - retired[i].second > 12) retired.erase(retired.begin() + (std::ptrdiff_t)i);
+            else i++;
         if (!b.Pixels)
         {
-            b.Own.resize((size_t)W * H);
+            const size_t n = (size_t)W * H;
+            if (b.Own.capacity() < n && !b.Own.empty())
+            {
+                retired.emplace_back(std::move(b.Own), calls);
+                b.Own = std::vector<u32>();
+            }
+            b.Own.resize(n);
             b.Pixels = b.Own.data();
         }
         b.W = W;
