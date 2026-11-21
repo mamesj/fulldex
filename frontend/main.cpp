@@ -5815,6 +5815,11 @@ int main(int argc, char** argv)
         int mountNational = 0, mountSize = 0;
         std::vector<uint32_t> mount[6];
         int facing = 1; // (DIR_NORTH 0, SOUTH 1, WEST 2, EAST 3)
+        // The clouds (as the GBA games' Free Flight): where the sheet is, in the top screen's pixels, and the player's last
+        // place in the world (its units: 16 a tile, a pixel at the game's own camera).
+        double cloudX = 0, cloudY = 0;
+        int32_t cloudPrevX = 0, cloudPrevZ = 0;
+        bool cloudPrev = false;
         bool moving = false;
     } freeFlight;
     {
@@ -12949,6 +12954,18 @@ int main(int argc, char** argv)
                         if (ffMain(mo))
                         {
                             freeFlight.facing = (int)(freeFlight.family >= 3 ? ffRead16(mo + 0x18) : ffRead32(mo + 0x28)) & 3;
+                            // The clouds slide by a little faster than the ground (nearer the eye: 1.15 times the camera's
+                            // movement, at FullDex's zoom) and drift on the wind.
+                            {
+                                const int32_t wx = (int32_t)ffRead32(mo + (freeFlight.family >= 3 ? 0x44 : 0x70)) >> 12;
+                                const int32_t wz = (int32_t)ffRead32(mo + (freeFlight.family >= 3 ? 0x4C : 0x78)) >> 12;
+                                const int dx = wx - freeFlight.cloudPrevX, dz = wz - freeFlight.cloudPrevZ;
+                                const double z = std::max(1.0f, freeFlight.zoom);
+                                if (freeFlight.cloudPrev && std::abs(dx) <= 32 && std::abs(dz) <= 32) { freeFlight.cloudX += dx * 1.15 / z; freeFlight.cloudY += dz * 1.15 / z; }
+                                freeFlight.cloudPrevX = wx; freeFlight.cloudPrevZ = wz; freeFlight.cloudPrev = true;
+                                freeFlight.cloudX = std::fmod(freeFlight.cloudX + 0.08 + 256.0, 256.0);
+                                freeFlight.cloudY = std::fmod(freeFlight.cloudY - 0.03 + 256.0, 256.0);
+                            }
                             freeFlight.moving = (keys & dpad) != 0;
                             static const bool showPlayer = getenv("SSR_FF_SHOWPLAYER") != nullptr;
                             uint32_t st = ffRead32(mo);
@@ -13998,6 +14015,96 @@ int main(int argc, char** argv)
             FdNav::DrawCount(canvas, outW, outH, fdNav.count, touchPadUsed && touchPad.visible ? (int)(outH * 0.135f) : 0);
             overlayUsed = true;
         }
+        // FREE FLIGHT's clouds, as the GBA games': a sheet of soft white puffs between the Pokemon flown on and the ground,
+        // seen through (at most 70%), as thick as it is high (thinning out on landing). A 128 x 128 map of round puffs in
+        // clusters, flatter at the bottom, each texel 2 x 2 of the top screen's pixels, wrapped; a white core, a thinner rim,
+        // a bluer underside where the cloud thins below. Over the ground and the shadow, under the Pokemon.
+        static std::vector<uint8_t> cloudMap;
+        auto drawFlightClouds = [&](const MergedView& v) {
+            const float strength = std::clamp(freeFlight.lift / 28.0f, 0.0f, 1.0f);
+            if (strength <= 0.01f || v.unit <= 0) return;
+            constexpr int N = 128;
+            if (cloudMap.empty())
+            {
+                cloudMap.assign(N * N, 0);
+                uint32_t seed = 0x9E3779B9u;
+                auto rnd = [&]() { seed = seed * 1664525u + 1013904223u; return (seed >> 8) / 16777216.0; };
+                for (int c = 0; c < 7; c++)
+                {
+                    const double cx = rnd() * N, cy = rnd() * N;
+                    const int puffs = 4 + (int)(rnd() * 4);
+                    const double big = 7 + rnd() * 4;
+                    for (int p = 0; p < puffs; p++)
+                    {
+                        const double r = p == 0 ? big : big * (0.45 + rnd() * 0.35);
+                        const double a = rnd() * 6.2832, d = p == 0 ? 0 : big * (0.55 + rnd() * 0.5);
+                        const double px = cx + std::cos(a) * d * 1.4, py = cy + std::sin(a) * d * 0.55 - (p == 0 ? 0 : r * 0.2);
+                        for (int y = (int)(py - r) - 1; y <= (int)(py + r) + 1; y++)
+                            for (int x = (int)(px - r) - 1; x <= (int)(px + r) + 1; x++)
+                            {
+                                const double dx = (x - px) / r, dy = (y - py) / r;
+                                if (dy > 0.55) continue; // (flat bottoms)
+                                const double q = 1 - (dx * dx + dy * dy);
+                                if (q <= 0) continue;
+                                const int val = std::min(255, (int)(std::sqrt(q) * 255 * 1.6));
+                                uint8_t& m = cloudMap[(size_t)((y & (N - 1)) * N + (x & (N - 1)))];
+                                if (val > m) m = (uint8_t)val;
+                            }
+                    }
+                }
+            }
+            auto at = [&](int px, int py) {
+                const int x = px & (N * 2 - 1), y = py & (N * 2 - 1);
+                const int x0 = x >> 1, y0 = y >> 1, x1 = (x0 + 1) & (N - 1), y1 = (y0 + 1) & (N - 1);
+                const int a = cloudMap[(size_t)(y0 * N + x0)], b = cloudMap[(size_t)(y0 * N + x1)];
+                const int c = cloudMap[(size_t)(y1 * N + x0)], d = cloudMap[(size_t)(y1 * N + x1)];
+                const int top = (x & 1) ? (a + b) >> 1 : a, bottom = (x & 1) ? (c + d) >> 1 : c;
+                return (y & 1) ? (top + bottom) >> 1 : top;
+            };
+            const int core = (int)(strength * 0.7f * 255), rim = core * 5 / 9;
+            const int ox = (int)std::floor(freeFlight.cloudX), oy = (int)std::floor(freeFlight.cloudY);
+            // (Worked out a top-screen pixel at a time, a block of output pixels each.)
+            const int y0 = std::max(0, v.originY > 0 ? (int)v.originY : 0), y1 = std::min(outH, (int)(v.originY + 192 * v.unit));
+            // (The colours of a row of top-screen pixels, spread over the output's columns; each output row laid over what's
+            // there already.)
+            static std::vector<uint32_t> rowCols;
+            rowCols.resize((size_t)outW);
+            int lastGy = INT_MIN;
+            for (int y = y0; y < y1; y++)
+            {
+                const int gy = (int)std::floor((y - v.originY) / v.unit);
+                if (gy != lastGy)
+                {
+                    lastGy = gy;
+                    int lastGx = INT_MIN;
+                    uint32_t col = 0;
+                    for (int x = 0; x < outW; x++)
+                    {
+                        const int gx = (int)std::floor((x - v.originX) / v.unit);
+                        if (gx != lastGx)
+                        {
+                            lastGx = gx;
+                            const int m = at(gx + ox, gy + oy);
+                            if (m < 40) col = 0;
+                            else
+                            {
+                                const bool under = at(gx + ox, gy + oy + 3) < m - 30; // (the cloud thins below: its shaded side)
+                                const uint32_t al = (uint32_t)(m >= 140 ? core : rim);
+                                col = (al << 24) | (under ? 0xCEDCF0u : 0xF8FAFFu);
+                            }
+                        }
+                        rowCols[(size_t)x] = col;
+                    }
+                }
+                uint32_t* row = &canvas.px[(size_t)y * canvas.w];
+                for (int x = 0; x < outW; x++)
+                    if (const uint32_t c = rowCols[(size_t)x]) row[x] = (row[x] >> 24) == 0 ? c : Glass::Over(row[x], c);
+            }
+            Glass::Mark(canvas, 0, y0, outW, y1);
+            overlayUsed = true;
+        };
+        if (freeFlight.on && freeFlight.mountSize <= 0 && effectiveLayout.mode == LayoutMode::Merged && !menu.open)
+            drawFlightClouds(MergedMakeView(outW, outH));
         // FREE FLIGHT: the Pokemon flown on, where the player is (the camera keeps the player in the same place on the
         // top screen: SSR_FF_ANCHOR=x,y moves where it is drawn, in the top screen's pixels), its shadow on the ground.
         if (freeFlight.on && freeFlight.mountSize > 0 && effectiveLayout.mode == LayoutMode::Merged && !menu.open)
@@ -14027,6 +14134,7 @@ int main(int argc, char** argv)
                     }
                 Glass::Mark(canvas, std::max(0, x0), std::max(0, y0), std::min(outW, x1), std::min(outH, y1));
             }
+            drawFlightClouds(v);
             // The sprite: S, N, W (E is W turned over); its second frame every 8 frames while it moves, and a beat of
             // its wings even when it hovers.
             int k = freeFlight.facing == 0 ? 2 : freeFlight.facing == 1 ? 0 : 4;
