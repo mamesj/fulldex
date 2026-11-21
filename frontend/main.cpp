@@ -4024,7 +4024,23 @@ int main(int argc, char** argv)
             only("top", 0);
             sc.wide = worldWide;
             sc.weatherObj = pt.Weather(funcWatch, 4); // rain, snow, ...: repeated to the view's edges
-            sc.weatherBg = pt.sandstorm >= 0 && funcWatch.Ran(pt.sandstorm, 4) ? LAYER_BG2 : 0;
+            static const bool noWeatherFix = getenv("SSR_TEST_NO_WEATHER_FIX") != nullptr; // (tests: the before picture)
+            sc.weatherBg = !noWeatherFix && pt.AnyRan(funcWatch, pt.dustBg, 4) ? LAYER_BG2 : 0;
+            // (A weather's shade over the whole screen leaves the first and last columns unshaded: they take their
+            // neighbours' colours, so no dark line runs down the edges of the 4:3 picture.)
+            if (!noWeatherFix && screens && screens[0].pixels && pt.AnyRan(funcWatch, pt.shadeBg, 4))
+            {
+                uint32_t* px = const_cast<uint32_t*>(screens[0].pixels);
+                for (int y = 0; y < 192; y++) { px[y * 256] = px[y * 256 + 1]; px[y * 256 + 255] = px[y * 256 + 254]; }
+            }
+            if (getenv("SSR_LAYER_HIST") && frame % 60 == 0 && screens && screens[0].flags)
+            {
+                int n[16] = {}, edge[16] = {};
+                for (int i = 0; i < 256 * 192; i++) { const int c = LayerClass(screens[0].flags[i]) & 15; n[c]++; if ((i & 255) < 8 || (i & 255) > 247) edge[c]++; }
+                fprintf(stderr, "[layers] frame %u weather %d:", (unsigned)frame, (int)sc.weatherObj);
+                for (int i = 1; i < 16; i++) if (n[i]) fprintf(stderr, " bg%d=%d (edges %d)", i, n[i], edge[i]);
+                fprintf(stderr, "\n");
+            }
             if (wideView && funcWatch.Ran(pt.startMenu, 2))
             {
                 // The X menu (its box x 154-253, y 0-181 of the top screen) stands against the
@@ -12441,7 +12457,21 @@ int main(int argc, char** argv)
             {
                 static const int testFreeFlight = getenv("SSR_TEST_FREEFLIGHT") ? atoi(getenv("SSR_TEST_FREEFLIGHT")) : -1;
                 static int testFrames = 0; // (frames run here, a loaded state's own count aside)
-                if (testFreeFlight >= 0 && testFrames++ == testFreeFlight) { fprintf(stderr, "[freeflight] test take-off\n"); startFreeFlight(); }
+                if (testFreeFlight >= 0 && testFrames == testFreeFlight) { fprintf(stderr, "[freeflight] test take-off\n"); startFreeFlight(); }
+                // (Tests, Platinum: SSR_TEST_WEATHER=<frame>,<weather> starts that weather there, as a script's SETWEATHER
+                // does: ov5_021D5F24(fieldSystem->unk_04->unk_0C, weather).)
+                {
+                    static int wxAt = -2, wxId = 0;
+                    if (wxAt == -2) { wxAt = -1; if (const char* t = getenv("SSR_TEST_WEATHER")) sscanf(t, "%d,%d", &wxAt, &wxId); }
+                    if (wxAt >= 0 && testFrames >= wxAt && freeFlight.supported)
+                    {
+                        const uint32_t fs = ffFieldSystem();
+                        const PkNdsOp ops[3] = { { PK_NDS_OP_LOAD32, { fs, 4, 0, 0 } }, { PK_NDS_OP_LOAD32, { PK_NDS_RESULT_REF + 0, 0x0C, 0, 0 } },
+                                                 { 0x021D5F25u, { PK_NDS_RESULT_REF + 1, (unsigned)wxId, 0, 0 } } };
+                        if (fs && pk_nds_call_ops(nds.get(), pk_nds_field_game(gameCode.c_str(), companionRevision), ops, 3)) { fprintf(stderr, "[weather] test: %d\n", wxId); wxAt = -1; }
+                    }
+                }
+                testFrames++;
                 if (freeFlight.on && ffRead32(freeFlight.addr[2]) != ffPatch) stopFreeFlight(false); // (the field's overlay went)
                 if (!freeFlight.on && freeFlight.supported && frame % 30 == 0)
                     for (int i = 0; i < 2; i++)

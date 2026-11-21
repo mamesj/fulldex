@@ -141,6 +141,12 @@ struct PtFuncs
     // more).
     std::vector<int> weather;
     int sandstorm = -1; // (its dust is a background too: Scene::weatherBg)
+    std::vector<int> dustBg, shadeBg;
+    bool AnyRan(const FuncWatch& fw, const std::vector<int>& fs, unsigned frames) const
+    {
+        for (int f : fs) if (f >= 0 && fw.Ran(f, frames)) return true;
+        return false;
+    }
 
     // romPath: the game being started; names: the functions the layouts watch (Platinum's are
     // added to it when the game is Platinum).
@@ -197,6 +203,11 @@ struct PtFuncs
                                "ov5_021DA244", "ov5_021D8D08", "ov5_021D9464", "ov5_021DA8A0", "ov5_021D823C", "ov5_021D8948" })
             weather.push_back(find(w));
         sandstorm = find("ov5_021D8D08");
+        // (Blizzard and ash: their snow and ash are in BG2 too, as the sandstorm's dust.)
+        for (const char* w : { "ov5_021D8D08", "ov5_021D8FF8", "ov5_021DA244" }) dustBg.push_back(find(w));
+        // (Cloudy, heavy rain, thunder, fog and deep fog lay a shade over the whole screen in BG2, all but its first and
+        // last columns, which showed as two dark lines down the edges of the 4:3 picture in widescreen.)
+        for (const char* w : { "ov5_021DAC68", "ov5_021D9FF8", "ov5_021D9F0C", "ov5_021DAEC0", "ov5_021DAD38" }) shadeBg.push_back(find(w));
         fprintf(stderr, "[platinum] field %d, menu %d, battle %d\n", field, startMenu, battle);
     }
 };
