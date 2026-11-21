@@ -17,7 +17,7 @@
 - **Android: a big ROMs folder no longer leaves a black screen** (#232). FullDex walks the folder once and only looks again in the folders that hold games. Settings > GAME LIST > ROMS FOLDER picks the folder again.
 - **Report A Bug: the details, ready to paste** (Settings in the pause menu, and About in the launcher). It copies the version, platform, game, display settings and the last 200 lines of `game.log` to the clipboard, and writes `diagnostics.txt` beside the log for attaching. Nothing is sent anywhere: paste it into Discord or a GitHub issue.
 - **3DS games: setting up from a folder on another drive works again** (#235, PR #236 by OzWookiee). Short paths are copied without the long-path prefix that some drives refuse, and a failed copy says which step failed and why.
-- **3DS games: the Mega Evolution button is back in battles** (#199). It was hidden in every battle but Rotation Battles' own rule.
+- **3DS games: the Mega Evolution button shows in ordinary battles** (#199), not only in the Battle Maison.
 - **3DS games: building a game no longer stops at one part that fails to compile** (#204). That part is built again on its own, then without optimisation, and the rest goes on.
 
 ## FullDex 1.7 (20 November 2026)

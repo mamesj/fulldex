@@ -16,8 +16,9 @@
 #include <shellapi.h>
 #include <cmath>
 #include <functional>
+#include <fstream>
 
-inline const char* kBuilderToolsUrl = "https://github.com/mamesj/pokemon-fulldex/releases/download/fulldex-builder-1.7/FullDex-Builder-1.7.zip";
+inline const char* kBuilderToolsUrl = "https://github.com/mamesj/pokemon-fulldex/releases/download/fulldex-builder-1.7.1/FullDex-Builder-1.7.1.zip";
 
 inline const char* kSwitchBat =
     "@echo off\r\n"
@@ -154,7 +155,19 @@ inline std::string SetupToolsDir(const std::string& appDir)
     if (const char* t = getenv("FULLDEX_BUILDER_TOOLS")) if (*t) return t;
     return appDir + "/3ds/builder/tools";
 }
-inline bool SetupHaveTools(const std::string& appDir) { std::error_code ec; return std::filesystem::is_regular_file(W(SetupToolsDir(appDir) + "/3dsrecomp.exe"), ec); }
+// The tools from an older FullDex (no stamp, or another download's) are fetched again, so a fix in
+// the Builder reaches everyone who set up before it. A folder named by FULLDEX_BUILDER_TOOLS is used as it is.
+inline std::string SetupToolsStamp(const std::string& appDir) { return SetupToolsDir(appDir) + "/fulldex-tools.txt"; }
+inline bool SetupHaveTools(const std::string& appDir)
+{
+    std::error_code ec;
+    if (!std::filesystem::is_regular_file(W(SetupToolsDir(appDir) + "/3dsrecomp.exe"), ec)) return false;
+    if (const char* t = getenv("FULLDEX_BUILDER_TOOLS")) if (*t) return true;
+    std::ifstream f(std::filesystem::path(W(SetupToolsStamp(appDir))));
+    std::string got;
+    std::getline(f, got);
+    return got == kBuilderToolsUrl;
+}
 inline std::string SetupShortName(const std::string& name) { return SetupName(name); }
 inline std::string Slashes(std::string p) { for (char& ch : p) if (ch == '/') ch = '\\'; return p; }
 
@@ -221,6 +234,7 @@ inline bool SetupGetTools(const std::string& appDir, std::string& why)
     if (ec) { why = "Couldn't put the tools in place."; return false; }
     fs::remove_all(W(unz), ec);
     fs::remove(W(zip), ec);
+    { std::ofstream f(std::filesystem::path(W(SetupToolsStamp(appDir)))); f << kBuilderToolsUrl << "\n"; }
     return SetupHaveTools(appDir);
 }
 
