@@ -47,6 +47,16 @@ int pk_nds_call_ops(NDS* nds, const PkNdsFieldGame* game, const PkNdsOp* ops, in
     return nds ? pk_nds_call_ops(callMemory(nds), game, ops, n) : 0;
 }
 
+bool pk_nds_call_gen5_hold_events(NDS* nds, const PkNdsFieldGame* game, bool on)
+{
+    return nds ? pk_nds_call_gen5_hold_events(callMemory(nds), game, on) : false;
+}
+
+int pk_nds_call_ops_quiet(NDS* nds, const PkNdsFieldGame* game, const PkNdsOp* ops, int n)
+{
+    return nds ? pk_nds_call_ops_quiet(callMemory(nds), game, ops, n) : 0;
+}
+
 int pk_nds_call_script(NDS* nds, const PkNdsFieldGame* game, const u8* bytes, u32 len)
 {
     return nds ? pk_nds_call_script(callMemory(nds), game, bytes, len) : 0;

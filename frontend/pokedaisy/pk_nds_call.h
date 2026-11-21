@@ -29,6 +29,10 @@ int pk_nds_call_action(melonDS::NDS* nds, const PkNdsFieldGame* game, int action
 
 /** Any ops (headless tools: nds_dump's call), on the same terms as an action. */
 int pk_nds_call_ops(melonDS::NDS* nds, const PkNdsFieldGame* game, const PkNdsOp* ops, int n);
+/** Gen 5, events held (Free Flight): the GameSystem's event check swapped for the ARM9's return-0 (on) or put back
+ * (off); true when done. pk_nds_call_ops_quiet: a job hooked into that slot while it is swapped, going on into return-0. */
+bool pk_nds_call_gen5_hold_events(melonDS::NDS* nds, const PkNdsFieldGame* game, bool on);
+int pk_nds_call_ops_quiet(melonDS::NDS* nds, const PkNdsFieldGame* game, const PkNdsOp* ops, int n);
 
 /** A field script of a tool's (assembled like stub/platinum_pc.s) started as the PC action starts its own. */
 int pk_nds_call_script(melonDS::NDS* nds, const PkNdsFieldGame* game, const uint8_t* bytes, uint32_t len);

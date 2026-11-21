@@ -758,6 +758,32 @@ int pk_nds_call_ops(const PkNdsCallMemory& mem, const PkNdsFieldGame* game, cons
     return post(mem, game, parent, o, nullptr, 0);
 }
 
+// Free Flight in Gen 5: no events while flying (no trainer's eye, warp, step event, wild Pokemon or menu), the event check
+// the game calls every frame swapped for the ARM9's return-0, and put back on landing (only where it holds one or the other).
+bool pk_nds_call_gen5_hold_events(const PkNdsCallMemory& mem, const PkNdsFieldGame* game, bool on)
+{
+    const Gen5Fns* g5 = gen5FnsFor(game);
+    if (!g5) return false;
+    u32 gs = rd32(mem, g5->gameSystemPtr);
+    if (!inMain(gs)) return false;
+    const u32 slot = gs + (u32) g5->offEventCheck, now = rd32(mem, slot);
+    if (now != g5->eventCheck && now != g5->returnZero) return false;
+    wr32(mem, slot, on ? g5->returnZero : g5->eventCheck);
+    return true;
+}
+
+// A job while the events are held: hooked into the swapped slot, going on into return-0 (no event that frame either).
+int pk_nds_call_ops_quiet(const PkNdsCallMemory& mem, const PkNdsFieldGame* game, const PkNdsOp* ops, int n)
+{
+    const Gen5Fns* g5 = gen5FnsFor(game);
+    if (!g5 || (pending.seq && pending.state == 0) || n <= 0 || n > PK_NDS_MAX_OPS) return 0;
+    u32 gs = rd32(mem, g5->gameSystemPtr);
+    if (!inMain(gs) || rd32(mem, gs + g5->offEvent) || rd32(mem, gs + g5->offEventCheck) != g5->returnZero) return 0;
+    Ops o;
+    for (int i = 0; i < n; i++) o.op[o.n++] = ops[i];
+    return postAt(mem, gs, gs + g5->offEventCheck, g5->returnZero, g5->returnZero, o, nullptr, 0);
+}
+
 int pk_nds_call_script(const PkNdsCallMemory& mem, const PkNdsFieldGame* game, const uint8_t* bytes, uint32_t len)
 {
     const CallFns* f = fnsFor(game);
