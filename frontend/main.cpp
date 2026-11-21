@@ -3866,6 +3866,14 @@ int main(int argc, char** argv)
                 sc.bgScreen = 0;
                 sc.bgX = 1;
                 sc.bgY = 140;
+                // (That blue is the band beside each Pokemon in the left column, but the chosen one's orange frame covers
+                // its band: the first band that isn't orange, #245.)
+                if (screens)
+                    for (const int y : { 140, 92, 28 })
+                    {
+                        const uint32_t c = screens[0].pixels[y * 256 + 1];
+                        if ((int)((c >> 16) & 0xFF) <= (int)(c & 0xFF) + 40) { sc.bgY = y; break; }
+                    }
             }
             else if (ran(pt.bag)) alone("bag", 0);       // the touch screen: the pockets, which LEFT and RIGHT reach
             else if (ran(pt.summary)) alone("summary", 0);
