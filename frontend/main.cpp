@@ -2640,6 +2640,8 @@ int main(int argc, char** argv)
     SDL_Renderer* renderer = nullptr;
     SDL_Texture* tex[2] = { nullptr, nullptr };
     SDL_Texture* overlayTex = nullptr;
+    SDL_Texture* cloudTex = nullptr; // (Free Flight's clouds: a small layer, stretched smoothly over the top screen)
+    int cloudTexW = 0, cloudTexH = 0;
     int overlayTexW = 0, overlayTexH = 0;
     bool canvasStale = true; // (the canvas drawn again since its texture was filled: see menuKeep)
     int menuDrawCount = 0, menuOpenFrames = 0;
@@ -9221,6 +9223,10 @@ int main(int argc, char** argv)
     {
         bool valid = false;
         bool merged = false, overlayUsed = false, wantShot = false, liveUsed = false;
+        bool cloudUsed = false; // (Free Flight's clouds: cloud, cloudW x cloudH, stretched over cloudDst)
+        int cloudW = 0, cloudH = 0;
+        SDL_FRect cloudDst {};
+        std::vector<uint32_t> cloud;
         uint32_t frameNo = 0; // (for the name of a screenshot)
         int outW = 0, outH = 0;
         SDL_Rect rects[2] {};
@@ -9691,6 +9697,26 @@ int main(int argc, char** argv)
             liveTexStale = false;
             liveStale.clear();
             if (liveTex) SDL_RenderCopy(renderer, liveTex, &dr, &dr);
+        }
+        if (j.cloudUsed && !backdropJustRead && j.cloudW > 0 && j.cloud.size() == (size_t)j.cloudW * j.cloudH)
+        {
+            if (!cloudTex || cloudTexW != j.cloudW || cloudTexH != j.cloudH)
+            {
+                if (cloudTex) SDL_DestroyTexture(cloudTex);
+                cloudTex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, j.cloudW, j.cloudH);
+                if (cloudTex)
+                {
+                    SDL_SetTextureBlendMode(cloudTex, SDL_BLENDMODE_BLEND);
+                    SDL_SetTextureScaleMode(cloudTex, SDL_ScaleModeLinear);
+                }
+                cloudTexW = j.cloudW;
+                cloudTexH = j.cloudH;
+            }
+            if (cloudTex)
+            {
+                SDL_UpdateTexture(cloudTex, nullptr, j.cloud.data(), j.cloudW * 4);
+                SDL_RenderCopyF(renderer, cloudTex, nullptr, &j.cloudDst);
+            }
         }
         if (j.overlayUsed && !backdropJustRead)
         {
@@ -13921,6 +13947,11 @@ int main(int argc, char** argv)
         sceneMark(2);
         // Overlay: touch cursor, status message, pause menu.
         bool overlayUsed = false;
+        bool cloudUsed = false; // (Free Flight's clouds this frame: cloudLayer, cloudW x cloudH, over cloudDst)
+        int cloudW = 0, cloudH = 0;
+        SDL_FRect cloudDst {};
+        static std::vector<uint32_t> cloudLayer;
+        float ffShA = 0, ffShX = 0, ffShY = 0, ffShW = 1, ffShH = 1; // (the shadow under it, in top-screen pixels)
         bool liveUsed = false;
         // The pause menu, nothing in it moving, drawn again only when something may have changed:
         // any input, its page or row, the frosted picture behind it, and twice a second for what
@@ -14244,67 +14275,93 @@ int main(int argc, char** argv)
                 };
                 return 0.55f * vn(x, y, 40) + 0.3f * vn(x + 1000, y + 500, 17) + 0.15f * vn(x - 300, y + 900, 7);
             };
-            // (Worked out a top-screen pixel at a time, a block of output pixels each.)
-            const int y0 = std::max(0, v.originY > 0 ? (int)v.originY : 0), y1 = std::min(outH, (int)(v.originY + 192 * v.unit));
-            // (The colours of a row of top-screen pixels, spread over the output's columns; each output row laid over what's
-            // there already.)
-            static std::vector<uint32_t> rowCols;
-            rowCols.resize((size_t)outW);
-            int lastGy = INT_MIN;
-            for (int y = y0; y < y1; y++)
-            {
-                const int gy = (int)std::floor((y - v.originY) / v.unit);
-                if (gy != lastGy)
-                {
-                    lastGy = gy;
-                    int lastGx = INT_MIN;
-                    uint32_t col = 0;
-                    for (int x = 0; x < outW; x++)
+            // (Worked out a top-screen pixel at a time into a layer of their own, the size of the DS's top screen (wider in
+            // widescreen), that the graphics card stretches smoothly over it: far less to work out and to send than the
+            // full-size overlay. The thick cloud's slope and noise are worked out every 4th pixel and eased between.)
+            const int yA = std::max(0, v.originY > 0 ? (int)v.originY : 0), yB = std::min(outH, (int)(v.originY + 192 * v.unit));
+            if (yB <= yA) return;
+            const int gxA = (int)std::floor((0 - v.originX) / v.unit), gxB = (int)std::ceil((outW - v.originX) / v.unit);
+            const int gyA = std::max(0, (int)std::floor((yA - v.originY) / v.unit)), gyB = std::min(192, (int)std::ceil((yB - v.originY) / v.unit));
+            const int LW = gxB - gxA, LH = gyB - gyA;
+            if (LW <= 0 || LH <= 0 || LW > 4096) return;
+            cloudLayer.assign((size_t)LW * LH, 0x00EEF2FAu); // (see-through but cloud-coloured: no dark fringe when stretched)
+            constexpr int G = 4;
+            const int GW = LW / G + 2, GH = LH / G + 2;
+            static std::vector<float> gK, gN, gL;
+            gK.assign((size_t)GW * GH, 0.0f);
+            gN.assign((size_t)GW * GH, 0.5f);
+            gL.assign((size_t)GW * GH, 1.0f);
+            if (fogOn)
+                for (int j = 0; j < GH; j++)
+                    for (int i = 0; i < GW; i++)
                     {
-                        const int gx = (int)std::floor((x - v.originX) / v.unit);
-                        if (gx != lastGx)
-                        {
-                            lastGx = gx;
-                            const int m = at(gx + ox, gy + oy);
-                            // The GBA games' cloud over the unexplored (and the void past the edges): soft white, as solid as
-                            // they make it, its edge a row of billows (the slope pushed in and out by fractal noise fixed to the
-                            // world), lit a little from the top left, a cool grey in the hollows.
-                            // (Past the map's edges a little sooner, so the seam where the void starts stays under it.)
-                            const float k = fogOn ? std::max(fogAt(gx, gy), std::min(1.0f, fogAt(gx, gy, voidGrid) * 2.6f)) : 0.0f;
-                            float fa = 0;
-                            uint32_t fc = 0;
-                            if (k > 0.02f)
-                            {
-                                // (Its noise as large on screen as the GBA games' looks: in 0.3 of a world pixel.)
-                                const int wx = (int)std::floor((wx0 + (gx - ancX) * zz) * 0.3), wz = (int)std::floor((wz0 + (gy - ancY) * zz) * 0.3);
-                                const float nz = fogNoise(wx, wz);
-                                const float t = std::clamp((k + (nz - 0.5f) * 0.8f - 0.12f) / 0.6f, 0.0f, 1.0f); // (a wide, soft slope)
-                                fa = 0.97f * t * t * (3 - 2 * t);
-                                const float lit = std::clamp(0.97f + (nz - fogNoise(wx + 3, wz + 4)) * 0.9f, 0.9f, 1.04f);
-                                fc = (uint32_t)std::min(255.0f, 236 * lit) << 16 | (uint32_t)std::min(255.0f, 241 * lit) << 8 | (uint32_t)std::min(255.0f, 250 * lit);
-                            }
-                            // (The thin clouds fade in with their density: soft edges, no steps.)
-                            const float mt = std::clamp((m - 20) / 150.0f, 0.0f, 1.0f);
-                            const int thin = (int)(core * mt * mt * (3 - 2 * mt));
-                            if (thin <= 2 && fa <= 0.01f) col = 0;
-                            else if (fa > 0.01f && (thin <= 2 || fa >= 0.6f))
-                                col = ((uint32_t)(strength * 255 * fa) << 24) | fc;
-                            else
-                            {
-                                const bool under = at(gx + ox, gy + oy + 3) < m - 30; // (the cloud thins below: its shaded side)
-                                const int al = std::max(thin, (int)(strength * 255 * fa));
-                                col = ((uint32_t)al << 24) | (under ? 0xDCE5F3u : 0xF8FAFFu);
-                            }
-                        }
-                        rowCols[(size_t)x] = col;
+                        const int gx = gxA + i * G, gy = gyA + j * G;
+                        const size_t q = (size_t)j * GW + i;
+                        // (Past the map's edges a little sooner, so the seam where the void starts stays under it.)
+                        gK[q] = std::max(fogAt(gx, gy), std::min(1.0f, fogAt(gx, gy, voidGrid) * 2.6f));
+                        // (Its noise as large on screen as the GBA games' looks: in 0.3 of a world pixel.)
+                        const int wx = (int)std::floor((wx0 + (gx - ancX) * zz) * 0.3), wz = (int)std::floor((wz0 + (gy - ancY) * zz) * 0.3);
+                        const float nz = fogNoise(wx, wz);
+                        gN[q] = nz;
+                        gL[q] = std::clamp(0.97f + (nz - fogNoise(wx + 3, wz + 4)) * 0.9f, 0.9f, 1.04f);
                     }
+            for (int ly = 0; ly < LH; ly++)
+            {
+                const int gy = gyA + ly, j = ly / G;
+                const float tz = (float)(ly % G) / G;
+                uint32_t* out = &cloudLayer[(size_t)ly * LW];
+                for (int lx = 0; lx < LW; lx++)
+                {
+                    const int gx = gxA + lx, i = lx / G;
+                    const float tx = (float)(lx % G) / G;
+                    auto ease = [&](const std::vector<float>& g) {
+                        const float* p = &g[(size_t)j * GW + i];
+                        const float a = p[0] + (p[1] - p[0]) * tx, b = p[GW] + (p[GW + 1] - p[GW]) * tx;
+                        return a + (b - a) * tz;
+                    };
+                    const int m = at(gx + ox, gy + oy);
+                    // The GBA games' cloud over the unexplored (and the void past the edges): soft white, as solid as they
+                    // make it, its edge a row of billows (the slope pushed in and out by fractal noise fixed to the world),
+                    // lit a little from the top left, a cool grey in the hollows.
+                    const float k = fogOn ? ease(gK) : 0.0f;
+                    float fa = 0;
+                    uint32_t fc = 0;
+                    if (k > 0.02f)
+                    {
+                        const float nz = ease(gN);
+                        const float t = std::clamp((k + (nz - 0.5f) * 0.8f - 0.12f) / 0.6f, 0.0f, 1.0f); // (a wide, soft slope)
+                        fa = 0.97f * t * t * (3 - 2 * t);
+                        const float lit = ease(gL);
+                        fc = (uint32_t)std::min(255.0f, 236 * lit) << 16 | (uint32_t)std::min(255.0f, 241 * lit) << 8 | (uint32_t)std::min(255.0f, 250 * lit);
+                    }
+                    // (The thin clouds fade in with their density: soft edges, no steps.)
+                    const float mt = std::clamp((m - 20) / 150.0f, 0.0f, 1.0f);
+                    const int thin = (int)(core * mt * mt * (3 - 2 * mt));
+                    uint32_t col = 0;
+                    if (thin <= 2 && fa <= 0.01f) col = 0;
+                    else if (fa > 0.01f && (thin <= 2 || fa >= 0.6f))
+                        col = ((uint32_t)(strength * 255 * fa) << 24) | fc;
+                    else
+                    {
+                        const bool under = at(gx + ox, gy + oy + 3) < m - 30; // (the cloud thins below: its shaded side)
+                        const int al = std::max(thin, (int)(strength * 255 * fa));
+                        col = ((uint32_t)al << 24) | (under ? 0xDCE5F3u : 0xF8FAFFu);
+                    }
+                    // (The shadow of the Pokemon flown on, on the ground under the clouds.)
+                    uint32_t base = 0;
+                    if (ffShA > 0)
+                    {
+                        const float dx = (gx + 0.5f - ffShX) / ffShW, dy = (gy + 0.5f - ffShY) / ffShH, d = dx * dx + dy * dy;
+                        if (d < 1) base = (uint32_t)(ffShA * (1 - d)) << 24;
+                    }
+                    if (base) out[lx] = (col >> 24) ? Glass::Over(base, col) : base;
+                    else if (col >> 24) out[lx] = col;
                 }
-                uint32_t* row = &canvas.px[(size_t)y * canvas.w];
-                for (int x = 0; x < outW; x++)
-                    if (const uint32_t c = rowCols[(size_t)x]) row[x] = (row[x] >> 24) == 0 ? c : Glass::Over(row[x], c);
             }
-            Glass::Mark(canvas, 0, y0, outW, y1);
-            overlayUsed = true;
+            cloudUsed = true;
+            cloudW = LW;
+            cloudH = LH;
+            cloudDst = { v.originX + gxA * v.unit, v.originY + gyA * v.unit, LW * v.unit, LH * v.unit };
         };
         if (freeFlight.on && freeFlight.mountSize <= 0 && effectiveLayout.mode == LayoutMode::Merged && !menu.open)
             drawFlightClouds(MergedMakeView(outW, outH));
@@ -14322,23 +14379,14 @@ int main(int argc, char** argv)
             const int S = freeFlight.mountSize;
             // (Output pixels a sprite pixel: a small one drawn larger, more so with the player on its back.)
             const float px = v.unit / z * (S == 64 ? 1.0f : freeFlight.riderOk ? 1.6f : 1.25f);
-            // Shadow: a soft dark ellipse.
-            {
-                const float sw = 18.0f * v.unit / z, sh = 7.0f * v.unit / z;
-                const float cx = v.originX + gx * v.unit, cy = v.originY + gy * v.unit;
-                const int x0 = (int)(cx - sw), x1 = (int)(cx + sw), y0 = (int)(cy - sh), y1 = (int)(cy + sh);
-                for (int y = std::max(0, y0); y < std::min(outH, y1); y++)
-                    for (int x = std::max(0, x0); x < std::min(outW, x1); x++)
-                    {
-                        const float dx = (x - cx) / sw, dy = (y - cy) / sh, d = dx * dx + dy * dy;
-                        if (d >= 1) continue;
-                        const uint32_t a = (uint32_t)(110 * (1 - d) * std::min(1.0f, freeFlight.lift / 12));
-                        uint32_t& dst = canvas.px[(size_t)y * canvas.w + x];
-                        dst = (dst >> 24) == 0 ? (a << 24) : Glass::Over(dst, a << 24);
-                    }
-                Glass::Mark(canvas, std::max(0, x0), std::max(0, y0), std::min(outW, x1), std::min(outH, y1));
-            }
+            // Shadow: a soft dark ellipse, on the clouds' layer (under them).
+            ffShA = 110 * std::min(1.0f, freeFlight.lift / 12);
+            ffShX = gx;
+            ffShY = gy;
+            ffShW = 18.0f / z;
+            ffShH = 7.0f / z;
             drawFlightClouds(v);
+            ffShA = 0;
             // The sprite: S, N, W (E is W turned over); its second frame every 8 frames while it moves, and a beat of
             // its wings even when it hovers.
             int k = freeFlight.facing == 0 ? 2 : freeFlight.facing == 1 ? 0 : 4;
@@ -15182,6 +15230,8 @@ int main(int argc, char** argv)
             DrawJob& job = ahead ? aheadJobs[(aheadHead + aheadCount) % 3] : pipelined ? pendingJob : nowJob;
             job.merged = merged;
             job.overlayUsed = overlayUsed;
+            job.cloudUsed = cloudUsed;
+            if (cloudUsed) { job.cloud.swap(cloudLayer); job.cloudW = cloudW; job.cloudH = cloudH; job.cloudDst = cloudDst; }
             job.liveUsed = liveUsed;
             job.wantShot = wantShot && opt.windowShots;
             job.frameNo = frame;
@@ -15275,6 +15325,7 @@ int main(int argc, char** argv)
         statePreview.Clear();
         if(companionTexture){SDL_DestroyTexture(companionTexture);companionTexture=nullptr;}
         if (overlayTex) { SDL_DestroyTexture(overlayTex); overlayTex = nullptr; }
+        if (cloudTex) { SDL_DestroyTexture(cloudTex); cloudTex = nullptr; }
         if (liveTex) { SDL_DestroyTexture(liveTex); liveTex = nullptr; }
         if (frostTex) { SDL_DestroyTexture(frostTex); frostTex = nullptr; }
         exitStep("settings");
