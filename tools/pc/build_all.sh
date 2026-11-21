@@ -34,6 +34,8 @@
 # libegl1-mesa-dev, libdrm-dev, libgbm-dev, libasound2-dev, libpulse-dev and the rest named if
 # one is missing). It does not run the ARM program: it only compiles it.
 # GBA games too: SSR_GBA_DIR, Pokemon GBA Widescreen's folder after its setup.sh (optional).
+# With SSR_3DS_WIN_DIR, Ultra Sun and Ultra Moon's add-on (tools/pc/usum-addon) is built too when
+# glslangValidator and the Vulkan headers are there (sudo apt install glslang-tools libvulkan-dev).
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -216,6 +218,20 @@ if [ "$TARGET" = windows ] || [ "$TARGET" = both ]; then
         cp -r "$SSR_3DS_WIN_DIR/." "$OUT/3ds/program/"
         rm -f "$OUT/3ds/program/game.3ds" "$OUT/3ds/program/rom.txt" "$OUT/3ds/program/title.dll" "$OUT/3ds/program/title.hints"
         say "Omega Ruby and Alpha Sapphire too: $SSR_3DS_WIN_DIR"
+        # Ultra Sun and Ultra Moon's single-screen battle buttons and X menu (tools/pc/usum-addon): an SDL2.dll
+        # in front of the program's own, which becomes SDL2_real.dll; in the other games' folders it only passes
+        # SDL through. (A kit with an SDL2_real.dll already has an add-on of its own, and keeps it.)
+        P3="$OUT/3ds/program"
+        if [ -f "$P3/SDL2_real.dll" ] || [ ! -f "$P3/SDL2.dll" ]; then
+            say "Ultra Sun and Ultra Moon's add-on left out: 3ds/program already has an SDL2_real.dll, or no SDL2.dll"
+        elif ! command -v glslangValidator > /dev/null || { [ -z "${VULKAN_INC:-}" ] && [ ! -f /usr/include/vulkan/vulkan.h ]; }; then
+            say "Ultra Sun and Ultra Moon's add-on left out: it needs glslang-tools and libvulkan-dev"
+        else
+            tools/pc/usum-addon/build.sh build-pc-usum-addon > /dev/null || fail "building Ultra Sun and Ultra Moon's add-on (tools/pc/usum-addon)"
+            mv "$P3/SDL2.dll" "$P3/SDL2_real.dll"
+            cp build-pc-usum-addon/SDL2.dll "$P3/SDL2.dll"
+            say "Ultra Sun and Ultra Moon's add-on in 3ds/program (SDL2.dll, the program's own as SDL2_real.dll)"
+        fi
     fi
     ZIP=pokemon-ds-wide-pc-windows-x86_64.zip
     UPDATE_BUILDS+=(--build "$ZIP=$HERE/build-pc-windows/fulldex-build-id.txt")

@@ -41,6 +41,9 @@ The Windows download also plays your own copies of Pokemon Omega Ruby and Alpha 
 Each game keeps its own folder, with its saves and settings, in 3ds (3ds\000400000011C400 is
 Omega Ruby, 3ds\000400000011C500 Alpha Sapphire). For the Switch and Android, see the FullDex
 Builder on the releases page.
+Ultra Sun and Ultra Moon get battle buttons and an X menu made for the One screen layout (an
+SDL2.dll in front of the program's own, SDL2_real.dll). To turn them off for a game, put an empty
+file named usumfix_off.txt in its folder (3ds\00040000001B5000 is Ultra Sun).
 
 
 STEAM DECK

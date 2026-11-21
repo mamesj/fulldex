@@ -32,7 +32,8 @@ guide see [`README.md`](../README.md); for AI-agent-specific rules see
 Common: Linux or WSL2 (Ubuntu 24.04), Git, CMake, Ninja, Python 3, curl, SDL2 development
 headers, libpng, zlib.
 
-- Windows target: MinGW-w64 (`g++-mingw-w64-x86-64-posix`)
+- Windows target: MinGW-w64 (`g++-mingw-w64-x86-64-posix`); with `SSR_3DS_WIN_DIR`, Ultra Sun and
+  Ultra Moon's add-on also needs `glslang-tools` and `libvulkan-dev` (left out with a note without them)
 - Linux AppImage: `zsync`, Python Pillow (`python3-pil`); `appimagetool` is fetched by the script
 - Linux ARM64: `g++-aarch64-linux-gnu`, `patchelf`
 - Android: Android SDK with `build-tools;34.0.0`, `platforms;android-34`,
@@ -56,7 +57,7 @@ set -e
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq cmake ninja-build g++ pkg-config git curl python3 python3-pil file zip \
-  g++-mingw-w64-x86-64-posix libsdl2-dev libpng-dev zlib1g-dev zsync \
+  g++-mingw-w64-x86-64-posix glslang-tools libvulkan-dev libsdl2-dev libpng-dev zlib1g-dev zsync \
   libx11-dev libxext-dev libxcursor-dev libxi-dev libxfixes-dev libxrandr-dev libxrender-dev libxss-dev \
   libwayland-dev libxkbcommon-dev libdecor-0-dev libegl1-mesa-dev libgles2-mesa-dev libdrm-dev libgbm-dev \
   libasound2-dev libpulse-dev libudev-dev >/dev/null
@@ -126,7 +127,10 @@ Optional environment variables:
 - `FULLDEX_RELAY_URL=<url>` — the theme Gallery relay
 - `FULLDEX_GOOGLE_CLIENT_FILE=<file>` — the Google sign-in client, two lines; **never commit it**
 - `SSR_3DS_LINUX_KIT=<folder>` (x86_64) and `SSR_3DS_WIN_DIR=<folder>` (Windows) — the Omega
-  Ruby / Alpha Sapphire program placed in `3ds/program/`; the games' dumps are not part of it
+  Ruby / Alpha Sapphire program placed in `3ds/program/`; the games' dumps are not part of it.
+  On Windows, Ultra Sun and Ultra Moon's add-on (`tools/pc/usum-addon`, single-screen battle
+  buttons and X menu) is built and put in front of the program's `SDL2.dll`, which becomes
+  `SDL2_real.dll`
 
 ### GBA games
 
@@ -186,7 +190,7 @@ set -e
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq cmake ninja-build g++ pkg-config git curl python3 python3-pil file zip \
-  g++-mingw-w64-x86-64-posix libsdl2-dev libpng-dev zlib1g-dev zsync \
+  g++-mingw-w64-x86-64-posix glslang-tools libvulkan-dev libsdl2-dev libpng-dev zlib1g-dev zsync \
   libx11-dev libxext-dev libxcursor-dev libxi-dev libxfixes-dev libxrandr-dev libxrender-dev libxss-dev \
   libwayland-dev libxkbcommon-dev libdecor-0-dev libegl1-mesa-dev libgles2-mesa-dev libdrm-dev libgbm-dev \
   libasound2-dev libpulse-dev libudev-dev >/dev/null
@@ -303,7 +307,9 @@ release APK's `lib/arm64-v8a/libmain.so` or supply your own — never commit the
   The client file and users' tokens never enter the repository.
 - RetroAchievements use rcheevos (vendored under `frontend/thirdparty/rcheevos`).
 - The 3DS games use a separate program under `3ds/program/` (`frontend/n3ds.h`); the PC
-  program runs its `--prepare` step once from the player's dump and then launches it.
+  program runs its `--prepare` step once from the player's dump and then launches it. On
+  Windows, `tools/pc/usum-addon` is an `SDL2.dll` in front of that program's own for Ultra Sun
+  and Ultra Moon's one-screen layout (its `README.txt` has how it works and how it is built).
 
 ## Coding notes
 
