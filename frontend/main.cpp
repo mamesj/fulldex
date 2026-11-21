@@ -14199,7 +14199,7 @@ int main(int argc, char** argv)
             double wx0 = 0, wz0 = 0;
             bool fogOn = false;
             int fogBX = 0, fogBZ = 0;
-            float fogGrid[9][9] = {};
+            float fogGrid[9][9] = {}, voidGrid[9][9] = {};
             {
                 const uint32_t mo = ffMapObject();
                 if (mo)
@@ -14213,12 +14213,14 @@ int main(int argc, char** argv)
                             const int id = ffBlockId(fogBX + i, fogBZ + j);
                             if (id == -2) { fogOn = false; goto noFog; }
                             fogGrid[j][i] = id == -1 || !ffExplored(id) ? 1.0f : 0.0f;
+                            voidGrid[j][i] = id == -1 ? 1.0f : 0.0f;
                         }
                     fogOn = true;
                 }
             }
             noFog:
-            auto fogAt = [&](int gx, int gy) {
+            auto fogAt = [&](int gx, int gy, const float (*grid)[9] = nullptr) {
+                if (!grid) grid = fogGrid;
                 if (!fogOn) return 0.0f;
                 const double wx = wx0 + (gx - ancX) * zz, wz = wz0 + (gy - ancY) * zz;
                 const double fx = wx / 512 - 0.5 - fogBX, fz = wz / 512 - 0.5 - fogBZ;
@@ -14226,8 +14228,8 @@ int main(int argc, char** argv)
                 if (i0 < 0 || j0 < 0 || i0 > 7 || j0 > 7) return 1.0f;
                 const float tx = (float)(fx - i0), tz = (float)(fz - j0);
                 auto sm = [](float t) { t = std::clamp((t - 0.25f) * 2.0f, 0.0f, 1.0f); return t * t * (3 - 2 * t); }; // (from a quarter of a block either side of its edge)
-                const float a = fogGrid[j0][i0] + (fogGrid[j0][i0 + 1] - fogGrid[j0][i0]) * sm(tx);
-                const float b = fogGrid[j0 + 1][i0] + (fogGrid[j0 + 1][i0 + 1] - fogGrid[j0 + 1][i0]) * sm(tx);
+                const float a = grid[j0][i0] + (grid[j0][i0 + 1] - grid[j0][i0]) * sm(tx);
+                const float b = grid[j0 + 1][i0] + (grid[j0 + 1][i0 + 1] - grid[j0 + 1][i0]) * sm(tx);
                 return a + (b - a) * sm(tz);
             };
             // The thick cloud: a sea of cumulus tops seen from above, fixed to the world (a 128 x 128 wrapped field of a few hundred
@@ -14330,11 +14332,16 @@ int main(int argc, char** argv)
                             const float cover = fogOn ? bankCover(gx, gy, bh, blit) : -1.0f;
                             if (cover > 0)
                             {
-                                // The bank: lit tops white, valleys blue-grey, a darker rim just inside its edge.
-                                uint32_t c = mix(0xAFBCD6u, 0xFBFCFFu, blit);
-                                if (cover < 0.07f) c = mix(c, 0x9AA9C6u, 0.55f);
-                                const float edge = std::min(1.0f, cover / 0.03f);
-                                col = ((uint32_t)(strength * 255 * edge) << 24) | c;
+                                // The bank: lit tops white, valleys blue-grey, a softer rim at its edge. Seen through: thin where
+                                // it starts and in its valleys, thicker on the puffs and further in (the ground below still shows
+                                // a little, as through real cloud).
+                                uint32_t c = mix(0xB7C3DAu, 0xFBFCFFu, blit);
+                                if (cover < 0.06f) c = mix(c, 0xA7B4CEu, 0.35f);
+                                const float edge = std::min(1.0f, cover / 0.12f);
+                                const float depth = std::clamp(cover / 0.9f, 0.0f, 1.0f);
+                                // (Over the void past the map's edges: solid, so what's there never shows.)
+                                const float body = std::max(std::min(0.92f, 0.42f + 0.28f * std::min(1.0f, bh / 0.6f) + 0.22f * depth), std::min(1.0f, fogAt(gx, gy, voidGrid) * 3.0f)); // (solid from a little before the void starts)
+                                col = ((uint32_t)(strength * 255 * edge * body) << 24) | c;
                             }
                             else
                             {
