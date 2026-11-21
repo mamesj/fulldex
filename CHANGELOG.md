@@ -67,6 +67,7 @@
 - **iPad: the game list stays still under your finger,** and the system keyboard no longer covers the list's own (thanks moomof, #219).
 - **Game Options in the launcher** keeps its focus and opens the selected game's menu under the button (#191).
 - **About > Credits:** OzWookiee, Saiborg23 and elripalda.
+- **Report A Bug: the details, ready to paste** (Settings in the pause menu, and About in the launcher). It copies the version, platform, game, display settings and the last 200 lines of `game.log` to the clipboard, and writes `diagnostics.txt` beside the log for attaching. Nothing is sent anywhere: paste it into Discord or a GitHub issue.
 
 ## FullDex 1.6 (16 November 2026)
 
