@@ -4024,6 +4024,7 @@ int main(int argc, char** argv)
             only("top", 0);
             sc.wide = worldWide;
             sc.weatherObj = pt.Weather(funcWatch, 4); // rain, snow, ...: repeated to the view's edges
+            sc.weatherBg = pt.sandstorm >= 0 && funcWatch.Ran(pt.sandstorm, 4) ? LAYER_BG2 : 0;
             if (wideView && funcWatch.Ran(pt.startMenu, 2))
             {
                 // The X menu (its box x 154-253, y 0-181 of the top screen) stands against the
@@ -12542,7 +12543,9 @@ int main(int argc, char** argv)
                         else { keys |= (1u << dir) | (1u << KEY_B); if (speed < 2) speed = 2; freeFlight.seekDir = dir; }
                     }
                     // The player raised while flying, coming down on landing (MapObject.spritePosOffset.y, 0x8C); hidden under
-                    // the Pokemon flown on while one is drawn (MapObject.status's MAP_OBJ_STATUS_HIDE, 1 << 9).
+                    // the Pokemon flown on while one is drawn (MapObject.status's MAP_OBJ_STATUS_HIDE, 1 << 9). (Not in the
+                    // frame the flight ended in: stopFreeFlight has put the player back.)
+                    if (freeFlight.on)
                     {
                         const uint32_t fs = ffFieldSystem(), av = fs ? ffRead32(fs + 0x3C) : 0, mo = ffMain(av) ? ffRead32(av + 0x30) : 0;
                         if (ffMain(mo))

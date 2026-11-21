@@ -140,6 +140,7 @@ struct PtFuncs
     // rain, thunderstorm, snow, heavy snow, blizzard, ashfall, sandstorm, hail, spirits and two
     // more).
     std::vector<int> weather;
+    int sandstorm = -1; // (its dust is a background too: Scene::weatherBg)
 
     // romPath: the game being started; names: the functions the layouts watch (Platinum's are
     // added to it when the game is Platinum).
@@ -195,6 +196,7 @@ struct PtFuncs
         for (const char* w : { "ov5_021D7658", "ov5_021D9FF8", "ov5_021D9F0C", "ov5_021D79F0", "ov5_021D7E54", "ov5_021D8FF8",
                                "ov5_021DA244", "ov5_021D8D08", "ov5_021D9464", "ov5_021DA8A0", "ov5_021D823C", "ov5_021D8948" })
             weather.push_back(find(w));
+        sandstorm = find("ov5_021D8D08");
         fprintf(stderr, "[platinum] field %d, menu %d, battle %d\n", field, startMenu, battle);
     }
 };

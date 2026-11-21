@@ -169,6 +169,9 @@ struct Scene
     // reaches one side before the other), other sprites (the banner's badge and words) would
     // be repeated with them.
     bool weatherObj = false;
+    // A weather drawn in a background as well (Platinum's sandstorm: its dust in BG2, over the world): that layer's
+    // pixels repeated beside the screen like the particles, three quarters over the world there. 0: none.
+    uint8_t weatherBg = 0;
     // Rows of each screen drawn on below its last line (belowscreen.h), which its pieces may
     // show: the screen images then have 192 + extraRows rows.
     int extraRows[2] = { 0, 0 };
@@ -329,6 +332,17 @@ inline bool MergedWeatherPixel(const ScreenImage& top, int bx, int sy, uint32_t&
     const int sx = ((bx % 256) + 256) % 256;
     const size_t i = (size_t)sy * 256 + sx;
     if (LayerClass(top.flags[i]) != LAYER_OBJ) return false;
+    rgb = top.pixels[i] & 0xFFFFFF;
+    return true;
+}
+
+// The weather's background (Scene::weatherBg) beside the top screen at base x bx and row sy, if it is there.
+inline bool MergedWeatherBgPixel(const ScreenImage& top, uint8_t bg, int bx, int sy, uint32_t& rgb)
+{
+    if (!bg || !top.flags) return false;
+    const int sx = ((bx % 256) + 256) % 256;
+    const size_t i = (size_t)sy * 256 + sx;
+    if (LayerClass(top.flags[i]) != bg) return false;
     rgb = top.pixels[i] & 0xFFFFFF;
     return true;
 }
@@ -1507,8 +1521,15 @@ inline void MergedCompose(const Scene& scene, const ScreenImage screens[2], int 
                                 for (int x = xa; x < xb; x++)
                                 {
                                     uint32_t rgb;
-                                    if (MergedWeatherPixel(top, (int)std::floor((x - v.originX) / v.unit), sy, rgb))
+                                    const int bx = (int)std::floor((x - v.originX) / v.unit);
+                                    if (MergedWeatherPixel(top, bx, sy, rgb))
                                         dst[x] = 0xFF000000 | rgb;
+                                    else if (MergedWeatherBgPixel(top, scene.weatherBg, bx, sy, rgb))
+                                    {
+                                        const uint32_t d = dst[x];
+                                        dst[x] = 0xFF000000 | ((((rgb >> 16) & 0xFF) * 3 + ((d >> 16) & 0xFF)) / 4) << 16 |
+                                                 ((((rgb >> 8) & 0xFF) * 3 + ((d >> 8) & 0xFF)) / 4) << 8 | (((rgb & 0xFF) * 3 + (d & 0xFF)) / 4);
+                                    }
                                 }
                             }
                     }

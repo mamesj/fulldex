@@ -523,7 +523,9 @@ private:
                     for (int x = 0; x < 256; x++)
                     {
                         const int i = y * 256 + x;
-                        row[x] = LayerClass(top.flags[i]) == LAYER_OBJ ? 0xFF000000u | (top.pixels[i] & 0xFFFFFF) : 0u;
+                        const uint8_t lc = LayerClass(top.flags[i]);
+                        row[x] = lc == LAYER_OBJ ? 0xFF000000u | (top.pixels[i] & 0xFFFFFF)
+                            : scene.weatherBg && lc == scene.weatherBg ? 0xC0000000u | (top.pixels[i] & 0xFFFFFF) : 0u; // (see Scene::weatherBg)
                     }
                 }
                 SDL_SetTextureBlendMode(w, SDL_BLENDMODE_BLEND);
