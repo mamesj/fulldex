@@ -14227,7 +14227,7 @@ int main(int argc, char** argv)
                 const int i0 = (int)std::floor(fx), j0 = (int)std::floor(fz);
                 if (i0 < 0 || j0 < 0 || i0 > 7 || j0 > 7) return 1.0f;
                 const float tx = (float)(fx - i0), tz = (float)(fz - j0);
-                auto sm = [](float t) { t = std::clamp((t - 0.4f) * 5.0f, 0.0f, 1.0f); return t * t * (3 - 2 * t); }; // (a tenth of a block either side of its edge)
+                auto sm = [](float t) { t = std::clamp((t - 0.2f) * 1.6667f, 0.0f, 1.0f); return t * t * (3 - 2 * t); }; // (from 0.3 of a block either side of its edge: soft)
                 const float a = grid[j0][i0] + (grid[j0][i0 + 1] - grid[j0][i0]) * sm(tx);
                 const float b = grid[j0 + 1][i0] + (grid[j0 + 1][i0 + 1] - grid[j0 + 1][i0]) * sm(tx);
                 return a + (b - a) * sm(tz);
@@ -14270,7 +14270,7 @@ int main(int argc, char** argv)
                             // they make it, its edge a row of billows (the slope pushed in and out by fractal noise fixed to the
                             // world), lit a little from the top left, a cool grey in the hollows.
                             // (Past the map's edges a little sooner, so the seam where the void starts stays under it.)
-                            const float k = fogOn ? std::max(fogAt(gx, gy), std::min(1.0f, fogAt(gx, gy, voidGrid) * 1.6f)) : 0.0f;
+                            const float k = fogOn ? std::max(fogAt(gx, gy), std::min(1.0f, fogAt(gx, gy, voidGrid) * 2.6f)) : 0.0f;
                             float fa = 0;
                             uint32_t fc = 0;
                             if (k > 0.02f)
@@ -14278,19 +14278,22 @@ int main(int argc, char** argv)
                                 // (Its noise as large on screen as the GBA games' looks: in 0.3 of a world pixel.)
                                 const int wx = (int)std::floor((wx0 + (gx - ancX) * zz) * 0.3), wz = (int)std::floor((wz0 + (gy - ancY) * zz) * 0.3);
                                 const float nz = fogNoise(wx, wz);
-                                const float t = std::clamp((k + (nz - 0.5f) * 1.05f - 0.28f) / 0.24f, 0.0f, 1.0f);
+                                const float t = std::clamp((k + (nz - 0.5f) * 0.8f - 0.12f) / 0.6f, 0.0f, 1.0f); // (a wide, soft slope)
                                 fa = 0.97f * t * t * (3 - 2 * t);
                                 const float lit = std::clamp(0.97f + (nz - fogNoise(wx + 3, wz + 4)) * 0.9f, 0.9f, 1.04f);
                                 fc = (uint32_t)std::min(255.0f, 236 * lit) << 16 | (uint32_t)std::min(255.0f, 241 * lit) << 8 | (uint32_t)std::min(255.0f, 250 * lit);
                             }
-                            if (m < 40 && fa <= 0.01f) col = 0;
-                            else if (fa > 0.01f && (m < 40 || fa >= 0.6f))
+                            // (The thin clouds fade in with their density: soft edges, no steps.)
+                            const float mt = std::clamp((m - 20) / 150.0f, 0.0f, 1.0f);
+                            const int thin = (int)(core * mt * mt * (3 - 2 * mt));
+                            if (thin <= 2 && fa <= 0.01f) col = 0;
+                            else if (fa > 0.01f && (thin <= 2 || fa >= 0.6f))
                                 col = ((uint32_t)(strength * 255 * fa) << 24) | fc;
                             else
                             {
                                 const bool under = at(gx + ox, gy + oy + 3) < m - 30; // (the cloud thins below: its shaded side)
-                                const int al = std::max(m >= 140 ? core : rim, (int)(strength * 255 * fa));
-                                col = ((uint32_t)al << 24) | (under ? 0xCEDCF0u : 0xF8FAFFu);
+                                const int al = std::max(thin, (int)(strength * 255 * fa));
+                                col = ((uint32_t)al << 24) | (under ? 0xDCE5F3u : 0xF8FAFFu);
                             }
                         }
                         rowCols[(size_t)x] = col;
