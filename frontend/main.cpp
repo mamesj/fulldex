@@ -5567,6 +5567,18 @@ int main(int argc, char** argv)
                 sc.items.push_back(el);
             }
         }
+        else if (sectionActive("OVY_108"))
+            // The Safari Zone's Area Customizer and the placing of its objects (overlay 108, theirs
+            // alone): the chosen area on the top screen, the areas to arrange on the touch screen.
+            // Both side by side the whole time. (The top screen's card stood there alone, and what
+            // was being arranged could not be seen.)
+            sc = Stack("safari-areas", { Crop(0, 0, 0, 256, 192), Crop(1, 0, 0, 256, 192) }, true, viewWidth);
+        else if (sectionActive("OVY_29"))
+            // Mom's savings (overlay 29, the overworld's touch screen while money goes into or out
+            // of the bank): the saved and the held money on the top screen, the keypad for the
+            // amount on the touch screen. Both side by side. (The overworld stood alone with the
+            // money windows, and the keypad could not be seen.)
+            sc = Stack("bank", { Crop(0, 0, 0, 256, 192), Crop(1, 0, 0, 256, 192) }, true, viewWidth);
         else if (athlonNow)
         {
             // The Pokeathlon: both screens side by side, as the SIDE layout shows them (the
