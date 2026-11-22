@@ -5518,6 +5518,13 @@ int main(int argc, char** argv)
             // the touch screen; one of them alone always hid something).
             sc = Stack("pokeathlon", { Crop(0, 0, 0, 256, 192), Crop(1, 0, 0, 256, 192) }, true, viewWidth);
         }
+        else if (sectionActive("OVY_68"))
+            // The move relearner and the move tutors (overlay 68, theirs alone): the Pokemon's
+            // moves on the top screen, the moves to teach and what each does on the touch screen.
+            // Both side by side the whole time. (Left to the safety net below, the list showed only
+            // while the game waited on the touch screen, and every press of the d-pad down the
+            // list put the top screen back alone.)
+            sc = Stack("relearner", { Crop(0, 0, 0, 256, 192), Crop(1, 0, 0, 256, 192) }, true, viewWidth);
         else if (menuReturn > 0)
             startMenu();
         else if (probeActive(probeStartMenuWait) && !appBottomNow)
