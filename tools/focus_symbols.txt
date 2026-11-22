@@ -30,3 +30,6 @@ HandleWriteSaveAsync_NormalData
 HandleWriteSaveAsync_PCBoxes
 # The evolution scene (a Bag Rare Candy or a level-up: it runs in the main binary, no overlay of its own).
 EvolutionScene_Task
+# HeartGold's falling leaves while the Kimono Girls dance for Ho-Oh: backgrounds repeated beside
+# the screen on a wide view (Scene::weatherBg).
+Task_LeavesEffect

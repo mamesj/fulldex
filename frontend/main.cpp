@@ -2952,6 +2952,8 @@ int main(int argc, char** argv)
         focusProbe("TouchscreenHitbox_TouchHeldIsIn"), focusProbe("TouchscreenHitbox_TouchNewIsIn") };
     const int probeFieldMap = focusProbe("FieldMap_Main");
     const int probeEvolution = focusProbe("EvolutionScene_Task");
+    // HeartGold's falling leaves while the Kimono Girls dance for Ho-Oh (see Scene::weatherBg).
+    const int probeLeaves = focusProbe("Task_LeavesEffect");
     // Writing the save: for the seconds this takes the game sits in its flash write loop
     // and the code of the screen it shows (the save question, the overworld) runs only now
     // and then, so nothing on screen changes but the probes go quiet.
@@ -4655,6 +4657,7 @@ int main(int argc, char** argv)
                 if (sectionActive("field")) singleFieldFrame = rc_current_frame();
                 sc.wide = viewWidth > 256.5f && (fieldActive() || (singleFieldFrame && rc_current_frame() - singleFieldFrame < 20));
                 if (sc.wide && screens) sc.weatherObj = MergedParticleWeather(screens[0]);
+                if (sc.wide && probeActive(probeLeaves)) sc.weatherBg = LAYER_BG2 | LAYER_BG3; // (as below)
             }
             return sc;
         }
@@ -5511,6 +5514,18 @@ int main(int argc, char** argv)
                 sc.items.push_back(el);
             }
         }
+        else if (sectionActive("OVY_108"))
+            // The Safari Zone's Area Customizer and the placing of its objects (overlay 108, theirs
+            // alone): the chosen area on the top screen, the areas to arrange on the touch screen.
+            // Both side by side the whole time. (The top screen's card stood there alone, and what
+            // was being arranged could not be seen.)
+            sc = Stack("safari-areas", { Crop(0, 0, 0, 256, 192), Crop(1, 0, 0, 256, 192) }, true, viewWidth);
+        else if (sectionActive("OVY_29"))
+            // Mom's savings (overlay 29, the overworld's touch screen while money goes into or out
+            // of the bank): the saved and the held money on the top screen, the keypad for the
+            // amount on the touch screen. Both side by side. (The overworld stood alone with the
+            // money windows, and the keypad could not be seen.)
+            sc = Stack("bank", { Crop(0, 0, 0, 256, 192), Crop(1, 0, 0, 256, 192) }, true, viewWidth);
         else if (athlonNow)
         {
             // The Pokeathlon: both screens side by side, as the SIDE layout shows them (the
@@ -5590,6 +5605,10 @@ int main(int argc, char** argv)
         // Snow, rain and sand are sprites. Repeat them beside the screen, as Platinum and the
         // Black games do from their weather functions (see Scene::weatherObj).
         if (sc.wide && screens) sc.weatherObj = MergedParticleWeather(screens[0]);
+        // HeartGold's leaves falling on the Bell Tower while the Kimono Girls dance for Ho-Oh are
+        // backgrounds 2 and 3, a screen wide and scrolled across it: repeated beside the screen
+        // too, instead of each leaf at its edge drawn out into a streak to the view's edge.
+        if (sc.wide && probeActive(probeLeaves)) sc.weatherBg = LAYER_BG2 | LAYER_BG3;
         return sc;
     };
     Scene scene;
