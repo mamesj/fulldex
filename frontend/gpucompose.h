@@ -544,9 +544,10 @@ private:
                     SDL_RenderCopyF(R, in, nullptr, &dst);
                 }
         }
-        // The weather's particles beside the screen (Scene::weatherObj): the top screen's
-        // sprites, drawn again one screen width to the left and to the right.
-        if (scene.weatherObj && (left > 0 || right < outW))
+        // The weather's particles beside the screen (Scene::weatherObj, weatherRepeat): the top
+        // screen's sprites (or the backgrounds named), drawn again one screen width to the left
+        // and to the right.
+        if (const uint8_t classes = scene.WeatherClasses(); classes && (left > 0 || right < outW))
         {
             // (Rows where 2D is continued beside the screen are left out.)
             for (int side = 0; side < 2; side++)
@@ -565,7 +566,7 @@ private:
                     {
                         const int i = y * 256 + x;
                         const uint8_t lc = LayerClass(top.flags[i]);
-                        row[x] = lc == LAYER_OBJ ? 0xFF000000u | (top.pixels[i] & 0xFFFFFF)
+                        row[x] = (lc & classes) ? 0xFF000000u | (top.pixels[i] & 0xFFFFFF)
                             : scene.weatherBg && lc == scene.weatherBg ? 0xC0000000u | (top.pixels[i] & 0xFFFFFF) : 0u; // (see Scene::weatherBg)
                     }
                 }

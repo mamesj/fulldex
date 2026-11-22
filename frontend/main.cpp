@@ -2977,6 +2977,8 @@ int main(int argc, char** argv)
         focusProbe("TouchscreenHitbox_TouchHeldIsIn"), focusProbe("TouchscreenHitbox_TouchNewIsIn") };
     const int probeFieldMap = focusProbe("FieldMap_Main");
     const int probeEvolution = focusProbe("EvolutionScene_Task");
+    // HeartGold's falling leaves while the Kimono Girls dance for Ho-Oh (see Scene::weatherRepeat).
+    const int probeLeaves = focusProbe("Task_LeavesEffect");
     // Writing the save: for the seconds this takes the game sits in its flash write loop
     // and the code of the screen it shows (the save question, the overworld) runs only now
     // and then, so nothing on screen changes but the probes go quiet.
@@ -4719,6 +4721,7 @@ int main(int argc, char** argv)
                 if (sectionActive("field")) singleFieldFrame = rc_current_frame();
                 sc.wide = viewWidth > 256.5f && (fieldActive() || (singleFieldFrame && rc_current_frame() - singleFieldFrame < 20));
                 if (sc.wide && screens) sc.weatherObj = MergedParticleWeather(screens[0]);
+                if (sc.wide && probeActive(probeLeaves)) sc.weatherRepeat = LAYER_BG2 | LAYER_BG3; // (as below)
             }
             return sc;
         }
@@ -5679,6 +5682,10 @@ int main(int argc, char** argv)
         // Snow, rain and sand are sprites. Repeat them beside the screen, as Platinum and the
         // Black games do from their weather functions (see Scene::weatherObj).
         if (sc.wide && screens) sc.weatherObj = MergedParticleWeather(screens[0]);
+        // HeartGold's leaves falling on the Bell Tower while the Kimono Girls dance for Ho-Oh are
+        // backgrounds 2 and 3, a screen wide and scrolled across it: repeated beside the screen
+        // too, instead of each leaf at its edge drawn out into a streak to the view's edge.
+        if (sc.wide && probeActive(probeLeaves)) sc.weatherRepeat = LAYER_BG2 | LAYER_BG3;
         return sc;
     };
     Scene scene;

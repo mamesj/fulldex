@@ -52,5 +52,28 @@ int main() {
     for (int x = 2; x < 12; ++x) { flags[40 * 256 + x] = 0x10; pixels[40 * 256 + x] = 0x118899; }
     const EdgeContinuation lent = MergedEdgeContinuation(scene, top, 40, 0);
     assert(lent.pattern && lent.row == 42);
-    puts("Wide edges: tiled banners preserved; frame borders/arrows not repeated");
+    // HeartGold's falling leaves (Scene::weatherRepeat): a leaf of background 2 at the screen's edge
+    // is no longer drawn out into a streak to the view's edge; beside the screen the leaves are
+    // the screen's own, one screen width over, and the world and the sprites there are not.
+    {
+        std::fill(pixels.begin(), pixels.end(), 0x000000);
+        std::fill(flags.begin(), flags.end(), 0x40); // the world (3D)
+        std::fill(flat, flat + 384, 0);
+        Scene leaves; leaves.items = {FullScreen(0)};
+        flags[60 * 256 + 0] = flags[60 * 256 + 1] = 0x04;
+        pixels[60 * 256 + 0] = pixels[60 * 256 + 1] = 0xE07030;
+        assert(!MergedEdgeContinuation(leaves, top, 60, 0).none()); // (without weatherRepeat: the streak)
+        leaves.weatherRepeat = LAYER_BG2 | LAYER_BG3;
+        assert(MergedEdgeContinuation(leaves, top, 60, 0).none());
+        assert(MergedWeatherRow(leaves, top, 60));
+        uint32_t rgb = 0;
+        assert(MergedWeatherPixel(top, -256, 60, rgb, leaves.WeatherClasses()) && rgb == 0xE07030);
+        assert(MergedWeatherPixel(top, 257, 60, rgb, leaves.WeatherClasses()) && rgb == 0xE07030);
+        assert(!MergedWeatherPixel(top, -245, 60, rgb, leaves.WeatherClasses()));
+        flags[61 * 256 + 5] = 0x10; // a sprite: repeated only with weatherObj
+        assert(!MergedWeatherPixel(top, 261, 61, rgb, leaves.WeatherClasses()));
+        leaves.weatherObj = true;
+        assert(MergedWeatherPixel(top, 261, 61, rgb, leaves.WeatherClasses()));
+    }
+    puts("Wide edges: tiled banners preserved; frame borders/arrows not repeated; falling leaves repeated, not streaked");
 }

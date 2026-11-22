@@ -172,6 +172,14 @@ struct Scene
     // A weather drawn in a background as well (Platinum's sandstorm: its dust in BG2, over the world): that layer's
     // pixels repeated beside the screen like the particles, three quarters over the world there. 0: none.
     uint8_t weatherBg = 0;
+    // With `wide`: background layers (LAYER_BG2...) that fill the top screen with something
+    // falling across the world, a screen wide and scrolled: repeated beside the screen as
+    // weatherObj's sprites are (a wider screen would show them so), and never continued from
+    // the screen's edge, where each of their pixels became a streak to the view's edge.
+    // HeartGold's falling leaves while the Kimono Girls dance for Ho-Oh.
+    uint8_t weatherRepeat = 0;
+    // The layer classes repeated beside the screen (weatherObj, weatherRepeat).
+    uint8_t WeatherClasses() const { return (weatherObj ? LAYER_OBJ : 0) | weatherRepeat; }
     // Rows of each screen drawn on below its last line (belowscreen.h), which its pieces may
     // show: the screen images then have 192 + extraRows rows.
     int extraRows[2] = { 0, 0 };
@@ -327,12 +335,13 @@ inline uint32_t WideBoxPixel(const ScreenImage& top, int sy, int vx, int shift, 
 }
 
 // The colour of the weather particle beside the top screen at base x bx (outside 0..255) and
-// row sy, if there is one there (see Scene::weatherObj).
-inline bool MergedWeatherPixel(const ScreenImage& top, int bx, int sy, uint32_t& rgb)
+// row sy, if there is one there: a pixel of one of the layer classes the scene repeats (see
+// Scene::weatherObj, Scene::weatherRepeat).
+inline bool MergedWeatherPixel(const ScreenImage& top, int bx, int sy, uint32_t& rgb, uint8_t classes = LAYER_OBJ)
 {
     const int sx = ((bx % 256) + 256) % 256;
     const size_t i = (size_t)sy * 256 + sx;
-    if (LayerClass(top.flags[i]) != LAYER_OBJ) return false;
+    if (!(LayerClass(top.flags[i]) & classes)) return false;
     rgb = top.pixels[i] & 0xFFFFFF;
     return true;
 }
@@ -538,6 +547,8 @@ inline EdgeContinuation MergedEdgeContinuation(const Scene& scene, const ScreenI
     const EdgeContinuation none = { 0, 0, 16 };
     // (Nor where the piece leaves the screen out: that part is drawn elsewhere.)
     if (scene.items[0].Skips(sx, sy)) return none;
+    // (Nor a layer that is repeated beside the screen instead: Scene::weatherRepeat.)
+    if (top.flags && (LayerClass(top.flags[sy * 256 + sx]) & scene.weatherRepeat)) return none;
     // A sprite over a band at the edge (the badge beside a place's name, a pixel in from the
     // screen's side in Black 2): the row goes on as the band's nearest row of the same kind
     // does (two, four... rows away: the bands' dots alternate by row), where the band is at
@@ -1521,8 +1532,8 @@ inline void MergedCompose(const Scene& scene, const ScreenImage screens[2], int 
                                 dst[x] = 0xFF000000 | nr << 16 | ng << 8 | nb;
                             }
                         }
-                        // The weather's particles beside the screen (Scene::weatherObj).
-                        if (scene.weatherObj)
+                        // The weather's particles beside the screen (Scene::weatherObj, weatherRepeat).
+                        if (const uint8_t classes = scene.WeatherClasses())
                             for (int side = 0; side < 2; side++)
                             {
                                 if (!MergedWeatherRow(scene, top, sy)) break;
@@ -1531,7 +1542,7 @@ inline void MergedCompose(const Scene& scene, const ScreenImage screens[2], int 
                                 {
                                     uint32_t rgb;
                                     const int bx = (int)std::floor((x - v.originX) / v.unit);
-                                    if (MergedWeatherPixel(top, bx, sy, rgb))
+                                    if (MergedWeatherPixel(top, bx, sy, rgb, classes))
                                         dst[x] = 0xFF000000 | rgb;
                                     else if (MergedWeatherBgPixel(top, scene.weatherBg, bx, sy, rgb))
                                     {
