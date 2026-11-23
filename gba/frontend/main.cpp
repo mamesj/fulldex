@@ -734,6 +734,7 @@ struct App
     bool fastInputFocused = true;
     uint32_t tapDirs = 0;
     Uint32 tapSince = 0;
+    bool tapSlow = false; // fast forward held, at normal speed for a direction's first quarter second
     bool plusHeld = false, plusCombo = false; // START (+) held, and SELECT (-) pressed with it
     bool comboOn = false;                     // START and SELECT pressed together, till both are let go
     Uint32 plusAt = 0, minusAt = 0;           // when START, SELECT went down
@@ -1021,7 +1022,9 @@ struct App
             if (ff && set.Get("ff_mute") == "1") SDL_ClearQueuedAudio(audio);
             ffWas = ff;
         }
-        if (ff && set.Get("ff_mute") == "1") queue = false;
+        // (FAST FORWARD SOUND off: silent also through a direction's quarter second at normal speed,
+        // tapSlow. Heard there, every move through a menu played a burst of the game's sound.)
+        if ((ff || tapSlow) && set.Get("ff_mute") == "1") queue = false;
         double nudge = ff ? 0 : (target - queued) / target * 0.005;
         nudge = std::max(-0.005, std::min(0.005, nudge));
         mAudioResamplerSetSource(&resampler, buf, core->audioSampleRate(core) / ratio, true);
@@ -6222,7 +6225,8 @@ struct App
                     // (Fast forward switched on, by the Toggle button or the menu, stays on whatever
                     // is pressed, as in the DS games (#111, #156): the quarter second at normal speed is
                     // for fast forward held on its button, where a quick tap in a menu moved twice.)
-                    if (speed > 1 && dirs && !fastToggle && SDL_GetTicks() - tapSince < 250) speed = 1;
+                    tapSlow = speed > 1 && dirs && !fastToggle && SDL_GetTicks() - tapSince < 250;
+                    if (tapSlow) speed = 1;
                 }
                 for (int i = 0; i < run * speed; i++) RunFrame(true, speed > 1, i == run * speed - 1);
                 if (run > 0) { SceneFrame(); FogFrame(); DayNightFrame(); FollowerFrame(); }

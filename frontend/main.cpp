@@ -11953,6 +11953,7 @@ int main(int argc, char** argv)
         SmButtons::S().clock = frame;
         SmButtons::S().on = cfg.battleButtons == 4;
         int speed = 1;
+        bool ffTapSlow = false; // (fast forward held, at normal speed for a direction's first quarter second: below)
         ffRefreshes = 1;
         if (!paused && !swallowMenuButtons)
         {
@@ -12099,7 +12100,7 @@ int main(int argc, char** argv)
                 : lastFieldForSpeed;
             // (FAST FORWARD turned on in the menu stays on whatever is pressed (#111): the quarter second is for
             // fast forward held on its button, where a quick tap in a menu would otherwise move two or three places.)
-            if (speed > 1 && dirs && !freeWalk && !fastLock && now - dirSince < 250) speed = 1;
+            if (speed > 1 && dirs && !freeWalk && !fastLock && now - dirSince < 250) { speed = 1; ffTapSlow = true; }
             if (speed == 1) ffRefreshes = 1;
         }
         prevPad = ps;
@@ -13970,7 +13971,10 @@ int main(int argc, char** argv)
             audioStretch.Process(audioBuf.data(), got, slowdown, audioOut);
             // VOLUME: scaled here, after the game's own mixing (silence at OFF, still queued, so
             // the timing the queue gives stays the same).
-            if (cfg.ffMute && speed > 1)
+            // (FAST FORWARD SOUND off: silent also through a direction's quarter second at normal
+            // speed, ffTapSlow. Heard there, every move of the stick or the d-pad through a menu
+            // or a battle's moves and items played a burst of the game's sound.)
+            if (cfg.ffMute && (speed > 1 || ffTapSlow))
                 std::fill(audioOut.begin(), audioOut.end(), (int16_t)0); // (FAST FORWARD SOUND off)
             else if (cfg.volume < 100)
                 for (int16_t& v : audioOut) v = (int16_t)(v * cfg.volume / 100);
