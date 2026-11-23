@@ -23,10 +23,11 @@ inline int& UiTitleLang() { static int l = 0; return l; }
 
 namespace UiLang
 {
-inline int lang = 0; // English, Spanish, Italian, French, German, Japanese, Korean
+inline int lang = 0; // English, Spanish, Italian, French, German, Japanese, Korean, Portuguese
 inline int system = 0;
 inline std::string choice = "auto";
-inline const char* Codes[] = {"en","es","it","fr","de","ja","ko"};
+inline const char* Codes[] = {"en","es","it","fr","de","ja","ko","pt"};
+inline constexpr int CodeCount = sizeof(Codes) / sizeof(Codes[0]); // kept in sync with Codes[] above; add a new language there and this follows.
 inline std::string Normalise(std::string code) {
     for(char& c:code) if(c>='A'&&c<='Z') c+=32;
     const auto end=code.find_first_of("_-"); if(end!=std::string::npos)code.resize(end);
@@ -34,11 +35,11 @@ inline std::string Normalise(std::string code) {
 }
 inline int Language(const std::string& code) {
     const auto normal=Normalise(code);
-    for(int i=0;i<7;++i)if(normal==Codes[i])return i;
-    return 0;
+    const auto it=std::find(std::begin(Codes),std::end(Codes),normal);
+    return it==std::end(Codes)?0:int(it-std::begin(Codes));
 }
 inline const std::vector<std::pair<std::string,std::string>>& Choices() {
-    static const std::vector<std::pair<std::string,std::string>> values={{"auto","AUTO"},{"en","ENGLISH"},{"es","ESPAÑOL"},{"it","ITALIANO"},{"fr","FRANÇAIS"},{"de","DEUTSCH"},{"ja","日本語"},{"ko","한국어"}};return values;
+    static const std::vector<std::pair<std::string,std::string>> values={{"auto","AUTO"},{"en","ENGLISH"},{"es","ESPAÑOL"},{"it","ITALIANO"},{"fr","FRANÇAIS"},{"de","DEUTSCH"},{"ja","日本語"},{"ko","한국어"},{"pt","PORTUGUÊS"}};return values;
 }
 inline std::string ChoiceName() { for(const auto& value:Choices())if(value.first==choice)return value.second;return "AUTO"; }
 inline std::string NextChoice(int direction) {
@@ -179,7 +180,7 @@ inline std::string Tr(const std::string& s) {
         const auto rest=s.substr(digits);if(const auto* value=direct(rest))return s.substr(0,digits)+*value;
         if(rest.rfind(" OF ",0)==0)if(const auto* value=direct(" OF "))return s.substr(0,digits)+*value+rest.substr(4);
     }
-    // Companion pages (PokeDaisy) keep their own es/it/fr/de text; ja/ko fall back to English.
+    // Companion pages (PokeDaisy) keep their own es/it/fr/de text; ja/ko/pt fall back to English.
     return lang <= 4 ? CompanionTranslation(lang, s) : s;
 }
 // A template in the menus' language with its {0}, {1}... filled in ("Holding {0}": "Lleva {0}").

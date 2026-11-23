@@ -52,14 +52,14 @@ inline void Add(Table& t, const std::string& text)
 }
 inline Table& For(int lang)
 {
-    static Table tables[8];
-    static bool made[8] = {};
-    if (lang < 0 || lang >= 8) lang = 0;
+    static Table tables[UiLang::CodeCount];
+    static bool made[UiLang::CodeCount] = {};
+    if (lang < 0 || lang >= UiLang::CodeCount) lang = 0;
     Table& t = tables[lang];
     if (!made[lang])
     {
         made[lang] = true;
-        const char* code = UiLang::Codes[lang < 7 ? lang : 0];
+        const char* code = UiLang::Codes[lang];
         if (const char* builtIn = LauncherLangData(code)) Add(t, builtIn);
         if (!OverrideDir().empty())
             if (FILE* f = fopen((OverrideDir() + "/launcher-" + code + ".txt").c_str(), "rb"))
