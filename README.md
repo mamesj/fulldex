@@ -63,8 +63,8 @@ DS game, presented the way it should look on a modern screen.
 - **Beta** languages work with the exact ROM copies they were checked against, and complete
   playthroughs haven't been verified yet. Other GBA games play too, without widescreen.
 - Each language keeps its own save (`heartgold-fr.sav`, `black2-es.sav`, `pearl-fr.sav` ...).
-- The menus speak English, Spanish, Italian, French, German, Japanese and Korean
-  (DISPLAY > LANGUAGE; AUTO follows your system), whatever the game's own language. More in
+- The menus speak English, Spanish, Italian, French, German, Japanese, Korean and Portuguese
+  (Brazil) (DISPLAY > LANGUAGE; AUTO follows your system), whatever the game's own language. More in
   [regional games and touch controls](docs/REGIONAL-AND-TOUCH-CONTROLS.md).
 
 ## Install
@@ -820,7 +820,7 @@ or trimming).
 ## Custom touch controls and regional profiles
 
 Android players can move and resize on-screen controls in the paused layout editor.
-The launcher and Fulldex menus offer AUTO, English, Spanish, Italian, French, German, Japanese and Korean interface languages. Embedded GBA menus follow the launcher language too. See [controls, regional games and build notes](docs/REGIONAL-AND-TOUCH-CONTROLS.md).
+The launcher and Fulldex menus offer AUTO, English, Spanish, Italian, French, German, Japanese, Korean and Portuguese (Brazil) interface languages. Embedded GBA menus follow the launcher language too. See [controls, regional games and build notes](docs/REGIONAL-AND-TOUCH-CONTROLS.md).
 
 ### Open a DS game from an Android frontend
 
