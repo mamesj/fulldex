@@ -294,6 +294,11 @@ public:
     // display frame (30 fps) get an in-between image, built from the previous and the new
     // geometry, on the first of those two frames. Only what is displayed changes.
     bool InterpolationEnabled = false;
+    // ssrecomp: a console whose pictures nobody sees (fast forward's music copy,
+    // frontend/ff_music.h): no 3D picture is drawn, and nothing waits on the widescreen world's
+    // threads, which are the game's. (With the world drawn by the processor, its frames waited
+    // there for the game's: up to 5 ms a picture of fast forward.)
+    bool Unseen = false;
     u32 InterpolatedFrames = 0; // statistics
     u32 InterpSkipped = 0;      // statistics: in-between frames left out (InterpSkipLog)
 

@@ -23,6 +23,8 @@
 #include "GPU3D_GLThread.h"
 #include "GPU3D_WideGpu.h"
 
+extern bool rc_wide_draw_skip; // ssrecomp: GPU.cpp
+
 namespace melonDS
 {
 WideState Wide;
@@ -1446,6 +1448,9 @@ struct WideAccess
         // The lists built on the helper thread (ListHelper): the in-between frame's for it, or
         // both.
         ListHelper::Join(showingInterp ? 1 : 2);
+        // (Fast forward's shown frame: the picture before is handed on, above, and none drawn for
+        // the hidden frame after; the next one drawn takes what has changed meanwhile, Dirty.)
+        if (rc_wide_draw_skip) return;
         if (Wide.Width <= 0 || Wide.Height <= 0) return;
         if (showingInterp && NumInterp)
         {
