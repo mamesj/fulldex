@@ -13,6 +13,7 @@ class DisplayPacingTests(unittest.TestCase):
         source = (ROOT / 'frontend/main.cpp').read_text()
         present = source[source.index('    auto presentFrame ='):source.index('    auto drawFrame =')]
         harness = r'''
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
@@ -22,6 +23,7 @@ static bool driverBlocks;
 static uint64_t SDL_GetPerformanceCounter() { return ++clockNow; }
 static uint32_t SDL_GetTicks() { return clockNow / 1000; }
 static void SleepPrecise(double seconds) { clockNow += (uint64_t)(seconds * 1000000); }
+static double perfNow() { return clockNow / 1000.0; }
 static void SDL_RenderPresent(void*) {
     if (driverBlocks) {
         uint64_t next = lastDriverReturn + 16667;
@@ -42,6 +44,8 @@ static void Run(bool blocks, bool sync, bool swapAccepted) {
     int refreshesPerFrame = 4, ffRefreshes = 1;
     std::vector<double> presentIntervals;
     void* renderer = nullptr;
+    bool ffPictureTimed = false;
+    double pictureWorkFrom = 0, emuFramesMs = 0, emuBeginMs = 0, ffPictureMs = 0;
     auto perfMark = [](int) {};
 PRESENT
     DrawJob job;
@@ -73,6 +77,17 @@ PRESENT
     clockNow += 1000000;
     presentFrame(job, true);
     assert(nextTick > clockNow && nextTick - clockNow < 18000);
+    // Fast forward's picture work besides its frames (ffPictureMs): from the last picture
+    // handed over to this one, before any wait, less the frames' own time.
+    driverBlocks = false;
+    presentFrame(job, true);
+    clockNow += 9000; emuFramesMs = 4; ffPictureTimed = true;
+    presentFrame(job, true);
+    assert(ffPictureMs > 4.9 && ffPictureMs < 5.2 && !ffPictureTimed);
+    // A picture with no fast forward frames run for it is not measured.
+    clockNow += 30000;
+    presentFrame(job, true);
+    assert(ffPictureMs > 4.9 && ffPictureMs < 5.2);
 }
 int main() {
     Run(false, true, true);

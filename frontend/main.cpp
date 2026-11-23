@@ -361,7 +361,7 @@ static void Bw2DexCover(Scene& sc, float viewWidth, const ScreenImage* screens)
 
 // Defined in the 2D renderer: layers not to draw, per engine (see GPU2D_Soft.cpp).
 extern unsigned rc_hide_layers[2];
-extern bool rc_frame_hidden, rc_wide_render_skip, rc_3d_render_skip; // melonDS/src/GPU.cpp
+extern bool rc_frame_hidden, rc_wide_render_skip, rc_wide_draw_skip, rc_3d_render_skip; // melonDS/src/GPU.cpp
 
 using namespace melonDS;
 
@@ -6297,9 +6297,12 @@ int main(int argc, char** argv)
     FastForwardButton fastButton;
     bool fastInputFocused = true;
     double ffFrameMs = 0; // emulation time of one frame while fast forwarding (see speed)
-    // (The same in two parts: the frame that is shown, which draws its screens, and each of the
-    // hidden ones before it, which cost a third of that.)
-    double ffShownMs = 0, ffHiddenMs = 0;
+    // (The same in parts: the frame that is shown, which draws its screens; the one before it,
+    // which draws the 3D and the widescreen world the picture shows (ffDrawnMs); and each hidden
+    // one before those, which draws nothing. Measured as one, the hidden frames cost more the
+    // fewer a picture held, and two a picture were chosen and dropped by turns: a picture every
+    // refresh, then every second one, and back.)
+    double ffShownMs = 0, ffDrawnMs = 0, ffHiddenMs = 0;
     // Fast forward's pictures are shown this many refreshes of the screen apart (see speed): 1,
     // or more where the frames of one picture take longer than a refresh.
     int ffRefreshes = 1;
@@ -9369,7 +9372,26 @@ int main(int argc, char** argv)
     FfMusic ffMusic;
     std::vector<int16_t> musicBuf(4096 * 2);
     int emuMusicGot = 0, ffMusicWait = 0, ffMusicFind = 0;
+    // (The copy is playing: its sound is the one heard, even in a picture it ran no frame for.)
+    bool emuMusicOn = false;
+    // The copy's frames are run by the clock, not one a picture (ffMusicDue: how many are owed, from
+    // the time since the last picture, ffMusicAt). Where the pictures are a whole number of
+    // refreshes apart, one a picture played the song at a half or a third of its speed.
+    double ffMusicDue = 0, ffMusicAt = 0;
     unsigned ffMusicEvent = 0;
+    // The copy's own time each picture (its frame, and the song's volume handed to it): part of
+    // what a picture of fast forward costs, which the number of frames a picture is chosen by.
+    double ffMusicMs = 0;
+    // A PC runs the frames and shows the picture on one thread, one after the other: there the
+    // rest of a picture's work (the input, the music's copy above, choosing the picture and
+    // putting it together, handing it over) is measured, ffPictureMs, and the frames a picture
+    // holds leave room for it. It had been taken as about 3 ms: on a slower processor (a Steam
+    // Deck) it is more, and the pictures of fast forward missed their refresh by turns.
+    double ffPictureMs = 0, emuFramesMs = 0, emuBeginMs = 0, pictureWorkFrom = 0;
+    bool ffPictureTimed = false; // (this picture's frames were fast forward's, run on this thread)
+    // Fast forward held, at normal speed for a direction's first quarter second (ffTapSlow): the
+    // copy plays on through it, instead of the song cut off and started again at every press.
+    bool emuTapSlow = false;
     bool ffMusicWanted = false; // (set before each run: fast forward's sound is on)
     double emuMs = 0, perfEmu = 0;
     uint64_t perfDsFrames = 0; // DS frames emulated since the last timing line (several a frame when fast forwarding)
@@ -9383,7 +9405,7 @@ int main(int argc, char** argv)
     auto runFrames = [&]() {
         const double t0 = perfNow();
         int filled = 0;
-        if (ffMusicWanted && emuSpeed > 1 && gameMusic.musicOn && !gameMusic.streamChannels)
+        if (ffMusicWanted && (emuSpeed > 1 || emuTapSlow) && gameMusic.musicOn && !gameMusic.streamChannels)
         {
             // (Another song, or the song stopped: the copy ends, and a new one starts a few frames
             // on, once the sound processor has taken the command.)
@@ -9407,11 +9429,16 @@ int main(int argc, char** argv)
             ffMusicWait = 0;
             ffMusicEvent = gameMusic.musicEvent;
         }
+        const double b1 = perfNow();
         for (int i = 0; i < emuSpeed; i++)
         {
             // (The widescreen world drawn during a frame is shown after the next one.)
             rc_frame_hidden = !ffFull && emuSpeed > 1 && i < emuSpeed - 1;
             rc_wide_render_skip = !ffFull && emuSpeed > 1 && i < emuSpeed - 2;
+            // (The shown frame hands on the world drawn in the frame before it and draws none for
+            // the frame after, a hidden one: rc_wide_draw_skip. Drawn, it was never shown, a whole
+            // picture of the world at the 3D RESOLUTION each picture of fast forward.)
+            rc_wide_draw_skip = !ffFull && emuSpeed > 1 && i == emuSpeed - 1;
             // (The DS-resolution 3D picture on the graphics chip, drawn at the end of this frame
             // for the next: only the one the shown frame takes, see WideGpuDSLazy.)
             melonDS::WideGpuDSLazy = rc_3d_render_skip = !ffFull && emuSpeed > 1 && i != emuSpeed - 2;
@@ -9419,12 +9446,6 @@ int main(int argc, char** argv)
             if (funcWatchOn) funcWatch.NextFrame();
             const double f0 = perfNow();
             nds->RunFrame();
-            if (emuSpeed > 1)
-            {
-                double& part = i == emuSpeed - 1 ? ffShownMs : ffHiddenMs;
-                const double ms = perfNow() - f0;
-                part = part > 0 ? part * 0.9 + 0.1 * ms : ms;
-            }
             if (testMusicOffAt && rc_frame == testMusicOffAt) gameMusic.Music = 0;
             gameMusic.Apply(); // (MUSIC / SOUND EFFECTS: a change heard at once)
             pokeActions.Frame();
@@ -9438,10 +9459,19 @@ int main(int argc, char** argv)
                     audioBuf.resize((size_t)(filled + avail) * 2);
                 filled += nds->SPU.ReadOutput(audioBuf.data() + filled * 2, avail);
             }
+            // (With what runs after the frame for each one, above: all of it is paid again for
+            // each frame a picture holds.)
+            if (emuSpeed > 1)
+            {
+                double& part = i == emuSpeed - 1 ? ffShownMs : i == emuSpeed - 2 ? ffDrawnMs : ffHiddenMs;
+                const double ms = perfNow() - f0;
+                part = part > 0 ? part * 0.9 + 0.1 * ms : ms;
+            }
         }
         emuGot = filled;
-        rc_frame_hidden = rc_wide_render_skip = false;
+        rc_frame_hidden = rc_wide_render_skip = rc_wide_draw_skip = false;
         melonDS::WideGpuDSLazy = rc_3d_render_skip = false;
+        const double m0 = perfNow();
         if (ffMusic.playing)
         {
             // (The song's volume as the game has it now: its fades in and out.)
@@ -9452,8 +9482,28 @@ int main(int argc, char** argv)
             }
             ffMusic.MirrorVolumes(*nds, gameMusic.players && GameMusic::PlayersAt(gameMusic.players) ? gameMusic.players : nullptr, gameMusic.musicOn);
         }
-        emuMusicGot = ffMusic.playing ? ffMusic.Frame(musicBuf.data(), (int)(musicBuf.size() / 2)) : 0;
+        emuMusicGot = 0;
+        if (ffMusic.playing)
+        {
+            // (At most 4 at once: a longer hold-up, a song starting, is not made up.)
+            ffMusicDue += ffMusicAt > 0 ? (m0 - ffMusicAt) / (frameTime * 1000) : 1.0;
+            ffMusicAt = m0;
+            const int run = std::min((int)ffMusicDue, 4);
+            ffMusicDue = std::min(ffMusicDue - run, 1.0);
+            for (int k = 0; k < run; k++)
+                emuMusicGot += ffMusic.Frame(musicBuf.data() + (size_t)emuMusicGot * 2, (int)(musicBuf.size() / 2) - emuMusicGot);
+        }
+        else ffMusicDue = ffMusicAt = 0;
+        emuMusicOn = ffMusic.playing;
         emuMs = perfNow() - t0;
+        emuBeginMs = b1 - t0; // (a copy started: once a song, not each picture)
+        emuFramesMs = m0 - b1;
+        if (ffMusic.playing)
+        {
+            const double ms = emuMs - (m0 - t0);
+            ffMusicMs = ffMusicMs > 0 ? ffMusicMs * 0.9 + 0.1 * ms : ms;
+        }
+        else ffMusicMs = 0;
     };
     if (pipelined)
     {
@@ -9784,6 +9834,17 @@ int main(int argc, char** argv)
         }
     };
     auto presentFrame = [&](DrawJob& j, bool pace) {
+        // (FAST FORWARD: the picture's work besides its frames, from the last picture handed over
+        // to this one, before any wait. See ffPictureMs.)
+        if (ffPictureTimed && pace && pictureWorkFrom > 0)
+        {
+            double other = perfNow() - pictureWorkFrom - emuFramesMs - emuBeginMs;
+            // (One picture held up by something rare, the save written out, counts for at most
+            // twice the measure: what keeps coming back still raises it in a few dozen pictures.)
+            if (ffPictureMs > 0) other = std::min(other, ffPictureMs * 2 + 2.0);
+            if (other > 0) ffPictureMs = ffPictureMs > 0 ? ffPictureMs * 0.9 + 0.1 * other : other;
+        }
+        ffPictureTimed = false;
         // The screen is the clock (syncToDisplay). The work of this frame has already been
         // done; wait here, just before the next refresh, and hand the picture over then.
         // Waiting after Present on the DS's 59.8 a second instead is what walked past a
@@ -9843,7 +9904,11 @@ int main(int argc, char** argv)
             }
             lastShownAt = t;
         }
+        const double presentFrom = perfNow();
         SDL_RenderPresent(renderer);
+        // (The picture's work counted from here: with the screen's refresh as the clock, Present
+        // waits for it, which is not work; else Present's own time is.)
+        pictureWorkFrom = syncToDisplay ? perfNow() : presentFrom;
         if (perfOn)
         {
             const uint64_t r = SDL_GetPerformanceCounter();
@@ -9976,6 +10041,7 @@ int main(int argc, char** argv)
 
     while (running && !Host::StopRequested)
     {
+        ffPictureTimed = false; // (frames run with no picture after them: not a picture's measure)
         if (timingFile)
         {
             // (The CSV and summary sample the same cumulative counters independently.)
@@ -10092,7 +10158,11 @@ int main(int argc, char** argv)
                 }
                 if (perfDsFrames > (uint64_t)perfN)
                 {
-                    snprintf(extra, sizeof(extra), "; fast forward: %.2f DS frames a frame", (double)perfDsFrames / perfN);
+                    // (With what the speed was chosen from: the frame that is shown, the one before it and
+                    // each hidden one, the music's copy and the rest of the picture's work, and the refreshes
+                    // a picture; for reports of fast forward's smoothness.)
+                    snprintf(extra, sizeof(extra), "; fast forward: %.2f DS frames a frame (shown frame %.2f ms, the one before %.2f ms, hidden %.2f ms, music's copy %.2f ms, the picture's other work %.2f ms, %d refresh%s a picture)",
+                        (double)perfDsFrames / perfN, ffShownMs, ffDrawnMs, ffHiddenMs, ffMusicMs, ffPictureMs, ffRefreshes, ffRefreshes == 1 ? "" : "es");
                     tail += extra;
                 }
                 perfDsFrames = 0;
@@ -12030,14 +12100,40 @@ int main(int argc, char** argv)
             // number in use is kept until it clearly no longer fits, or one more clearly does,
             // so that it does not flicker between two.
             static int oneRefresh = 0;
-            if (ffShownMs > 0 && ffHiddenMs > 0 && !opt.headless)
+            if (ffShownMs > 0 && ffDrawnMs > 0 && !opt.headless)
             {
-                const double room = paceTime * 1000 - 3.0;
-                auto fits = [&](int n, double slack) { return n >= 2 && n <= cfg.fastSpeed && (ffShownMs + (n - 1) * ffHiddenMs) * slack <= room; };
-                if (!fits(oneRefresh, 0.95)) oneRefresh = 0;
+                // (Besides the frames: the picture's own work, as measured where it is done on the
+                // same thread, ffPictureMs, with the music's copy in it; else about 3 ms beside the
+                // music's copy, which is on the frames' thread. A millisecond more to spare there
+                // too had two frames a picture, which fitted, taken for too many by turns: a
+                // picture every refresh and every second refresh, back and forth.)
+                const double other = pipelined ? 3.0 + ffMusicMs : std::max(3.0, ffPictureMs);
+                const double paceMs = paceTime * 1000;
+                // (The frames of n: the shown one, the one before, and n - 2 that draw nothing, as
+                // last measured; none measured yet, as the one before.)
+                const double hidden = ffHiddenMs > 0 ? ffHiddenMs : ffDrawnMs;
+                auto framesMs = [&](int n) { return ffShownMs + ffDrawnMs + (n - 2) * hidden; };
+                // (On one thread, the picture's work and its frames together within the refresh:
+                // a little over is a late picture there, so the number is kept only while it
+                // fits, and taken up with a tenth of the whole to spare. Queued ahead (the
+                // pipeline), the frames within what the picture's work leaves, kept while a
+                // little over: the frames around make it up.)
+                auto fits = [&](int n, double slack) {
+                    return n >= 2 && n <= cfg.fastSpeed &&
+                        (pipelined ? framesMs(n) * slack <= paceMs - other : (framesMs(n) + other) * slack <= paceMs);
+                };
+                if (!fits(oneRefresh, pipelined ? 0.95 : 1.0)) oneRefresh = 0;
                 for (int n = cfg.fastSpeed; n > oneRefresh && n >= 2; n--)
                     if (fits(n, 1.1)) { oneRefresh = n; break; }
+#if defined(SSR_PHONE) || defined(__SWITCH__)
                 if (oneRefresh * 2 >= speed) speed = oneRefresh;
+#else
+                // (A PC: a picture every refresh wherever two frames or more fit in one, whatever
+                // the speed set; a whole number of refreshes apart only where not even two fit.
+                // Fewer pictures of more frames each, 8x on a Steam Deck, which cannot run eight
+                // frames a refresh, was far choppier than 4x.)
+                if (oneRefresh >= 2) speed = oneRefresh;
+#endif
                 // Otherwise the pictures are shown a whole number of refreshes apart, as many as
                 // their frames take. Shown as each was ready, pictures 25 ms apart reached a
                 // 60 Hz screen 17 and 33 ms apart by turns, which is the judder in the
@@ -12045,7 +12141,7 @@ int main(int argc, char** argv)
                 static int refreshes = 1;
                 if (speed != oneRefresh)
                 {
-                    const double need = (ffShownMs + (speed - 1) * ffHiddenMs + 3.0) / (paceTime * 1000);
+                    const double need = (framesMs(speed) + other) / paceMs;
                     if (need > refreshes) refreshes = (int)std::ceil(need);
                     else if (need * 1.1 < refreshes - 1) refreshes = std::max(1, (int)std::ceil(need * 1.1));
                     ffRefreshes = refreshes = std::clamp(refreshes, 1, 4);
@@ -13237,7 +13333,15 @@ int main(int argc, char** argv)
             else nds->ReleaseScreen();
 
             emuSpeed = speed;
+            emuTapSlow = ffTapSlow;
             ffMusicWanted = FfMusic::Supported() && !cfg.ffMute && !opt.lockstep;
+#ifndef __ANDROID__
+            // (The copy's console made ahead, at the first frame or as FAST FORWARD SOUND is turned
+            // on, not as fast forward starts: see FfMusic::Prepare. Here the frames' thread is
+            // between frames. Not on a phone, where a second console is memory taken from the
+            // game whether fast forward is used or not.)
+            if (ffMusicWanted) ffMusic.Prepare(*nds);
+#endif
             // (No in-between frames while fast forwarding: only one frame in several is shown.)
             nds->GPU.GPU3D.InterpolationEnabled = cfg.fps60 && !opt.lockstep && speed == 1;
             if (ahead)
@@ -13301,6 +13405,7 @@ int main(int argc, char** argv)
             {
                 runFrames();
                 if (pipelined) perfEmu += emuMs;
+                ffPictureTimed = !pipelined && emuSpeed > 1;
             }
             got = emuGot;
             perfDsFrames += emuSpeed;
@@ -13877,7 +13982,8 @@ int main(int argc, char** argv)
         // have time to arrive; clearing it here creates a hole in playback. A battle has its own
         // music: when one starts or ends, what waits is dropped so that track starts with the
         // battle instead of waiting behind whatever was playing before it.
-        const bool audioFastForward = speed > 1;
+        // (Through a direction's quarter second at normal speed, ffTapSlow, the copy's song plays on.)
+        const bool audioFastForward = speed > 1 || (ffTapSlow && emuMusicOn);
         if (audioFastForward != audioWasFastForward)
         {
             // The fast-forward backlog and live audio are different timelines. Discard
@@ -13931,7 +14037,7 @@ int main(int argc, char** argv)
             }
         }
 
-        const bool steadyMusic = speed > 1 && emuMusicGot > 0;
+        const bool steadyMusic = (speed > 1 || ffTapSlow) && emuMusicOn;
         if (steadyMusic)
         {
             // (The song at its own speed, from the copy that only plays it: nothing waits.)
@@ -13966,7 +14072,8 @@ int main(int argc, char** argv)
                 if (dt < 0.25) audioSlow += (std::min(dt / frameTime, 4.0) - audioSlow) * 0.03;
             }
             audioTick = t;
-            const double slowdown = speed == 1 || steadyMusic ? AudioQueueSlowdown(audioSlow, queued) : 1.0;
+            // (The copy's song keeps to the clock itself, runFrames: only the queue steers it.)
+            const double slowdown = steadyMusic ? AudioQueueSlowdown(1.0, queued) : speed == 1 ? AudioQueueSlowdown(audioSlow, queued) : 1.0;
             audioOut.clear();
             audioStretch.Process(audioBuf.data(), got, slowdown, audioOut);
             // VOLUME: scaled here, after the game's own mixing (silence at OFF, still queued, so

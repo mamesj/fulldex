@@ -2603,7 +2603,8 @@ void GPU3D::VBlank() noexcept
         if (RenderingEnabled)
         {
             // ssrecomp: the pictures still being sent to the graphics chip read the registers
-            // and polygons this changes (GPU3D_WideGpu.h, WideGpuSend).
+            // and polygons this changes (GPU3D_WideGpu.h, WideGpuSend). (Not another console's.)
+            if (!Unseen)
             {
                 SsrProf::Scope prof(SsrProf::SendWait);
                 WideGpuSendJoin(-1);
@@ -2726,6 +2727,7 @@ void GPU3D::VBlank() noexcept
 
 void GPU3D::VCount215(GPU& gpu) noexcept
 {
+    if (Unseen) return; // (ssrecomp: see Unseen)
     SsrProf::Scope prof(SsrProf::Render3D); // ssrecomp
     if (InterpDeferred)
     {
