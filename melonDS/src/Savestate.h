@@ -49,6 +49,11 @@ public:
 
     bool Saving;
 
+    // ssrecomp: the console's main memory is left out of this state, both ways; whoever makes it
+    // copies the memory themselves (fast forward's music copy, frontend/ff_music.h: the 4 MB a DS
+    // has, where a state holds all of the 16 MB a DSi could, twice over, a new song each time).
+    bool MainRAMApart = false;
+
     u32 CurSection;
 
     void Section(const char* magic);

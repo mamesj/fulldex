@@ -26,6 +26,10 @@ bool rc_frame_hidden = false;
 // ssrecomp: the widescreen world drawn at line 215 of this frame would not be shown either (it is
 // shown after the next frame), so it is not drawn (GPU3D::VCount215).
 bool rc_wide_render_skip = false;
+// ssrecomp: fast forward's shown frame: the widescreen world drawn in the frame before it is handed
+// on to be shown, but none is drawn for the frame after, a hidden one (GPU3D_Wide.cpp, OnRender).
+// Drawn, it was never shown: a whole picture of the world at the 3D RESOLUTION, every picture.
+bool rc_wide_draw_skip = false;
 // ssrecomp: set while a hidden frame takes its 3D lines without looking at them (see skip2D), so
 // that a renderer with nothing to count out need not draw that picture (GPU3D_WideGpu.cpp).
 bool rc_3d_line_unseen = false;

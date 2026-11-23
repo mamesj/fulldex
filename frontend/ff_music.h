@@ -16,10 +16,14 @@
 // Adapted from PokeDaisy's pk_nds_music (app/src/main/cpp/nds/pk_nds_music.cpp),
 // Copyright (C) 2026 Lidor Itzhari, GNU GPL version 3: https://github.com/lidor30/pokedaisy
 #pragma once
+#include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <memory>
+#include <vector>
 #include "NDS.h"
 #include "Savestate.h"
 
@@ -34,6 +38,10 @@ struct FfMusic
     int still = 0; // frames the copy's channels have all stood still while one sounds
     unsigned frames = 0;
     bool log = getenv("FULLDEX_FFMUSIC_LOG") != nullptr;
+    // The game's state as it is handed over, written over each time: a new one each time was a
+    // fresh 32 MB the system had to give and fill in, most of the saving's time. (Without the
+    // main memory, copied straight across: Savestate::MainRAMApart.)
+    std::vector<uint8_t> state;
 
     // Windows, Linux and Android, where it has been run. A second console is memory the Switch is
     // short of, and on Apple's processors making one changes the thread's JIT write mode: those
@@ -48,15 +56,11 @@ struct FfMusic
 #endif
     }
 
-    // The copy takes the game's state as it is now and plays on from here. Between the game's
-    // frames, on the thread that runs them.
-    bool Begin(melonDS::NDS& live)
+    // The copy's console and the room for the state, made ahead (before the game's first frame):
+    // made at fast forward's first frame, they held that picture up a tenth of a second.
+    void Prepare(melonDS::NDS& live)
     {
         using namespace melonDS;
-        playing = false;
-        Savestate save;
-        if (!live.DoSavestate(&save) || save.Error) return false;
-        save.Finish();
         if (!copy || copy->LargeMainRAM != live.LargeMainRAM)
         {
             NDSArgs args;
@@ -66,7 +70,40 @@ struct FfMusic
             copy->Reset();
             copy->Start();
         }
+        if (state.empty()) state.resize(8 << 20); // (a DS game's is under 4 MB; more is made if needed)
+    }
+
+    // The copy takes the game's state as it is now and plays on from here. Between the game's
+    // frames, on the thread that runs them: what it takes holds up that picture (a new song, and
+    // each time fast forward starts), so it is kept short (see Prepare, state, and the JIT's
+    // tables, NDS::DoSavestate).
+    bool Begin(melonDS::NDS& live)
+    {
+        using namespace melonDS;
+        playing = false;
+        auto now = [] { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count(); };
+        const double t0 = now();
+        Prepare(live);
+        const double t1 = now();
+        u32 length = 0;
+        for (int tries = 0; !length; tries++)
+        {
+            Savestate save(state.data(), (u32)state.size(), true);
+            save.MainRAMApart = true;
+            if (live.DoSavestate(&save) && !save.Error)
+            {
+                save.Finish();
+                length = save.Length();
+            }
+            else if (tries) return false;
+            else state.resize(state.size() * 4); // (a state larger than the room: once more, with more)
+        }
+        const double t2 = now();
         NDS& n = *copy;
+        // (The main memory the game has, 4 MB on a DS, straight across: the state leaves it out.
+        // The rest of the 16 MB, and the mark at its end that says how much there is (see
+        // NDS::LargeMainRAMMark), are the copy's own, made for the same size.)
+        memcpy(n.MainRAM, live.MainRAM, std::min<u32>(live.MainRAMMask, n.MainRAMMaxSize - 1) + 1);
         // (Which processor has the shared work memory, WRAMCNT: a console just made gives it all
         // to the main one, a game to the sound processor, whose program is in it. Loading a state
         // into a console that already says what the state says leaves the old arrangement in
@@ -74,7 +111,8 @@ struct FfMusic
         const u8 wramCnt = live.ARM9Read8(0x04000247);
         n.ARM9Write8(0x04000247, wramCnt ^ 3);
         n.ARM9Write8(0x04000247, wramCnt);
-        Savestate load(save.Buffer(), save.Length(), false);
+        Savestate load(state.data(), length, false);
+        load.MainRAMApart = true;
         const bool loaded = !load.Error && n.DoSavestate(&load) && !load.Error;
         if (loaded)
         {
@@ -96,6 +134,7 @@ struct FfMusic
         n.IE[0] = 0;
         n.ARM9.Halt(1);
         n.GPU.GPU2D_A.CaptureCnt &= ~(1u << 31); // (no display capture: it would draw)
+        n.GPU.GPU3D.Unseen = true; // (no 3D picture, nor a wait on the game's widescreen threads)
         // (What the sound chip had mixed but not handed out belongs to the game's own stream.)
         int16_t drop[2048];
         while (n.SPU.GetOutputSize() > 0 && n.SPU.ReadOutput(drop, 1024) > 0) {}
@@ -103,7 +142,8 @@ struct FfMusic
         still = 0;
         frames = 0;
         playing = true;
-        if (log) fprintf(stderr, "[ffmusic] begin (%u bytes of state)\n", (unsigned)save.Length());
+        if (log) fprintf(stderr, "[ffmusic] begin (%u bytes of state; console made in %.1f ms, saved in %.1f, loaded in %.1f)\n",
+            (unsigned)length, t1 - t0, t2 - t1, now() - t2);
         return true;
     }
 

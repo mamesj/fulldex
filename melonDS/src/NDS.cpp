@@ -222,6 +222,7 @@ void NDS::SetJITArgs(std::optional<JITArgs> args) noexcept
     if (args)
     { // If we want to turn the JIT on...
         JIT.SetJITArgs(*args);
+        if (!EnableJIT) JIT.Reset(); // (states loaded while it was off left its tables as they were)
     }
     else if (args.has_value() != EnableJIT)
     { // Else if we want to turn the JIT off, and it wasn't already off...
@@ -649,7 +650,7 @@ bool NDS::DoSavestate(Savestate* file)
         }
     }
 
-    file->VarArray(MainRAM, MainRAMMaxSize);
+    if (!file->MainRAMApart) file->VarArray(MainRAM, MainRAMMaxSize); // (ssrecomp: see Savestate)
     file->VarArray(SharedWRAM, SharedWRAMSize);
     file->VarArray(ARM7WRAM, ARM7WRAMSize);
 
@@ -769,7 +770,10 @@ bool NDS::DoSavestate(Savestate* file)
         Wifi.SetPowerCnt(PowerControl7 & 0x0002);
 
 #ifdef JIT_ENABLED
-        JIT.Reset();
+        // (Only with the JIT on, the one thing its tables serve: on a console without it, as fast
+        // forward's music copy, clearing them was most of a state's loading, 12 of 22 ms. Turned
+        // on later, SetJITArgs resets them.)
+        if (EnableJIT) JIT.Reset();
 #endif
     }
 
