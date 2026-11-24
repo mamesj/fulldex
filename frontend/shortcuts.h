@@ -258,7 +258,8 @@ inline std::string DesktopValue(const std::string& value)
 {
     std::string out;
     for (char c : value)
-        if (c == '\\') out += "\\\\";
+        if (c == ' ') out += "\\s";
+        else if (c == '\\') out += "\\\\";
         else if (c == '\n') out += "\\n";
         else if (c == '\r') out += "\\r";
         else if (c == '\t') out += "\\t";
