@@ -419,6 +419,20 @@ void ARMJIT_Memory::SetCodeProtectionRange(u32 addr, u32 size, u32 num, int prot
 }
 #endif
 
+#ifdef __SWITCH__
+// ssrecomp (#257): a page of the DS's memory that holds compiled code is mapped read-only on the
+// Switch (as mprotect does elsewhere), not left out of the address space: reading it stays fast
+// (the ARM7's work RAM, where its code and data share pages; HeartGold's stack and data beside
+// code), writing it faults and that store goes the slow way, which looks for code to throw out.
+// Before, every load and store there faulted once and went the slow way for good: ~15,000 slow
+// accesses a frame in Goldenrod. (SetUpSwitchFastMem tests it first; SSR_JIT_CODE_UNMAPPED=1:
+// as before.)
+static bool SwitchSetPerm(void* p, u32 size, u32 perm)
+{
+    return R_SUCCEEDED(svcSetProcessMemoryPermission(envGetOwnProcessHandle(), (u64)p, size, perm));
+}
+#endif
+
 void ARMJIT_Memory::Mapping::Unmap(int region, melonDS::NDS& nds) noexcept
 {
     u32 dtcmStart = nds.ARM9.DTCMBase;
@@ -446,9 +460,11 @@ void ARMJIT_Memory::Mapping::Unmap(int region, melonDS::NDS& nds) noexcept
             }
 
 #ifdef __SWITCH__
-            if (status == memstate_MappedRW)
+            if (status == memstate_MappedRW || (SwitchReadOnlyCode && status == memstate_MappedProtected))
             {
                 u32 segmentSize = offset - segmentOffset;
+                if (status == memstate_MappedProtected) // (read-only: writable again before it goes)
+                    SwitchSetPerm((u8*)(Num == 0 ? nds.JIT.Memory.FastMem9Start : nds.JIT.Memory.FastMem7Start) + Addr + segmentOffset, segmentSize, Perm_Rw);
                 Log(LogLevel::Debug, "unmapping %x %x %x %x\n", Addr + segmentOffset, Num, segmentOffset + LocalOffset + OffsetsPerRegion[region], segmentSize);
                 bool success = nds.JIT.Memory.UnmapFromRange(Addr + segmentOffset, Num, segmentOffset + LocalOffset + OffsetsPerRegion[region], segmentSize);
                 assert(success);
@@ -510,10 +526,13 @@ void ARMJIT_Memory::SetCodeProtection(int region, u32 offset, bool protect) noex
 
 #if defined(__SWITCH__)
         bool success;
+        u8* page = (u8*)(mapping.Num == 0 ? FastMem9Start : FastMem7Start) + effectiveAddr;
         if (protect)
-            success = UnmapFromRange(effectiveAddr, mapping.Num, OffsetsPerRegion[region] + offset, 0x1000);
+            success = (SwitchReadOnlyCode && SwitchSetPerm(page, 0x1000, Perm_R))
+                || UnmapFromRange(effectiveAddr, mapping.Num, OffsetsPerRegion[region] + offset, 0x1000);
         else
-            success = MapIntoRange(effectiveAddr, mapping.Num, OffsetsPerRegion[region] + offset, 0x1000);
+            success = (SwitchReadOnlyCode && SwitchSetPerm(page, 0x1000, Perm_Rw))
+                || MapIntoRange(effectiveAddr, mapping.Num, OffsetsPerRegion[region] + offset, 0x1000);
         assert(success);
 #else
         SetCodeProtectionRange(effectiveAddr, PageSize, mapping.Num, protect ? 1 : 2);
@@ -702,11 +721,14 @@ bool ARMJIT_Memory::MapAtAddress(u32 addr) noexcept
             u32 sectionSize = offset - sectionOffset;
 
 #if defined(__SWITCH__)
-            if (!hasCode)
+            if (!hasCode || SwitchReadOnlyCode)
             {
                 //printf("trying to map %x (size: %x) from %x\n", mirrorStart + sectionOffset, sectionSize, sectionOffset + memoryOffset + OffsetsPerRegion[region]);
                 bool succeded = MapIntoRange(mirrorStart + sectionOffset, num, sectionOffset + memoryOffset + OffsetsPerRegion[region], sectionSize);
                 assert(succeded);
+                // (Code there: read-only, or left out as before if that is refused.)
+                if (hasCode && succeded && !SwitchSetPerm((u8*)(num == 0 ? FastMem9Start : FastMem7Start) + mirrorStart + sectionOffset, sectionSize, Perm_R))
+                    UnmapFromRange(mirrorStart + sectionOffset, num, sectionOffset + memoryOffset + OffsetsPerRegion[region], sectionSize);
             }
 #else
             if (hasCode)
@@ -983,6 +1005,7 @@ ARMJIT_Memory::~ARMJIT_Memory() noexcept
 
 #if defined(__SWITCH__)
 bool ARMJIT_Memory::SwitchFastMem = false;
+bool ARMJIT_Memory::SwitchReadOnlyCode = false;
 
 // A test of the exception handler when fast memory is set up: a read in the address space,
 // where nothing is mapped yet, that the handler skips. It comes back with the read's
@@ -1009,6 +1032,19 @@ static bool ProbeSwitchExceptions(u8* addr)
     if (!ok)
         fprintf(stderr, "[jit] fast memory: the exception test went wrong (%d, %llx, %llu, %llx)\n",
             SwitchProbeState, (unsigned long long)value, (unsigned long long)zero, (unsigned long long)neon);
+    SwitchProbeState = 0;
+    return ok;
+}
+
+// Whether a store to a read-only page comes to the exception handler (as a store of the JIT's
+// to a page with code will), not changing the page.
+static bool ProbeSwitchWriteFault(u8* addr)
+{
+    SwitchProbeAddr = (u64)addr;
+    SwitchProbeState = 1;
+    const u64 before = *(volatile u64*)addr;
+    asm volatile("str %0, [%1]\n" : : "r"(~before), "r"(addr) : "memory");
+    const bool ok = SwitchProbeState == 2 && *(volatile u64*)addr == before;
     SwitchProbeState = 0;
     return ok;
 }
@@ -1053,6 +1089,24 @@ bool ARMJIT_Memory::SetUpSwitchFastMem() noexcept
         FastMem9Start = area9;
         FastMem7Start = area7;
         ok = ProbeSwitchExceptions((u8*)area9 + 0x1000);
+        // Read-only pages for code (SwitchReadOnlyCode): one page mapped, made read-only, read,
+        // and written to (which must fault), then put back.
+        if (ok && !getenv("SSR_JIT_CODE_UNMAPPED"))
+        {
+            u8* page = (u8*)area9 + 0x2000;
+            const Result m = svcMapProcessMemory(page, self, (u64)codeMem, 0x1000);
+            const Result p = R_SUCCEEDED(m) ? svcSetProcessMemoryPermission(self, (u64)page, 0x1000, Perm_R) : m;
+            bool faults = false;
+            if (R_SUCCEEDED(p))
+            {
+                faults = ProbeSwitchWriteFault(page);
+                svcSetProcessMemoryPermission(self, (u64)page, 0x1000, Perm_Rw);
+            }
+            if (R_SUCCEEDED(m)) svcUnmapProcessMemory(page, self, (u64)codeMem, 0x1000);
+            SwitchReadOnlyCode = R_SUCCEEDED(p) && faults;
+            fprintf(stderr, "[jit] fast memory: pages with code %s (0x%x 0x%x %d)\n",
+                SwitchReadOnlyCode ? "read-only" : "left out", (unsigned)m, (unsigned)p, faults ? 1 : 0);
+        }
     }
     if (!ok)
     {
@@ -1104,13 +1158,18 @@ void ARMJIT_Memory::TearDownSwitchFastMem() noexcept
             u32 off = 0;
             while (off < m.Size)
             {
-                if (statuses[(m.Addr + off) >> 12] != memstate_MappedRW)
+                auto mapped = [&](u32 o) {
+                    const u8 st = statuses[(m.Addr + o) >> 12];
+                    return st == memstate_MappedRW || (SwitchReadOnlyCode && st == memstate_MappedProtected);
+                };
+                if (!mapped(off))
                 {
                     off += 0x1000;
                     continue;
                 }
                 u32 end = off;
-                while (end < m.Size && statuses[(m.Addr + end) >> 12] == memstate_MappedRW) end += 0x1000;
+                while (end < m.Size && mapped(end)) end += 0x1000;
+                if (SwitchReadOnlyCode) SwitchSetPerm(area + m.Addr + off, end - off, Perm_Rw); // (read-only pages among them)
                 const bool all = unmap(off, end - off);
                 for (u32 p = off; p < end; p += 0x1000)
                     if (all || unmap(p, 0x1000)) statuses[(m.Addr + p) >> 12] = memstate_Unmapped;

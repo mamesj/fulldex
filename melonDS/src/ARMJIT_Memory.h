@@ -188,6 +188,7 @@ private:
     u8* MemoryHeap = nullptr;        // the heap buffer that holds the DS's memory
     u8* MemoryBaseCodeMem = nullptr; // the same memory as code memory, mappable into the address spaces
     static bool SwitchFastMem;       // fast memory is set up (and works)
+    static bool SwitchReadOnlyCode;  // pages with code mapped read-only, not left out (#257)
 #elif defined(_WIN32)
     struct VirtmemPlaceholder
     {
