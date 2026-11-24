@@ -1825,6 +1825,8 @@ bool Start(int& argc, char**& argv)
                 // menu are not read any more, so no one is left on the slower choices.)
                 // The widescreen drawing threads on core 0 too (melonDS/src/SsrThreads.h).
                 if (!strncmp(line, "wide_core0=", 11) && line[11] == '0') setenv("SSR_WIDE_CORE0", "0", 1);
+                // (A test key, not in the menus: emu_prof=1 adds the emulation's parts to the log's perf lines.)
+                if (!strncmp(line, "emu_prof=", 9) && line[9] == '1') setenv("SSR_EMU_PROF", "1", 1);
             }
             fclose(f);
         }
