@@ -564,7 +564,12 @@ public:
     NDS(NDS&&) = delete;
     NDS& operator=(NDS&&) = delete;
 
-    static thread_local NDS* Current;
+    // ssrecomp: a plain static, not thread_local (#257). The JIT's memory paths read it on every
+    // access they handle; thread_local is a function call there on the Switch (-mtp=soft) and with
+    // MinGW (PokeDaisy measured ~8% of the emulation thread on Android). Each console sets it when
+    // its frame starts, and no two run at once on different threads (FF music's copy runs inside
+    // the console's frame, the --lockstep console with the pipeline off).
+    static NDS* Current;
 protected:
     explicit NDS(NDSArgs&& args, int type, void* userdata) noexcept;
     virtual u32 GetSavestateConfig();
