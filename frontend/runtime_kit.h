@@ -73,6 +73,20 @@ inline bool CopyMissing(const std::filesystem::path& from, const std::filesystem
         {
             const bool exists = fs::exists(dest, ec);
             if (ec) { Fail("check destination", dest, ec); reported = true; break; }
+            if (exists)
+            {
+                const auto status = fs::status(dest, ec);
+                if (ec) { Fail("check destination", dest, ec); reported = true; break; }
+                // An existing directory or special file is not an installed tool.
+                // Keep it, but report the obstruction instead of claiming success.
+                if (!fs::is_regular_file(status))
+                {
+                    ec = std::make_error_code(fs::is_directory(status) ? std::errc::is_a_directory : std::errc::invalid_argument);
+                    Fail("destination is not a file", dest, ec);
+                    reported = true;
+                    break;
+                }
+            }
             if (!exists)
             {
                 fs::copy_file(it->path(), dest, ec);
