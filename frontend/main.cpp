@@ -9207,6 +9207,7 @@ int main(int argc, char** argv)
     double perfAcc[6] = {};
     double perfWorst = 0;
     int perfN = 0;
+    uint64_t perfWait3D = 0, perfWaitWide = 0;
     auto perfNow = []() { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count(); };
     double perfT = perfNow(), perfFrameStart = perfT;
     // Of "scene" in the timing lines (SSR_EMU_PROF): the screens' sections and focus, choosing
@@ -9977,7 +9978,7 @@ int main(int argc, char** argv)
     {
         if (timingFile)
         {
-            // (Written before the summary below takes the waits' counters back to 0.)
+            // (The CSV and summary sample the same cumulative counters independently.)
             const double t = perfNow();
             SsrThreadStats& ts = SsrStats();
             const uint64_t w3 = ts.Wait3DNs.load(), ww = ts.WaitWideNs.load();
@@ -10003,7 +10004,10 @@ int main(int argc, char** argv)
                 // thread and for the widescreen drawing; on the Switch also where those
                 // threads ran (frames started on cores 1 and 2), the clocks and temperatures.
                 SsrThreadStats& ts = SsrStats();
-                const double w3d = ts.Wait3DNs.exchange(0) / 1e6 / perfN, wwide = ts.WaitWideNs.exchange(0) / 1e6 / perfN;
+                // Keep cumulative waits intact: the timing CSV and adaptive detail read them too.
+                const uint64_t w3 = ts.Wait3DNs.load(), ww = ts.WaitWideNs.load();
+                const double w3d = (w3 - perfWait3D) / 1e6 / perfN, wwide = (ww - perfWaitWide) / 1e6 / perfN;
+                perfWait3D = w3; perfWaitWide = ww;
                 char extra[200];
                 snprintf(extra, sizeof(extra), "; waited for 3D %.2f wide %.2f ms (wide lines %d)", w3d, wwide, WideLinesNow);
                 std::string tail = extra;
@@ -12228,7 +12232,7 @@ int main(int argc, char** argv)
             else if (!opt.headless)
             {
                 const uint64_t ns = SsrStats().WaitWideNs.load();
-                const uint64_t waited = ns >= lastWideNs ? ns - lastWideNs : ns; // (the timing lines reset it)
+                const uint64_t waited = ns >= lastWideNs ? ns - lastWideNs : ns;
                 lastWideNs = ns;
                 if (speed > 1) {} // (fast forward: see above)
                 else if (waited > 1500000)

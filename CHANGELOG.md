@@ -83,6 +83,7 @@
 - DS: reuse the overlapping colour sums when drawing soft side bars, keeping their pixels unchanged while reducing CPU work.
 - DS: keep the uploaded widescreen world while its published image and hole-fill bounds are unchanged; fades and 2D overlays still update every frame.
 - DS: calculate widescreen coverage coordinates once per row and column when backdrop pixels need them, preserving the original sampling while reducing composition work.
+- DS performance diagnostics: detailed logs no longer reset renderer wait counters used by the per-frame CSV and adaptive detail. Add a repeatable six-setting comparison plan and timing report tool.
 
 
 ## FullDex 1.7 (not released yet)
