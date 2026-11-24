@@ -27,6 +27,7 @@
 #include "art.h"
 #include "fast_forward_button.h"
 #include "fast_forward_audio.h"
+#include "present_clock.h"
 #include "state_file.h"
 #include "hack_names.h"
 #ifdef GBAW_EMBEDDED
@@ -65,6 +66,7 @@
 #include <functional>
 #include <mutex>
 #include <thread>
+#include <chrono>
 #include "third_party/xbrz/xbrz.h"
 // ZOOM and the look-around: PokeDaisy's WIDE (GPL-3.0), the overworld past the picture rebuilt from the game's memory.
 extern "C" {
@@ -6134,6 +6136,7 @@ struct App
         int perFrame = 1; // pictures for each GBA frame
         const bool canLock = realTime && !getenv("GBAW_TEST_CLOCK");
         bool lockToVsync = false;
+        PresentClock presentClock;
         int vsyncCount = 0, lastEven = 0;
         if (realTime) Note("screen %d Hz", refresh);
         Uint64 vsyncCheckStart = SDL_GetPerformanceCounter();
@@ -6231,8 +6234,15 @@ struct App
 #endif
             Draw();
             if (testMode) ScriptShots();
+            const Uint64 beforePresent = SDL_GetPerformanceCounter();
             SDL_RenderPresent(ren);
-            if (canLock && ++vsyncCheckFrames == 120)
+            const bool wasUnpaced = presentClock.unpaced;
+            if (realTime && presentClock.Observe((double)(SDL_GetPerformanceCounter() - beforePresent) / freq))
+            {
+                lockToVsync = false;
+                if (!wasUnpaced) Note("vsync returned immediately; pacing pictures at 60 a second");
+            }
+            if (canLock && !presentClock.unpaced && ++vsyncCheckFrames == 120)
             {
                 const double secs = (double)(SDL_GetPerformanceCounter() - vsyncCheckStart) / SDL_GetPerformanceFrequency();
                 const double rate = 120 / std::max(secs, 0.001);
@@ -6287,7 +6297,9 @@ struct App
             {
                 // (No vsync, or not at 60 Hz: don't spin faster than needed.)
                 const double spent = (double)(SDL_GetPerformanceCounter() - now) / freq;
-                if (spent < 0.002) SDL_Delay(1);
+                const double wait = presentClock.Wait(spent);
+                if (wait > 0) std::this_thread::sleep_for(std::chrono::duration<double>(wait));
+                else if (spent < 0.002) SDL_Delay(1);
             }
             frame++;
         }
