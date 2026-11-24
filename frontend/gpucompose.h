@@ -139,13 +139,14 @@ public:
                 if (sharp) DrawCrisp(el, src, dst, slotIndex, keyed);
                 continue;
             }
-            cached.hasSig = !overWorld;
+            cached.hasSig = false;
             cached.sig = sig;
             const auto tu = std::chrono::steady_clock::now();
+            bool uploaded = false;
             if (plain)
             {
                 SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_NONE);
-                SDL_UpdateTexture(tex, nullptr, src.pixels + el.sy * 256 + el.sx, 256 * 4);
+                uploaded = SDL_UpdateTexture(tex, nullptr, src.pixels + el.sy * 256 + el.sx, 256 * 4) == 0;
             }
             else
             {
@@ -199,8 +200,9 @@ public:
                             out[x] = (al << 24) | c;
                     }
                 }
-                SDL_UpdateTexture(tex, nullptr, Buf.data(), el.sw * 4);
+                uploaded = SDL_UpdateTexture(tex, nullptr, Buf.data(), el.sw * 4) == 0;
             }
+            cached.hasSig = uploaded && !overWorld; // (A failed upload retries next frame.)
             (overWorld ? UnderWorldMs : UploadMs) += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tu).count();
             Uploads++;
             DrawPiece(tex, dst, el, sharp ? slotIndex : -1);
@@ -245,6 +247,12 @@ private:
         mix((uint64_t)(el.screen + 1) << 48 | (uint64_t)el.sx << 32 | (uint64_t)el.sy << 16 | (uint64_t)el.sw);
         mix((uint64_t)el.sh << 32 | (uint64_t)el.drop << 16 | (keyed ? 1u : 0u));
         for (uint32_t k : el.keys) mix(k);
+        mix((uint64_t)el.keyTolerance << 32 | (uint32_t)el.keyRing);
+        mix((uint64_t)(uint32_t)el.keyGrey);
+        mix((uint64_t)el.cutX << 32 | (uint32_t)el.cutY);
+        mix((uint32_t)el.holeCount);
+        for (int i = 0; i < el.holeCount; i++)
+            for (int j = 0; j < 4; j++) mix((uint32_t)el.holes[i][j]);
         for (int y = 0; y < el.sh; y++)
         {
             const uint32_t* row = src.pixels + (el.sy + y) * 256 + el.sx;
@@ -253,7 +261,7 @@ private:
         }
         if (!x.hasSig || x.sig != h)
         {
-            x.hasSig = true;
+            x.hasSig = false;
             x.sig = h;
             CrispBuf.assign((size_t)el.sw * el.sh, 0);
             bool any = false;
@@ -270,7 +278,8 @@ private:
                     CrispBuf[(size_t)y * el.sw + i] = 0xFF000000 | c;
                     any = true;
                 }
-            SDL_UpdateTexture(t, nullptr, CrispBuf.data(), el.sw * 4);
+            if (SDL_UpdateTexture(t, nullptr, CrispBuf.data(), el.sw * 4) != 0) return;
+            x.hasSig = true;
             CrispAny[slotIndex] = any;
         }
         if (!CrispAny[slotIndex]) return;
