@@ -386,7 +386,11 @@ struct Bindings
         std::vector<std::string> keep;
         if (!ConfigLines::ForEach(path, [&](const std::string& line) {
             if (line.compare(0, 8, "map_key_") && line.compare(0, 8, "map_pad_")) keep.push_back(line);
-        })) return false;
+        }))
+        {
+            fprintf(stderr, "[settings] %s could not be read completely: the controls were not saved, the file is left as it is\n", path.c_str());
+            return false;
+        }
         FILE* f = fopen(path.c_str(), "w");
         if (!f) return false;
         for (const std::string& l : keep) fprintf(f, "%s\n", l.c_str());

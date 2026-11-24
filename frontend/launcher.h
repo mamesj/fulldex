@@ -2476,7 +2476,11 @@ inline int RomActions()
 inline bool SetConfigLine(const std::string& cfg, const std::string& key, const std::string& value)
 {
     std::vector<std::string> lines;
-    if (!ConfigLines::Read(cfg, lines)) return false;
+    if (!ConfigLines::Read(cfg, lines))
+    {
+        fprintf(stderr, "[settings] %s could not be read completely: %s not saved, the file is left as it is\n", cfg.c_str(), key.c_str());
+        return false;
+    }
     bool found = false;
     for (std::string& l : lines)
         if (l.size() > key.size() && !l.compare(0, key.size(), key) && l[key.size()] == '=') { l = key + "=" + value; found = true; }
