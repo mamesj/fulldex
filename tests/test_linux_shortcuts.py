@@ -16,7 +16,7 @@ class LinuxShortcutTests(unittest.TestCase):
             exe=home/'FullDex %f $test'
             subprocess.run(['c++','-std=c++17','-I'+str(ROOT/'frontend'),str(ROOT/'tests/test_linux_shortcuts.cpp'),str(ROOT/'frontend/launcher_cjk.cpp'),'-o',str(exe)],check=True)
             result=home/'arguments'
-            env=dict(os.environ,HOME=str(home),XDG_DATA_HOME=str(home/'data'),FULLDEX_SHORTCUT_ARGS=str(result))
+            env=dict(os.environ,HOME=str(home),XDG_DATA_HOME=str(home/'data'),XDG_CONFIG_HOME=str(home/'.config'),APPIMAGE=str(exe),FULLDEX_SHORTCUT_ARGS=str(result))
             subprocess.run([str(exe)],env=env,check=True)
             entries=sorted((home/'data/applications').glob('*.desktop'))
             self.assertEqual(len(entries),3)

@@ -89,6 +89,8 @@ int main()
     const fs::path app = temp / "Fulldex.AppImage";
     WriteText(app, "fake appimage", true);
     setenv("HOME", home.string().c_str(), 1);
+    setenv("XDG_CONFIG_HOME", (home / ".config").string().c_str(), 1);
+    setenv("XDG_DATA_HOME", (home / ".local/share").string().c_str(), 1);
     setenv("APPIMAGE", app.string().c_str(), 1);
 
     const std::string oldPath = getenv("PATH") ? getenv("PATH") : "";
@@ -187,6 +189,8 @@ int main()
     const fs::path launcherDir = temp / "launcher";
     fs::create_directories(launcherDir);
     setenv("HOME", home2.string().c_str(), 1);
+    setenv("XDG_CONFIG_HOME", (home2 / ".config").string().c_str(), 1);
+    setenv("XDG_DATA_HOME", (home2 / ".local/share").string().c_str(), 1);
     SteamShortcuts::Initialize((temp / "settings-home2.cfg").string());
     Check(!SteamShortcuts::Available(), "Steam is not found in a home without userdata");
     Check(SteamShortcuts::RefreshAccount((temp / "settings-home2.cfg").string()) == "STEAM NOT FOUND", "refresh reports no Steam");
