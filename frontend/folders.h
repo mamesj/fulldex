@@ -140,6 +140,17 @@ inline void RemoveEmptyParents(const std::string& file, const std::vector<std::s
 inline bool Move(const Pairs& pairs, const std::string& journal, const std::vector<std::string>& keep, std::string& why)
 {
     std::error_code e;
+    // Equal bytes are not a second copy when both paths identify the same file.
+    // Check the whole plan before writing notes or removing any source.
+    for (const auto& p : pairs)
+    {
+        std::error_code identity;
+        if (fs::equivalent(fs::u8path(p.first), fs::u8path(p.second), identity))
+        {
+            why = "SOURCE AND DESTINATION ARE THE SAME FILE: " + p.first;
+            return false;
+        }
+    }
     if (!WriteJournal(journal, "copying", pairs)) { why = "COULD NOT WRITE ITS NOTES"; return false; }
     Pairs made;
     bool ok = true;
@@ -184,7 +195,11 @@ inline bool FinishCutShort(const std::string& journal, const std::vector<std::st
     if (stage == "removing")
     {
         for (const auto& p : pairs)
-            if (IsFile(p.first) && IsFile(p.second) && SameFile(p.first, p.second)) { fs::remove(fs::u8path(p.first), e); RemoveEmptyParents(p.first, keep); }
+            if (IsFile(p.first) && IsFile(p.second) && SameFile(p.first, p.second))
+            {
+                const bool alias = fs::equivalent(fs::u8path(p.first), fs::u8path(p.second), e);
+                if (!e && !alias) { fs::remove(fs::u8path(p.first), e); RemoveEmptyParents(p.first, keep); }
+            }
         WriteJournal(journal, "done", pairs);
         return true;
     }
