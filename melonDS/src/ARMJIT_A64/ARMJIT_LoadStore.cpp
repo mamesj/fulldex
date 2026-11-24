@@ -17,8 +17,6 @@
 */
 
 #include "ARMJIT_Compiler.h"
-#include <cstdlib>
-#include <cstddef>
 
 #include "../ARMJIT.h"
 
@@ -230,44 +228,6 @@ void Compiler::Comp_MemAccess(int rd, int rn, Op2 offset, int size, int flags)
         if (addrIsStatic)
             func = NDS.JIT.Memory.GetFuncForAddr(CurCPU, staticAddress, flags & memop_Store, size);
 
-        // ssrecomp (#257): the ARM9's DTCM read and written here, not through SlowRead9 /
-        // SlowWrite9: HeartGold keeps its stack there (0x027E0000), and on the Switch, where it
-        // is not in fast memory, a load or store compiled for the slow way went through a call for
-        // each access, thousands a frame. The same checks in the same order as those functions
-        // (ITCM first, then DTCM, which holds no code: nothing to invalidate); anything else
-        // goes on to the call. SSR_JIT_NO_DTCM_INLINE=1: as before.
-        static const bool noDtcmInline = getenv("SSR_JIT_NO_DTCM_INLINE") != nullptr;
-        const bool dtcmInline = !func && Num == 0 && !noDtcmInline &&
-            ((rdMapped >= W8 && rdMapped <= W15) || (rdMapped >= W19 && rdMapped <= W25) || rdMapped == W4);
-        FixupBranch dtcmDone;
-        if (dtcmInline)
-        {
-            LDR(INDEX_UNSIGNED, W1, RCPU, offsetof(ARMv5, ITCMSize));
-            CMP(W0, W1);
-            FixupBranch inItcm = B(CC_LO);
-            LDR(INDEX_UNSIGNED, W1, RCPU, offsetof(ARMv5, DTCMMask));
-            AND(W1, W0, W1);
-            LDR(INDEX_UNSIGNED, W2, RCPU, offsetof(ARMv5, DTCMBase));
-            CMP(W1, W2);
-            FixupBranch notDtcm = B(CC_NEQ);
-            LDR(INDEX_UNSIGNED, X1, RCPU, offsetof(ARMv5, DTCM));
-            ANDI2R(W2, W0, 0x3FFF & ~(size / 8 - 1));
-            if (flags & memop_Store)
-                STRGeneric(size, rdMapped, X1, X2);
-            else
-            {
-                LDRGeneric(size, flags & memop_SignExtend, rdMapped, X1, X2);
-                if (size == 32)
-                {
-                    UBFIZ(W0, W0, 3, 2);
-                    RORV(rdMapped, rdMapped, W0);
-                }
-            }
-            dtcmDone = B();
-            SetJumpTarget(inItcm);
-            SetJumpTarget(notDtcm);
-        }
-
         PushRegs(false, false);
 
         if (func)
@@ -368,8 +328,6 @@ void Compiler::Comp_MemAccess(int rd, int rn, Op2 offset, int size, int flags)
                     UBFX(rdMapped, W0, 0, size);
             }
         }
-        if (dtcmInline)
-            SetJumpTarget(dtcmDone);
     }
 
     if (CurInstr.Info.Branches())
