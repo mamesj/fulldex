@@ -158,16 +158,15 @@ inline bool Move(const Pairs& pairs, const std::string& journal, const std::vect
     return true;
 }
 
-// A move cut short (the program stopped while it ran): one still copying is taken back (its copies
-// removed), one removing is finished. True when there was one.
+// A move cut short: while copying keep both sides, since the journal does not say
+// which destination files already existed. The next move can reuse equal copies.
+// Once removing, finish it. True when there was an interrupted move.
 inline bool FinishCutShort(const std::string& journal, const std::vector<std::string>& keep)
 {
     std::string stage; Pairs pairs; std::error_code e;
     if (!ReadJournal(journal, stage, pairs)) return false;
     if (stage == "copying")
     {
-        for (const auto& p : pairs)
-            if (IsFile(p.first) && IsFile(p.second) && SameFile(p.first, p.second)) { fs::remove(fs::u8path(p.second), e); RemoveEmptyParents(p.second, keep); }
         fs::remove(fs::u8path(journal), e);
         return true;
     }
