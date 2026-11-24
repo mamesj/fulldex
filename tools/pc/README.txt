@@ -28,6 +28,21 @@ Windows may warn that the program is from an unknown publisher the first time: c
 "More info", then "Run anyway".
 On Linux there is nothing else to install: SDL2 comes with it (libSDL2-2.0.so.0).
 
+Choose the Linux download for your processor, not the ROM's console:
+  - Intel/AMD PCs and Steam Deck: pokemon-ds-wide-pc-linux-x86_64.tar.gz
+  - 64-bit ARM Linux devices: pokemon-ds-wide-pc-linux-aarch64.tar.gz
+The AppImages use the same x86_64 / aarch64 names. Unpack the entire tar.gz before
+starting pokemon-ds-wide; keep its libraries beside it.
+
+If a shell says "exec format error", check these from the unpacked folder:
+  uname -m
+  file ./pokemon-ds-wide
+An x86_64 system needs an x86-64 ELF executable; aarch64 needs an ARM aarch64 ELF.
+If they differ, download and unpack the matching archive into a separate folder.
+If they match and it still fails, report both outputs and the exact archive name.
+"Permission denied" is a different error: only then check executable permission
+(chmod +x ./pokemon-ds-wide). Changing permissions cannot repair a wrong format.
+
 
 OMEGA RUBY AND ALPHA SAPPHIRE (WINDOWS)
 --------------------------------------
