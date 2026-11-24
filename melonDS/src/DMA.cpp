@@ -580,7 +580,31 @@ void DMA::Run9()
     }
     else
     {
-        while (IterCount > 0 && !Stall)
+        // ssrecomp: a DMA from main RAM into the 3D command port (GXFIFO: how games send their 3D
+        // lists, thousands of words a frame in HeartGold's cities) gives each word straight to the
+        // geometry engine, not through the general memory read and I/O write (#257). The same
+        // timings and stalls; a word from anywhere else, or to another address, takes the loop below.
+        bool timeUp = false;
+        if (NDS.ConsoleType == 0 && NDS.GPU.GPU3D.GeometryEnabled)
+        {
+            GPU3D& gx = NDS.GPU.GPU3D;
+            while (IterCount > 0 && !Stall)
+            {
+                if ((CurSrcAddr & 0xFF000000) != 0x02000000 || (CurDstAddr & 0xFFFFFFC0) != 0x04000400) break;
+                NDS.ARM9Timestamp += (UnitTimings9_32(burststart) << NDS.ARM9ClockShift);
+                burststart = false;
+
+                gx.WriteToGXFIFO(*(const u32*)&NDS.MainRAM[(CurSrcAddr & ~3u) & NDS.MainRAMMask]);
+
+                CurSrcAddr += SrcAddrInc<<2;
+                CurDstAddr += DstAddrInc<<2;
+                IterCount--;
+                RemCount--;
+
+                if (NDS.ARM9Timestamp >= NDS.ARM9Target) { timeUp = true; break; }
+            }
+        }
+        while (!timeUp && IterCount > 0 && !Stall)
         {
             NDS.ARM9Timestamp += (UnitTimings9_32(burststart) << NDS.ARM9ClockShift);
             burststart = false;

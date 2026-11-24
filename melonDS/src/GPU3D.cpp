@@ -2499,6 +2499,12 @@ void GPU3D::CheckFIFOIRQ() noexcept
     case 2: irq = CmdFIFO.IsEmpty(); break;
     }
 
+    // ssrecomp: this runs after every geometry command while the FIFO is below half full (#257);
+    // nothing to do when the flag and the ARM9's interrupt line are already as they would be made.
+    const bool flagged = NDS.IF[0] & (1u << IRQ_GXFIFO);
+    if (irq == flagged && (bool)NDS.ARM9.IRQ == ((NDS.IME[0] & 0x1) && (NDS.IE[0] & NDS.IF[0])))
+        return;
+
     if (irq) NDS.SetIRQ(0, IRQ_GXFIFO);
     else     NDS.ClearIRQ(0, IRQ_GXFIFO);
 }
