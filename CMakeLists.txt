@@ -52,6 +52,11 @@ set(ENABLE_JIT ${SSR_JIT} CACHE BOOL "" FORCE)
 set(ENABLE_GDBSTUB OFF CACHE BOOL "" FORCE)
 set(ENABLE_LTO_RELEASE OFF CACHE BOOL "" FORCE)
 add_subdirectory(melonDS EXCLUDE_FROM_ALL)
+# The Switch: the DS hardware (melonDS's core) at -O3, not the release type's -O2. Its emulation
+# thread is what limits busy places there (HeartGold's Goldenrod, #257).
+if(NINTENDO_SWITCH)
+    target_compile_options(core PRIVATE -O3)
+endif()
 
 # Nintendo Switch homebrew: built with devkitPro's toolchain file ($DEVKITPRO/cmake/Switch.cmake),
 # which sets NINTENDO_SWITCH. See tools/switch/build.sh.
