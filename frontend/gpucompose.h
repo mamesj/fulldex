@@ -297,10 +297,10 @@ private:
         // SHARP PIXELS AT AN UNEVEN SCALE (MergedSharp): the piece is first blown up a whole
         // number of times with nearest pixels, into a texture of its own, and that is drawn
         // filtered to its place, so that only the seams between pixels are blended.
-        if (sharpSlot >= 0 && SDL_RenderTargetSupported(R))
+        int tw = 0, th = 0;
+        if (sharpSlot >= 0 && SDL_RenderTargetSupported(R) &&
+            SDL_QueryTexture(tex, nullptr, nullptr, &tw, &th) == 0 && tw > 0 && th > 0)
         {
-            int tw = 0, th = 0;
-            SDL_QueryTexture(tex, nullptr, nullptr, &tw, &th);
             const int k = std::clamp((int)std::ceil(std::max((float)dst.w / tw, (float)dst.h / th)), 1, 8);
             if ((int)Sharp.size() <= sharpSlot) Sharp.resize(sharpSlot + 1);
             Tex& x = Sharp[sharpSlot];
@@ -318,12 +318,16 @@ private:
             {
                 SDL_SetTextureScaleMode(tex, SDL_ScaleModeNearest);
                 SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_NONE);
-                SDL_RenderCopy(R, tex, nullptr, nullptr);
+                const bool copied = SDL_RenderCopy(R, tex, nullptr, nullptr) == 0;
                 SDL_SetTextureBlendMode(tex, mode);
                 SDL_SetRenderTarget(R, was);
-                SDL_SetTextureScaleMode(x.t, SDL_ScaleModeLinear);
-                SDL_SetTextureBlendMode(x.t, mode);
-                tex = x.t;
+                // (An enhancement failure must not replace fresh source pixels with an old target.)
+                if (copied)
+                {
+                    SDL_SetTextureScaleMode(x.t, SDL_ScaleModeLinear);
+                    SDL_SetTextureBlendMode(x.t, mode);
+                    tex = x.t;
+                }
             }
         }
         // (A mirrored piece, as MergedCompose draws it: the message box's closing edge in
