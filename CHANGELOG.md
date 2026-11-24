@@ -45,6 +45,10 @@
 - Save-state dates classify Today and Yesterday using local calendar dates, including 23-hour and 25-hour daylight-saving days. Future-dated files show their actual date. FullDex DS/GBA state timestamps on Switch use the console time zone rather than newlib UTC.
 - DS save states refuse directories or special files at a slot or previous-state path, preserving those paths instead of moving or deleting them during a save.
 - DS and GBA state recovery refuses directories or special files at pending/recovery filenames, preserving those paths rather than moving or deleting them as interrupted state files.
+- **DS: sharp text follows changing crops and transparency.** The sharp 2D and text layer kept old pixels when only its cut or see-through rules changed, and a failed texture upload could leave a stale picture on screen; both are redrawn now, and a failed upload is tried again on the next frame.
+- **DS: no stale picture when sharp scaling fails.** If the sharp enlargement cannot be prepared, that frame shows the fresh picture unenhanced and tries again on the next one.
+- **DS: less work putting the widescreen picture together.** The soft side bars reuse their colour sums, the uploaded world is kept while the game has not changed it, and the coverage coordinates are worked out once per row and column. The picture is the same pixel for pixel.
+- **DS performance diagnostics:** detailed logs no longer reset the wait counters that the per-frame timing file and LOWER RES WHEN BUSY read (a frame could show a wait of trillions of milliseconds). A repeatable six-setting comparison plan and report tool are in tools/.
 
 ### Saves and folders
 
@@ -56,6 +60,7 @@
 - Folder moves refuse source and destination paths that identify the same file. Recovery also preserves such files in older move journals instead of deleting the only copy through a folder alias.
 - Folder-based cloud sync stops when an existing remote save cannot be read, instead of treating it as missing and uploading over it. Resolve the read problem before retrying.
 - Switching games while a cloud save is still busy clears the previous game's sync context. If the new game cannot start syncing yet, a message explains that cloud sync is off for that session; later save events cannot reuse the previous game's path.
+- **Settings keep long values when they are rewritten.** Long folder paths and comments were cut into pieces when controls or launcher options were saved, and a piece could be read as a control. Settings are now read whole line by line, and a file that cannot be read completely is left as it is instead of being rewritten without its other lines (the log says so).
 
 ### Shortcuts
 
@@ -76,20 +81,6 @@
 
 
 ## FullDex 1.7 (20 November 2026)
-- Steam shortcuts reject excessively nested, damaged VDF data instead of exhausting the launcher stack. Unsupported files are left untouched.
-- Save-state dates classify Today and Yesterday using local calendar dates, including 23-hour and 25-hour daylight-saving days. Future-dated files show their actual date. FullDex DS/GBA state timestamps on Switch use the console time zone rather than newlib UTC.
-
-- Switching games while a cloud save is still busy clears the previous game's sync context. If the new game cannot start syncing yet, a message explains that cloud sync is off for that session; later save events cannot reuse the previous game's path.
-- DS: reuse the overlapping colour sums when drawing soft side bars, keeping their pixels unchanged while reducing CPU work.
-- DS: keep the uploaded widescreen world while its published image and hole-fill bounds are unchanged; fades and 2D overlays still update every frame.
-- DS: calculate widescreen coverage coordinates once per row and column when backdrop pixels need them, preserving the original sampling while reducing composition work.
-- DS performance diagnostics: detailed logs no longer reset renderer wait counters used by the per-frame CSV and adaptive detail. Add a repeatable six-setting comparison plan and timing report tool.
-- DS: sharp text respects changing crops and transparency masks; temporary texture-upload failures retry.
-- DS: if sharp scaling cannot query or draw its intermediate texture, show the fresh source picture instead of stale pixels and retry the enhancement on the next frame.
-- Launcher settings helpers preserve long folder values when remapping controls or changing options, and refuse rewrites when the original file cannot be read completely. Control loading ignores apparent mappings inside long unrelated values.
-
-
-## FullDex 1.7 (not released yet)
 
 - **Pokémon X, Y, Ultra Sun and Ultra Moon (3DS beta).** FullDex lists a .3ds dump of any of them with your ROMs and plays it the same way as Omega Ruby and Alpha Sapphire: on a PC the game's code is built once from your dump (about 5 minutes), on a phone too. Each keeps its own save (pokemonx.sav, pokemony.sav, ultrasun.sav, ultramoon.sav) with your other saves.
 - **The 3DS games on your Switch, set up from FullDex on a Windows PC.** In a 3DS game's Game Options, Put On My Switch finds the Switch's SD card in the PC, builds the game from your own dump (5 to 10 minutes) and copies it to the card, with the shaders the Switch saved as missing. The Switch tools download once (about 90 MB). On the Switch, a dump that is not set up yet says how. Save To A Folder Instead works without a card.
