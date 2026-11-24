@@ -68,8 +68,17 @@ bool HasFile(const std::string& path)
 
 std::string Start(const std::string& configDir, const std::string& savePath)
 {
-    if (!Wait(5)) { fprintf(stderr, "[cloud] still busy: this start is not synced\n"); return ""; }
+    // The old job owns its captures; it must not leave the old game active if
+    // this start cannot wait for it. Saved/Tick must then remain off this run.
+    g_sync.reset();
     g_pending = false;
+    g_save.clear();
+    if (!Wait(5))
+    {
+        if (g_job.joinable()) g_job.detach();
+        fprintf(stderr, "[cloud] still busy: this start is not synced\n");
+        return "CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION";
+    }
     // (The launcher's Hub writes cloud.ini into the settings folder beside the program (FOLDERS);
     // the standalone game, the Switch and older layouts keep it in the program's own folder.)
     const std::string cloudDir = HasFile(configDir + "/settings/cloud.ini") ? configDir + "/settings" : configDir;
@@ -115,9 +124,11 @@ void Tick()
 void Finish()
 {
     if (!g_sync) return;
-    if (!Wait(6)) { g_job.detach(); return; }
+    if (!Wait(6)) { g_job.detach(); g_sync.reset(); g_pending = false; g_save.clear(); return; }
     Send();
     if (!Wait(6)) g_job.detach();
     g_sync.reset();
+    g_pending = false;
+    g_save.clear();
 }
 }
