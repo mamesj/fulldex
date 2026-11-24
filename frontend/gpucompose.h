@@ -362,13 +362,24 @@ private:
         if (!tex) return;
         SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_NONE);
         SDL_SetTextureScaleMode(tex, smooth ? SDL_ScaleModeLinear : SDL_ScaleModeNearest);
-        const auto t0 = std::chrono::steady_clock::now();
-        const uint32_t* px = wide.placed ? wide.pixels
-            : MergedFillWideHoles(wide, (int)std::floor(MergedWideX(v.originX, wide.w, outW, outH)),
-                  (int)std::ceil(MergedWideX(v.originX + 256 * v.unit, wide.w, outW, outH)), WideFilled);
-        SDL_UpdateTexture(tex, nullptr, px, wide.w * 4);
-        WideUploadMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
-        WideUploads++;
+        const int fillX0 = (int)std::floor(MergedWideX(v.originX, wide.w, outW, outH));
+        const int fillX1 = (int)std::ceil(MergedWideX(v.originX + 256 * v.unit, wide.w, outW, outH));
+        // (A game can publish its world every other frame. Keep the uploaded picture while
+        // the producer's serial and the hole-fill boundaries stay the same. Fades and 2D
+        // pieces still draw every frame; untracked/battle pictures always upload.)
+        if (wide.placed || !wide.serial || !WideTex.hasSig || WideTex.sig != wide.serial ||
+            fillX0 != WideFillX0 || fillX1 != WideFillX1)
+        {
+            const auto t0 = std::chrono::steady_clock::now();
+            const uint32_t* px = wide.placed ? wide.pixels
+                : MergedFillWideHoles(wide, fillX0, fillX1, WideFilled);
+            const bool uploaded = SDL_UpdateTexture(tex, nullptr, px, wide.w * 4) == 0;
+            WideTex.hasSig = uploaded && !wide.placed && wide.serial != 0;
+            WideTex.sig = wide.serial;
+            WideFillX0 = fillX0; WideFillX1 = fillX1;
+            WideUploadMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+            WideUploads++;
+        }
         if (wide.placed)
         {
             // The widened top screen, at its place in the view.
@@ -667,6 +678,7 @@ private:
     std::vector<uint32_t> CrispBuf;
     std::vector<bool> CachedPremul; // (each slot's last blend mode, for a texture not uploaded again)
     Tex WideTex, EdgeTex[2], EdgeInTex[2], FillTex[2], CoverTex[2], NarrowTex[2], WeatherTex[2];
+    int WideFillX0 = 0, WideFillX1 = 0;
     uint32_t Fill[16 * 192];
     uint32_t Cover[2 * 192];
     Tex BoxTex;

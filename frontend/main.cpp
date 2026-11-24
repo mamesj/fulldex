@@ -12370,6 +12370,7 @@ int main(int argc, char** argv)
                     world.pixels = melonDS::Wide.Front;
                     world.w = melonDS::Wide.FrontW;
                     world.h = melonDS::Wide.FrontH;
+                    world.serial = melonDS::Wide.FrontSerial;
                 }
                 const float vw = MergedMakeView(outW, outH).width;
                 const int tu = topUnitOf();
@@ -12412,6 +12413,7 @@ int main(int argc, char** argv)
                 wideImage.pixels = melonDS::Wide.Front;
                 wideImage.w = melonDS::Wide.FrontW;
                 wideImage.h = melonDS::Wide.FrontH;
+                wideImage.serial = melonDS::Wide.FrontSerial;
                 // Fades: the game darkens or whitens its screen with the master brightness
                 // register, or with a brightness effect on the 3D layer.
                 const auto& unit = wideUnit;

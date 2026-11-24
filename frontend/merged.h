@@ -215,6 +215,7 @@ struct WideImage
     // Not 0: the world as it last was, held while a still picture of it covers the top screen (see main.cpp), one
     // number for each time.
     int held = 0;
+    uint64_t serial = 0; // changes with the world pixels; 0 means an untracked image
 };
 
 struct ScreenImage
