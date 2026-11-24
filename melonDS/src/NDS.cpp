@@ -21,6 +21,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include "NDS.h"
+#include "SsrProf.h" // ssrecomp
 #include "ARM.h"
 #include "NDSCart.h"
 #include "GBACart.h"
@@ -1009,10 +1010,11 @@ u32 NDS::RunFrame()
                 }
                 else
                 {
+                    SsrProf::Scope profC(SsrProf::Arm9); // ssrecomp
                     ARM9.Execute<cpuMode>();
                 }
 
-                RunTimers(0);
+                { SsrProf::Scope profT(SsrProf::Timers); RunTimers(0); } // ssrecomp
                 GPU.GPU3D.Run();
 
                 target = ARM9Timestamp >> ARM9ClockShift;
@@ -1036,13 +1038,14 @@ u32 NDS::RunFrame()
                     }
                     else
                     {
+                        SsrProf::Scope profC(SsrProf::Arm7); // ssrecomp
                         ARM7.Execute<cpuMode>();
                     }
 
-                    RunTimers(1);
+                    { SsrProf::Scope profT(SsrProf::Timers); RunTimers(1); } // ssrecomp
                 }
 
-                RunSystem(target);
+                { SsrProf::Scope profS(SsrProf::System); RunSystem(target); } // ssrecomp
 
                 if (CPUStop & CPUStop_Sleep)
                 {

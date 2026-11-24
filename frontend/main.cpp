@@ -10034,7 +10034,7 @@ int main(int argc, char** argv)
                 if (SsrProf::On)
                 {
                     static const char* const names[SsrProf::Count] = { "geometry", "2D top", "sound", "DMA", "wide lists",
-                        "in-between lists", "3D start", "2D bottom", "3D lines wait", "lists wait", "wide 3D start", "GPU send wait" };
+                        "in-between lists", "3D start", "2D bottom", "3D lines wait", "lists wait", "wide 3D start", "GPU send wait", "ARM9", "ARM7", "timers", "events" };
                     tail += "; of emulate:";
                     for (int i = 0; i < SsrProf::Count; i++)
                     {

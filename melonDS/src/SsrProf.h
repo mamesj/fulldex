@@ -11,7 +11,7 @@
 
 namespace SsrProf
 {
-enum Part { Geometry, Draw2D, Sound, DMA, WideFlush, Interp, Render3D, Draw2DB, Wait3D, HelperWait, WideRender, SendWait, Count };
+enum Part { Geometry, Draw2D, Sound, DMA, WideFlush, Interp, Render3D, Draw2DB, Wait3D, HelperWait, WideRender, SendWait, Arm9, Arm7, Timers, System, Count };
 inline bool On = false;
 inline uint64_t Ns[Count] = {};
 inline int Stack[16];
