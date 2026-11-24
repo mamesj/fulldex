@@ -88,6 +88,7 @@ inline bool WriteJournal(const std::string& path, const char* stage, const Pairs
         if (!j) return false;
         j << "fulldex-folders-move-v1\n" << stage << "\n";
         for (const auto& p : pairs) j << p.first << "\t" << p.second << "\n";
+        j.close(); // Buffered writes can fail only at close (disk full or a file-size limit).
         if (!j.good()) return false;
     }
     std::error_code e;
