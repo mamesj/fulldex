@@ -34,6 +34,7 @@
 #endif
 
 #include "launcher.h"
+#include "xdg_desktop_path.h"
 
 namespace Shortcuts
 {
@@ -495,22 +496,7 @@ inline std::string LinuxDesktopDir()
     if (h.empty()) return {};
     const char* xdg = getenv("XDG_CONFIG_HOME");
     const std::string config = xdg && *xdg && std::filesystem::u8path(xdg).is_absolute() ? xdg : h + "/.config";
-    std::string desk = h + "/Desktop";
-    if (FILE* f = fopen((config + "/user-dirs.dirs").c_str(), "r"))
-    {
-        char line[1024];
-        while (fgets(line, sizeof line, f))
-        {
-            std::string l = line;
-            if (l.compare(0, 16, "XDG_DESKTOP_DIR=") != 0) continue;
-            l = l.substr(16);
-            while (!l.empty() && (l.back() == '\n' || l.back() == '\r' || l.back() == '"')) l.pop_back();
-            if (!l.empty() && l[0] == '"') l = l.substr(1);
-            if (l.compare(0, 5, "$HOME") == 0) l = h + l.substr(5);
-            desk = l;
-        }
-        fclose(f);
-    }
+    const std::string desk = ReadDesktopPath(config, h);
     // XDG defines a directory pointed at HOME as disabled, not a desktop at HOME.
     // https://www.freedesktop.org/projects/xdg-user-dirs/
     if (desk.empty()) return {};
