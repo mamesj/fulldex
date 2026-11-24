@@ -7055,7 +7055,7 @@ inline const std::unordered_map<std::string,std::string>& Table(int language) {
         {"{0} AND {1} SWAPPED KEYS", "{0}と{1}のキーを入れ替えました"},
         {"{0} HAS NO BUTTON NOW", "{0}のボタンを外しました"},
         {"{0} HAS NO KEY NOW", "{0}のキーを外しました"},
-        {"{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}", "{0}がレベル上限を超えた：Lv{1}／{2}"},
+        {"{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}", "{0}がレベル上限を超えた：Lv{1}/{2}"},
         {"{0} IS STARTING", "{0}を起動しています"},
         {"{0} ITEMS", "{0}個"},
         {"{0} OF PLAYERS", "プレイヤーの{0}"},
