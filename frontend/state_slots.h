@@ -49,12 +49,14 @@ inline bool Save(const std::string& path,const std::function<bool(const std::str
 {
     const fs::path target=fs::u8path(path),temp=fs::u8path(path+".pending"),backup=fs::u8path(path+".previous");
     std::error_code ec;
+    const bool had=fs::exists(target,ec);
+    if(ec || (had && !fs::is_regular_file(target,ec)) || ec)return false;
+    if(had){const bool previous=fs::exists(backup,ec);if(ec || (previous && !fs::is_regular_file(backup,ec)) || ec)return false;}
     // An interrupted write (a crash, the power going) is kept as .pending.failed for recovery, and
     // the slot saves again: refusing left the slot unsaveable until the file was deleted by hand.
     if(fs::exists(temp,ec)){const fs::path failed=fs::u8path(path+".pending.failed");fs::remove(failed,ec);ec.clear();fs::rename(temp,failed,ec);if(ec)return false;}
     else if(ec)return false;
     if(!write(temp.u8string())||!Exists(temp.u8string()))return false;
-    bool had=fs::exists(target,ec);if(ec)return false;
     if(had){fs::remove(backup,ec);if(ec)return false;fs::rename(target,backup,ec);if(ec)return false;}
     fs::rename(temp,target,ec);
     if(ec){if(had){std::error_code recovery;fs::rename(backup,target,recovery);}return false;}
