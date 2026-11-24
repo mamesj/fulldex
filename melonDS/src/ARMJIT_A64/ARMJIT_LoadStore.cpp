@@ -242,18 +242,15 @@ void Compiler::Comp_MemAccess(int rd, int rn, Op2 offset, int size, int flags)
         FixupBranch dtcmDone;
         if (dtcmInline)
         {
-            // (Without touching the host's flags, which can hold the DS's between instructions.)
             LDR(INDEX_UNSIGNED, W1, RCPU, offsetof(ARMv5, ITCMSize));
-            SUB(X2, X0, X1); // (both zero-extended: negative when the address is below ITCMSize)
-            FixupBranch inItcm = TBNZ(X2, 63);
+            CMP(W0, W1);
+            FixupBranch inItcm = B(CC_LO);
             LDR(INDEX_UNSIGNED, W1, RCPU, offsetof(ARMv5, DTCMMask));
             AND(W1, W0, W1);
             LDR(INDEX_UNSIGNED, W2, RCPU, offsetof(ARMv5, DTCMBase));
-            EOR(W1, W1, W2);
-            FixupBranch notDtcm = CBNZ(W1);
-            // (The DTCM pointer is past ITCM, 33 KB in: beyond a load's 12-bit scaled offset.)
-            ADDI2R(X1, RCPU, offsetof(ARMv5, DTCM), X2);
-            LDR(INDEX_UNSIGNED, X1, X1, 0);
+            CMP(W1, W2);
+            FixupBranch notDtcm = B(CC_NEQ);
+            LDR(INDEX_UNSIGNED, X1, RCPU, offsetof(ARMv5, DTCM));
             ANDI2R(W2, W0, 0x3FFF & ~(size / 8 - 1));
             if (flags & memop_Store)
                 STRGeneric(size, rdMapped, X1, X2);
