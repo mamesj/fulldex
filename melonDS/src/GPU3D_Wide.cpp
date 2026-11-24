@@ -789,10 +789,11 @@ struct WideAccess
             }
         }
         // Waits for the in-between frame's pairs (0), also its lists (1), or everything (2).
-        static void Join(int which)
+        // (quiet: from the sending thread, which the profile does not time, see Draw.)
+        static void Join(int which, bool quiet = false)
         {
             if (!Thread.joinable()) return;
-            SsrProf::Scope prof(SsrProf::HelperWait); // (only the emulation thread joins)
+            SsrProf::Scope prof(SsrProf::HelperWait, !quiet); // (the emulation thread's waits)
             std::unique_lock<std::mutex> lock(Mutex);
             Done.wait(lock, [which] {
                 for (int i = 0; i <= which; i++)
@@ -1459,7 +1460,17 @@ struct WideAccess
         }
         // The lists built on the helper thread (ListHelper): the in-between frame's for it, or
         // both.
-        ListHelper::Join(showingInterp ? 1 : 2);
+        // (#257: the real frame's lists, with deko3D's sending thread, are waited for there: the
+        // emulation went on waiting here half a millisecond a frame in HeartGold's cities, the
+        // helper thread not being done 23 lines after it started. Draw reads them on that thread;
+        // ListHelper::Start, at the next frame's lists, waits for both.)
+        bool onGL = false;
+#ifdef OGLRENDERER_ENABLED
+        if (GLThreadRenderer* gl = GLThreadRenderer::Current; gl && &gpu.GPU3D.GetCurrentRenderer() == gl) onGL = true;
+#endif
+        const bool listsLater = !showingInterp && !onGL && WideGpuCurrent && WideGpuSendOnThread() &&
+            Wide.Width > 0 && Wide.Height > 0 && !getenv("SSR_WIDE_LISTS_JOIN");
+        if (!listsLater) ListHelper::Join(showingInterp ? 1 : 2);
         if (Wide.Width <= 0 || Wide.Height <= 0) return;
         if (showingInterp && NumInterp)
         {
@@ -1470,7 +1481,7 @@ struct WideAccess
         }
         else if (Dirty || NeedReal || Wide.FrontW != Wide.Width || Wide.FrontH != Wide.Height)
         {
-            Draw(gpu, ListReal.data(), NumReal);
+            Draw(gpu, listsLater ? nullptr : ListReal.data(), listsLater ? 0 : NumReal);
             NeedReal = false;
             Dirty = false;
             PendingPublish = true;
@@ -1504,10 +1515,18 @@ struct WideAccess
             static const bool prof = getenv("SSR_WIDE_PROF") != nullptr;
             const auto t0 = std::chrono::steady_clock::now();
             BackFor(W, H, true);
-            listCopy.assign(list, list + npolys);
+            // (No list given: the real frame's, whose lists the helper thread may still be
+            // building; the sending thread waits for them, not the emulation, see OnRender.)
+            const bool listsLater = !list;
+            if (!listsLater) listCopy.assign(list, list + npolys);
             SentOk = false;
             const int slot = Next;
-            WideGpuSend(1, [&gpu, W, H, slot] {
+            WideGpuSend(1, [&gpu, W, H, slot, listsLater] {
+                if (listsLater)
+                {
+                    ListHelper::Join(2, true);
+                    listCopy.assign(ListReal.data(), ListReal.data() + NumReal);
+                }
                 WideGpuBuild(gpu, listCopy.data(), (u32)listCopy.size(), W, H, frame, WideGpuCurrent->TakesAtlas());
                 SentOk = WideGpuCurrent->Submit(frame, slot);
                 // (Waited for on the other sending thread: the emulation then only waits for that

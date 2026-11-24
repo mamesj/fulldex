@@ -36,7 +36,7 @@ inline void Leave()
 struct Scope
 {
     bool Active;
-    explicit Scope(Part p) : Active(On) { if (Active) Enter(p); }
+    explicit Scope(Part p, bool when = true) : Active(On && when) { if (Active) Enter(p); }
     ~Scope() { if (Active) Leave(); }
 };
 }
