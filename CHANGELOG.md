@@ -82,6 +82,7 @@
 - Switching games while a cloud save is still busy clears the previous game's sync context. If the new game cannot start syncing yet, a message explains that cloud sync is off for that session; later save events cannot reuse the previous game's path.
 - DS: reuse the overlapping colour sums when drawing soft side bars, keeping their pixels unchanged while reducing CPU work.
 - DS: keep the uploaded widescreen world while its published image and hole-fill bounds are unchanged; fades and 2D overlays still update every frame.
+- DS: calculate widescreen coverage coordinates once per row and column when backdrop pixels need them, preserving the original sampling while reducing composition work.
 
 
 ## FullDex 1.7 (not released yet)

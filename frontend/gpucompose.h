@@ -156,6 +156,23 @@ public:
                 CachedPremul[slotIndex] = premul;
                 Buf.resize((size_t)el.sw * el.sh);
                 const uint32_t al = el.alpha;
+                bool worldMapReady = false;
+                auto worldCovers = [&](int x, int y) {
+                    // (Only backdrop pixels need the mapping. Build it once if any occur;
+                    // each column/row then reuses exactly the original sample coordinate.)
+                    if (!worldMapReady)
+                    {
+                        WorldColumns.resize(el.sw); WorldRows.resize(el.sh);
+                        for (int i = 0; i < el.sw; i++)
+                            WorldColumns[i] = (int)std::floor(MergedWideX(v.originX + (el.sx + i + 0.5f) * v.unit, wide->w, outW, outH));
+                        for (int i = 0; i < el.sh; i++)
+                            WorldRows[i] = (int)((v.originY + (el.sy + i + 0.5f) * v.unit) * wide->h / outH);
+                        worldMapReady = true;
+                    }
+                    const int wx = WorldColumns[x], wy = WorldRows[y];
+                    return wx >= 0 && wx < wide->w && wy >= 0 && wy < wide->h &&
+                        (wide->pixels[(size_t)wy * wide->w + wx] >> 24) != 0;
+                };
                 for (int y = 0; y < el.sh; y++)
                 {
                     const int sy = el.sy + y;
@@ -168,7 +185,7 @@ public:
                         bool skip = el.Skips(el.sx + x, sy) ||
                             (el.drop && frow && (LayerClass(frow[x]) & el.drop)) ||
                             (overWorld && frow && LayerClass(frow[x]) == LAYER_BACKDROP &&
-                                MergedWideCovers(*wide, v, outW, outH, el.sx + x, sy)) ||
+                                worldCovers(x, y)) ||
                             (spriteKey && LayerClass(frow[x]) == LAYER_OBJ && std::min(x, el.sw - 1 - x) < el.dropSpriteCorner &&
                                 std::min(y, el.sh - 1 - y) < el.dropSpriteCorner) ||
                             (keyed && MergedKeyed(el, c) &&
@@ -685,6 +702,7 @@ private:
     std::vector<uint32_t> BoxBuf;
     std::vector<SDL_Rect> Spans;
     std::vector<uint32_t> Buf, WideFilled;
+    std::vector<int> WorldColumns, WorldRows;
     uint32_t Edge[16 * 192];
     uint32_t EdgeIn[192]; // the screen's own outermost column, where a row is continued from the next one in
     uint32_t Weather[256 * 192];
