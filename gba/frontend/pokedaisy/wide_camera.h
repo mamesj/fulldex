@@ -2,8 +2,8 @@
 // pk_wide.c draws any window around the GBA's own 240 x 160 frame from the game's memory; this picks it.
 //
 // - Zoom steps (level): 1x is the game as large as the screen shows all of it (its full height on a wide screen);
-//   each step out is a whole number of screen pixels per GBA pixel, so the pixel art stays crisp, and shows at least
-//   1.2x as much as the one before, inside pk_wide.h's largest window.
+//   fine choices from 1.1x to 1.4x use fractional scaling; larger steps use whole screen pixels per GBA pixel.
+//   Every added step stays inside pk_wide.h's largest window.
 // - Close up when it matters: the game wanting it (pk_wide_scene: a battle starting, a menu screen, a text box) pulls
 //   in to 1x and the player, one eased motion per event; the chosen step comes back as gently once that has been over
 //   for half a second.
@@ -130,18 +130,29 @@ public:
     }
 
     // Screen pixels per game pixel for each step on a w x h screen: 1x (the whole frame as large as it fits), then
-    // the whole numbers below it that show at least 1.2x more each and fit the largest window.
+    // fine choices to 1.4x, then the larger whole-pixel choices that fit the largest window.
     static std::vector<float> LevelsFor(int w, int h)
     {
         if (w <= 0 || h <= 0) return { 1.0f };
         const float fit = std::min(w / (float)FrameW, h / (float)FrameH);
         std::vector<float> out = { fit };
+        for (float factor : { 1.1f, 1.2f, 1.3f, 1.4f })
+        {
+            const float s = fit / factor;
+            if (w / s < MaxW - 1 && h / s < MaxH - 1) out.push_back(s);
+        }
+        float previous = fit;
+        const float fineLimit = fit / out.back();
         int k = (int)std::floor(fit);
         if ((float)k == fit) k--;
         for (; k >= 1; k--)
         {
             if (w / (float)k > MaxW || h / (float)k > MaxH) break;
-            if (out.back() / k >= MinStep) out.push_back((float)k);
+            if (previous / k >= MinStep)
+            {
+                previous = (float)k;
+                if (fit / k > fineLimit + 0.0001f) out.push_back((float)k);
+            }
         }
         return out;
     }
