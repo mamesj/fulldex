@@ -22,6 +22,7 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include "config_lines.h"
 
 namespace Controls
 {
@@ -383,17 +384,9 @@ struct Bindings
     bool SaveTo(const std::string& path) const
     {
         std::vector<std::string> keep;
-        if (FILE* f = fopen(path.c_str(), "r"))
-        {
-            char buf[1024];
-            while (fgets(buf, sizeof buf, f))
-            {
-                std::string l = buf;
-                while (!l.empty() && (l.back() == '\n' || l.back() == '\r')) l.pop_back();
-                if (l.compare(0, 8, "map_key_") && l.compare(0, 8, "map_pad_")) keep.push_back(l);
-            }
-            fclose(f);
-        }
+        if (!ConfigLines::ForEach(path, [&](const std::string& line) {
+            if (line.compare(0, 8, "map_key_") && line.compare(0, 8, "map_pad_")) keep.push_back(line);
+        })) return false;
         FILE* f = fopen(path.c_str(), "w");
         if (!f) return false;
         for (const std::string& l : keep) fprintf(f, "%s\n", l.c_str());
@@ -411,19 +404,15 @@ struct Bindings
     {
         Reset();
         byLabel = true;
-        FILE* f = fopen(path.c_str(), "r");
-        if (!f) return;
-        char buf[512];
-        while (fgets(buf, sizeof buf, f))
+        std::vector<std::string> lines;
+        if (!ConfigLines::Read(path, lines)) return;
+        for (const std::string& line : lines)
         {
-            std::string l = buf;
-            while (!l.empty() && (l.back() == '\n' || l.back() == '\r')) l.pop_back();
-            const size_t eq = l.find('=');
+            const size_t eq = line.find('=');
             if (eq == std::string::npos) continue;
-            if (l.substr(0, eq) == "buttons") byLabel = l.substr(eq + 1) != "positions";
-            else Apply(l.substr(0, eq), l.substr(eq + 1));
+            if (line.substr(0, eq) == "buttons") byLabel = line.substr(eq + 1) != "positions";
+            else Apply(line.substr(0, eq), line.substr(eq + 1));
         }
-        fclose(f);
     }
 };
 

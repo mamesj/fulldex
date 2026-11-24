@@ -86,6 +86,7 @@
 - DS performance diagnostics: detailed logs no longer reset renderer wait counters used by the per-frame CSV and adaptive detail. Add a repeatable six-setting comparison plan and timing report tool.
 - DS: sharp text respects changing crops and transparency masks; temporary texture-upload failures retry.
 - DS: if sharp scaling cannot query or draw its intermediate texture, show the fresh source picture instead of stale pixels and retry the enhancement on the next frame.
+- Launcher settings helpers preserve long folder values when remapping controls or changing options, and refuse rewrites when the original file cannot be read completely. Control loading ignores apparent mappings inside long unrelated values.
 
 
 ## FullDex 1.7 (not released yet)

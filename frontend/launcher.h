@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <climits>
 #include <filesystem>
+#include "config_lines.h"
 #include "folders.h" // (FOLDERS; here, outside any namespace: saves_page.h, inside one, includes it too)
 #include "regional_profiles.h"
 #include <cstdint>
@@ -1259,19 +1260,11 @@ inline Theme ThemeNamed(const std::string& colour)
 inline std::string ConfigValue(const std::string& cfg, const char* key)
 {
     std::string out;
-    if (FILE* f = fopen(cfg.c_str(), "r"))
-    {
-        char buf[512];
-        const size_t n = strlen(key);
-        while (fgets(buf, sizeof buf, f))
-            if (!strncmp(buf, key, n) && buf[n] == '=')
-            {
-                out = buf + n + 1;
-                while (!out.empty() && (out.back() == '\n' || out.back() == '\r')) out.pop_back();
-            }
-        fclose(f);
-    }
-    return out;
+    const size_t n = strlen(key);
+    const bool read = ConfigLines::ForEach(cfg, [&](const std::string& line) {
+        if (line.size() > n && !line.compare(0, n, key) && line[n] == '=') out = line.substr(n + 1);
+    });
+    return read ? out : std::string();
 }
 
 // The GBA games (Pokemon GBA Widescreen, built in) take the DS games' settings where both have
@@ -2483,17 +2476,7 @@ inline int RomActions()
 inline bool SetConfigLine(const std::string& cfg, const std::string& key, const std::string& value)
 {
     std::vector<std::string> lines;
-    if (FILE* f = fopen(cfg.c_str(), "r"))
-    {
-        char buf[1024];
-        while (fgets(buf, sizeof buf, f))
-        {
-            std::string l = buf;
-            while (!l.empty() && (l.back() == '\n' || l.back() == '\r')) l.pop_back();
-            lines.push_back(l);
-        }
-        fclose(f);
-    }
+    if (!ConfigLines::Read(cfg, lines)) return false;
     bool found = false;
     for (std::string& l : lines)
         if (l.size() > key.size() && !l.compare(0, key.size(), key) && l[key.size()] == '=') { l = key + "=" + value; found = true; }
@@ -8969,18 +8952,16 @@ inline void BuildSettingsMenu(Menu& m, std::vector<int>& map, const SettingsPage
 inline void SetConfigValues(const std::string& cfg, const std::vector<std::pair<std::string, std::string>>& values)
 {
     std::vector<std::string> lines;
-    if (FILE* f = fopen(cfg.c_str(), "r"))
+    const bool read = ConfigLines::ForEach(cfg, [&](const std::string& line) {
+        bool set = false;
+        for (const auto& kv : values)
+            set |= line.size() > kv.first.size() && !line.compare(0, kv.first.size(), kv.first) && line[kv.first.size()] == '=';
+        if (!set) lines.push_back(line);
+    });
+    if (!read)
     {
-        char line[1024];
-        while (fgets(line, sizeof line, f))
-        {
-            std::string l = line;
-            while (!l.empty() && (l.back() == '\n' || l.back() == '\r')) l.pop_back();
-            bool set = false;
-            for (const auto& kv : values) set |= l.size() > kv.first.size() && !l.compare(0, kv.first.size(), kv.first) && l[kv.first.size()] == '=';
-            if (!set) lines.push_back(l);
-        }
-        fclose(f);
+        fprintf(stderr, "[launcher] settings could not be read: %s\n", cfg.c_str());
+        return;
     }
     for (const auto& kv : values)
         if (!kv.second.empty()) lines.push_back(kv.first + "=" + kv.second);
