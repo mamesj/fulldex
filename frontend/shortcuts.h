@@ -272,6 +272,17 @@ inline std::string DesktopArg(const std::string& value)
     return DesktopValue(out);
 }
 
+// Creation, lookup and removal must agree: a hack's game code can name the original's shortcut.
+inline bool Supported(const Launcher::Game& g)
+{
+    if (!g.known || g.platform == Launcher::N3DS) return false;
+#if defined(_WIN32) || defined(__APPLE__)
+    return !g.hack;
+#else
+    return !g.rom.empty();
+#endif
+}
+
 // Makes shortcuts for the library. Linux targets each ROM separately, including hacks. dir is
 // the program's folder (for the icons). Returns how many were made; where says where they went,
 // or what failed.
@@ -301,7 +312,7 @@ inline int Make(const std::string& dir, const std::vector<Launcher::Game>& games
     for (const Launcher::Game& g : games)
     {
         if (g.platform == Launcher::N3DS) continue; // (3DS games: their own programs, n3ds.h)
-        if (!g.known || g.hack || !done.insert(g.code).second) continue; // (the games, not hacks of them)
+        if (!Supported(g) || !done.insert(g.code).second) continue; // (the games, not hacks of them)
         IShellLinkW* link = nullptr;
         if (FAILED(CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_IShellLinkW, (void**)&link))) break;
         link->SetPath(exe);
@@ -367,7 +378,7 @@ inline int Make(const std::string& dir, const std::vector<Launcher::Game>& games
     for (const Launcher::Game& g : games)
     {
         if (g.platform == Launcher::N3DS) continue; // (3DS games: their own programs, n3ds.h)
-        if (!g.known || g.hack || !done.insert(g.code).second) continue; // (the games, not hacks of them)
+        if (!Supported(g) || !done.insert(g.code).second) continue; // (the games, not hacks of them)
         std::string lower = g.code;
         for (char& c : lower) c = (char)tolower((unsigned char)c);
         // The app is a shell script that starts the program on the game; the program, inside
@@ -448,7 +459,7 @@ inline int Make(const std::string& dir, const std::vector<Launcher::Game>& games
     for (const Launcher::Game& g : games)
     {
         if (g.platform == Launcher::N3DS) continue; // (3DS games: their own programs, n3ds.h)
-        if (!g.known || g.rom.empty() || !done.insert(g.rom).second) continue;
+        if (!Supported(g) || !done.insert(g.rom).second) continue;
         // A ROM path identifies hacks and duplicate releases without choosing another game.
         char suffix[16];
         snprintf(suffix, sizeof suffix, "%08x", Crc32((const uint8_t*)g.rom.data(), g.rom.size()));
@@ -527,6 +538,7 @@ inline std::string Lower(std::string s)
 
 inline bool Exists(const std::string& dir, const Launcher::Game& g)
 {
+    if (!Supported(g)) return false;
     (void)dir;
 #ifdef _WIN32
     PWSTR desktop = nullptr;
@@ -553,6 +565,7 @@ inline bool Exists(const std::string& dir, const Launcher::Game& g)
 
 inline bool Remove(const std::string& dir, const Launcher::Game& g, std::string& where)
 {
+    if (!Supported(g)) { where = "NO DESKTOP SHORTCUT FOR THIS GAME"; return false; }
 #ifdef _WIN32
     PWSTR desktop = nullptr;
     if (FAILED(SHGetKnownFolderPath(FOLDERID_Desktop, 0, nullptr, &desktop))) { where = "NO DESKTOP FOLDER"; return false; }
