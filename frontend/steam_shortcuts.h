@@ -621,8 +621,8 @@ inline std::string PlatformEntryDo(const std::string& dir, const Launcher::Game&
     std::string where;
     if (Shortcuts::Exists(dir, g))
     {
-        Shortcuts::Remove(dir, g, where);
-        return "REMOVED " + where;
+        if (Shortcuts::Remove(dir, g, where)) return "REMOVED " + where;
+        return where.empty() ? "COULD NOT REMOVE THE SHORTCUT" : where;
     }
     const int made = Shortcuts::Make(dir, std::vector<Launcher::Game>{ g }, where);
     if (made > 0) return "ADDED " + where;

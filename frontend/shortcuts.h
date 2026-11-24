@@ -571,7 +571,16 @@ inline bool Remove(const std::string& dir, const Launcher::Game& g, std::string&
     if (FAILED(SHGetKnownFolderPath(FOLDERID_Desktop, 0, nullptr, &desktop))) { where = "NO DESKTOP FOLDER"; return false; }
     const std::wstring desk = desktop;
     CoTaskMemFree(desktop);
-    DeleteFileW((desk + L"\\" + Wide(Title(g)) + L".lnk").c_str());
+    const std::wstring link = desk + L"\\" + Wide(Title(g)) + L".lnk";
+    if (!DeleteFileW(link.c_str()))
+    {
+        const DWORD error = GetLastError();
+        if (error != ERROR_FILE_NOT_FOUND && error != ERROR_PATH_NOT_FOUND)
+        {
+            where = "COULD NOT REMOVE THE DESKTOP SHORTCUT";
+            return false;
+        }
+    }
     DeleteFileW(Wide(dir + "/shortcut-icons/" + g.code + ".ico").c_str());
     where = "FROM YOUR DESKTOP";
 #elif defined(__APPLE__)
@@ -580,14 +589,18 @@ inline bool Remove(const std::string& dir, const Launcher::Game& g, std::string&
     const std::string h = home;
     std::error_code ec;
     std::filesystem::remove_all(std::filesystem::u8path(h + "/Applications/" + Title(g) + ".app"), ec);
+    if (ec) { where = "COULD NOT REMOVE THE APP SHORTCUT"; return false; }
     std::filesystem::remove_all(std::filesystem::u8path(h + "/Desktop/" + Title(g) + ".app"), ec);
+    if (ec) { where = "COULD NOT REMOVE THE DESKTOP SHORTCUT"; return false; }
     where = "FROM YOUR APPS AND DESKTOP";
 #else
     const std::string id = LinuxShortcutId(g);
     const std::string file = "pokemon-ds-wide-" + Lower(id) + ".desktop";
     std::error_code ec;
     std::filesystem::remove(std::filesystem::u8path(LinuxAppsDir() + "/" + file), ec);
+    if (ec) { where = "COULD NOT REMOVE THE APPS MENU SHORTCUT"; return false; }
     std::filesystem::remove(std::filesystem::u8path(LinuxDesktopDir() + "/" + file), ec);
+    if (ec) { where = "COULD NOT REMOVE THE DESKTOP SHORTCUT"; return false; }
     std::filesystem::remove(std::filesystem::u8path(dir + "/shortcut-icons/" + id + ".png"), ec);
     where = "FROM YOUR APPS MENU AND DESKTOP";
 #endif
