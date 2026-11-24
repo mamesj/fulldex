@@ -3,6 +3,7 @@
 #pragma once
 #ifdef __SWITCH__
 #include <cstdint>
+#include <ctime>
 #include <string>
 
 namespace SwitchPlatform
@@ -24,6 +25,8 @@ void JitStarted();
 
 // The console's own date and time, in the time zone set on it. False if it cannot be read.
 bool LocalTime(int& year, int& month, int& day, int& hour, int& minute, int& second);
+// Any saved POSIX UTC timestamp, using the console's configured time-zone rule.
+bool LocalCalendar(int64_t timestamp, std::tm& calendar);
 
 // For the timing lines in the log, in test runs only (empty otherwise): the processor,
 // graphics and memory clocks and the chip's and the board's temperature right now, as text.

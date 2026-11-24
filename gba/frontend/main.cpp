@@ -34,6 +34,7 @@
 #include "embed.h"
 #include "gba_glass.h" // (the pause menu as the DS games draw it; Fulldex's frontend folder)
 #include "auto_state.h"
+#include "state_calendar.h"
 #include "gba_dex.h"       // (POKEDEX: the game's own Pokedex data and pictures, read from its ROM)
 #include "gba_companion.h" // (COMPANION: the party, bag and place, read from the paused game)
 #include "gba_guides.h"    // (COMPANION's GUIDE)
@@ -1340,7 +1341,12 @@ struct App
         if (stat(StatePath(slot).c_str(), &st) != 0) return "";
         char buf[32] = "";
         const time_t t = st.st_mtime;
+#ifdef GBAW_EMBEDDED
+        std::tm calendar {};
+        if (StateCalendar::Local(t, calendar)) strftime(buf, sizeof(buf), "%d %b %H:%M", &calendar);
+#else
         if (const tm* lt = localtime(&t)) strftime(buf, sizeof(buf), "%d %b %H:%M", lt);
+#endif
         std::string out = buf;
         for (char& c : out) c = (char)toupper((unsigned char)c);
         return out;
