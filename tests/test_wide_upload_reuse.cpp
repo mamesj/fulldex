@@ -34,4 +34,4 @@ wide.w=640;wide.h=360;wide.pixels=world.data();for(int y=0;y<360;y++)for(int x=0
 // A failed upload is never recorded as valid; the next draw retries it.
 ++wide.serial;failNextUpload=true;reuse.Draw(scene,screens,1280,720,false,&wide);assert(reuse.WideUploads==13);check();assert(reuse.WideUploads==14);check();assert(reuse.WideUploads==14);
 std::cout<<"Repeated worlds skip uploads; changed serial, fill bounds, size, untracked/battle images and fades match uncached pixels.\n";
-SDL_DestroyRenderer(r);SDL_DestroyRenderer(oracle);SDL_FreeSurface(a);SDL_FreeSurface(b);SDL_Quit();}
+SDL_DestroyRenderer(r);SDL_DestroyRenderer(oracle);SDL_FreeSurface(a);SDL_FreeSurface(b);SDL_Quit();return 0;}

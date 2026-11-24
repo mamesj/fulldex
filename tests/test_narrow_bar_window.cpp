@@ -40,4 +40,4 @@ inline void ReferenceBars(const ScreenImage& s, uint32_t left[192], uint32_t rig
 
 int main(){std::mt19937 rng(90217);std::vector<uint32_t> pixels(256*192);ScreenImage image{pixels.data(),nullptr};uint32_t a[192],b[192],c[192],d[192];
 for(int t=0;t<152;t++){for(auto&v:pixels)v=t==150?0:t==151?0xFFFFFFFF:rng();for(bool calm:{false,true}){ReferenceBars(image,a,b,calm);MergedNarrowBars(image,c,d,calm);assert(std::equal(a,a+192,c));assert(std::equal(b,b+192,d));}}
-std::cout<<"Sliding-window bars match every pixel for 304 random/black/white normal and calm cases, including clipped top/bottom windows.\n";}
+std::cout<<"Sliding-window bars match every pixel for 304 random/black/white normal and calm cases, including clipped top/bottom windows.\n";return 0;}
