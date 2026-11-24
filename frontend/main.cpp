@@ -12243,7 +12243,39 @@ int main(int argc, char** argv)
                     }
                 }
             }
-            WideLinesNow = std::min(adaptLines, cfg.wideLines);
+            // (What LOWER RES WHEN BUSY asks for, kept to a few sizes and slow to come back up: it went up a tenth after
+            // 2 calm seconds and down again a moment later, a new size about once a second, and each size change makes
+            // the graphics chip wait and its pictures' memory be made again: stutter on the Switch, and #257's crash
+            // after ten minutes. Down at once; up only after the wait, which doubles each time it has to come down
+            // again within 10 seconds of going up (2, 4, 8 ... 30 seconds), back to 2 after a minute at full detail.)
+            {
+                static int levelLines = 0, upFrames = 0, upWait = 120;
+                static uint32_t wentUp = 0, atFull = 0;
+                const int full = cfg.wideLines;
+                auto snap = [&](int lines) {
+                    for (const int pct : { 100, 80, 64, 50 })
+                    {
+                        const int l = std::max(192, full * pct / 100 / 8 * 8);
+                        if (l <= lines) return l;
+                    }
+                    return std::max(192, std::min(lines, full));
+                };
+                const int want = snap(std::min(adaptLines, full));
+                if (!levelLines || levelLines > full || !cfg.autoDetail) levelLines = std::min(adaptLines, full);
+                else if (want < levelLines)
+                {
+                    if (frame - wentUp < 600) upWait = std::min(1800, upWait * 2);
+                    levelLines = want;
+                    upFrames = 0;
+                }
+                else if (want > levelLines)
+                {
+                    if (++upFrames >= upWait) { levelLines = want; upFrames = 0; wentUp = frame; }
+                }
+                else upFrames = 0;
+                if (levelLines >= full) { if (++atFull >= 3600) upWait = 120; } else atFull = 0;
+                WideLinesNow = levelLines;
+            }
             // While fast forwarding, at most 360 lines (not in the tests without a window) with
             // FAST FORWARD LOW RES on: it shows one frame in several, and the detail comes
             // straight back when it stops.

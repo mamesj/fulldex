@@ -302,6 +302,7 @@ public:
             dkQueueDestroy(Queue);
         }
         FreeTargets();
+        FreeSpare();
         for (Slot& s : Slots)
             if (s.Mem) dkMemBlockDestroy(s.Mem);
         for (auto& r : RetiredMem) dkMemBlockDestroy(r.first);
@@ -642,9 +643,46 @@ private:
         W = H = 0;
     }
 
+    // (The size before is kept as a spare: fast forward's low resolution (360 lines) and back made all four
+    // images again at each press, the graphics chip waiting while they were made, 400 times in #257's session.)
+    void SwapSpare()
+    {
+        std::swap(ColorMem, SpareMem[0]); std::swap(AttrMem, SpareMem[1]); std::swap(DepthMem, SpareMem[2]); std::swap(FinalMem, SpareMem[3]);
+        std::swap(ColorImage, SpareImage[0]); std::swap(AttrImage, SpareImage[1]); std::swap(DepthImage, SpareImage[2]); std::swap(FinalImage, SpareImage[3]);
+        std::swap(W, SpareW); std::swap(H, SpareH);
+    }
+    void FreeSpare()
+    {
+        for (DkMemBlock& m : SpareMem)
+        {
+            if (m) dkMemBlockDestroy(m);
+            m = nullptr;
+        }
+        SpareW = SpareH = 0;
+    }
+    void DescribeTargets()
+    {
+        DkImageView colorView, attrView;
+        dkImageViewDefaults(&colorView, &ColorImage);
+        dkImageViewDefaults(&attrView, &AttrImage);
+        DkImageDescriptor desc[2];
+        dkImageDescriptorInitialize(&desc[0], &colorView, false, false);
+        dkImageDescriptorInitialize(&desc[1], &attrView, false, false);
+        memcpy(Data + OffImageDesc + ImgColor * sizeof(desc[0]), desc, sizeof(desc));
+    }
+
     bool MakeTargets(int w, int h)
     {
         dkQueueWaitIdle(Queue);
+        if (ColorMem && SpareMem[0] && SpareW == w && SpareH == h)
+        {
+            SwapSpare();
+            DescribeTargets();
+            fprintf(stderr, "[widegpu] deko3D targets %dx%d (kept from before)\n", w, h);
+            return true;
+        }
+        FreeSpare();
+        if (ColorMem) SwapSpare(); // (the current ones become the spare)
         FreeTargets();
         const u32 render = DkImageFlags_UsageRender | (Sh->Compress ? DkImageFlags_HwCompression : 0);
         if (!Image(ColorImage, ColorMem, DkImageFormat_RGBA8_Unorm, w, h, render) ||
@@ -657,13 +695,7 @@ private:
             return false;
         }
         // The final pass's two textures.
-        DkImageView colorView, attrView;
-        dkImageViewDefaults(&colorView, &ColorImage);
-        dkImageViewDefaults(&attrView, &AttrImage);
-        DkImageDescriptor desc[2];
-        dkImageDescriptorInitialize(&desc[0], &colorView, false, false);
-        dkImageDescriptorInitialize(&desc[1], &attrView, false, false);
-        memcpy(Data + OffImageDesc + ImgColor * sizeof(desc[0]), desc, sizeof(desc));
+        DescribeTargets();
         W = w;
         H = h;
         fprintf(stderr, "[widegpu] deko3D targets %dx%d\n", w, h);
@@ -674,6 +706,9 @@ private:
     u64 TexVersion = 0;
     DkMemBlock CmdMem = nullptr, DataMem = nullptr;
     DkMemBlock ColorMem = nullptr, AttrMem = nullptr, DepthMem = nullptr, FinalMem = nullptr;
+    DkMemBlock SpareMem[4] = {}; // (the targets of the size before: see SwapSpare)
+    DkImage SpareImage[4];
+    int SpareW = 0, SpareH = 0;
     // The pictures (see Target).
     struct Slot
     {
