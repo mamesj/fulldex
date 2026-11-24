@@ -9,12 +9,16 @@
 #include <string>
 #include <vector>
 #endif
+#include "runtime_kit_windows.h"
 
 namespace RuntimeKit
 {
 inline std::filesystem::path NativePath(const std::filesystem::path& input, std::error_code& ec)
 {
 #ifdef _WIN32
+    // Already extended paths must not pass through MinGW's absolute-path parser.
+    if (input.native().rfind(L"\\\\?\\", 0) == 0)
+    { auto path = input; return path.make_preferred(); }
     auto path = std::filesystem::absolute(input, ec).lexically_normal();
     if (ec) return {};
     const std::wstring wide = path.make_preferred().wstring();
@@ -159,6 +163,16 @@ inline bool CopyMissing(const std::filesystem::path& from, const std::filesystem
     }
     fs::create_directories(nativeTo, ec);
     if (ec) { Fail("destination folder", nativeTo, ec); return false; }
+#ifdef _WIN32
+    // (Windows: its own walker, FindFirstFileW / FindNextFileW over extended paths: MinGW's recursive iterator
+    // gave names from the working folder for a long kit folder.)
+    if (!CopyWindowsTree(nativeFrom, nativeTo, ec))
+    {
+        Fail("copy (Windows walker)", nativeFrom, ec);
+        return false;
+    }
+    return true;
+#else
     auto prefix = nativeFrom.native();
     if (prefix.empty()) { ec = std::make_error_code(std::errc::invalid_argument); Fail("empty source path", nativeFrom, ec); return false; }
     if (prefix.back() != fs::path::preferred_separator) prefix += fs::path::preferred_separator;
@@ -229,5 +243,6 @@ inline bool CopyMissing(const std::filesystem::path& from, const std::filesystem
         std::fprintf(stderr, "[3ds] kit copy: walking [%s] stopped at [%s]: %d %s\n",
                      nativeFrom.u8string().c_str(), last.u8string().c_str(), ec.value(), ec.message().c_str());
     return !ec;
+#endif
 }
 }
