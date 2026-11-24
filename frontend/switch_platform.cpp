@@ -2074,6 +2074,29 @@ void FastClock(bool on)
         }
         clkrstCloseSession(&s);
     }
+    // The memory at 1600 MHz too (handheld has it at 1331; docked it is 1600 already), as the old
+    // CPU BOOST had it: the emulation reads and writes a lot of memory.
+    static u32 memBefore = 0;
+    if (R_SUCCEEDED(clkrstOpenSession(&s, PcvModuleId_EMC, 3)))
+    {
+        const u32 fastMem = 1600000000;
+        if (on)
+        {
+            u32 cur = 0;
+            if (R_SUCCEEDED(clkrstGetClockRate(&s, &cur)) && cur && cur < fastMem && R_SUCCEEDED(clkrstSetClockRate(&s, fastMem)))
+            {
+                memBefore = cur;
+                fprintf(stderr, "[clock] memory %u -> 1600 MHz\n", cur / 1000000);
+            }
+        }
+        else if (memBefore)
+        {
+            clkrstSetClockRate(&s, memBefore);
+            fprintf(stderr, "[clock] memory back to %u MHz\n", memBefore / 1000000);
+            memBefore = 0;
+        }
+        clkrstCloseSession(&s);
+    }
     clkrstExit();
 }
 
