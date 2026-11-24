@@ -426,6 +426,15 @@ The pause menu also has RESUME, SAVE STATE, LOAD STATE, FAST FORWARD, CHEATS
 in-game save as it is; saving in the game afterwards writes over it as usual. Not every platform has
 every setting: a phone and the Switch are always full screen, for one.
 
+When **FAST FORWARD BUTTON** is set to **HOLD**, a new direction in a DS menu or
+battle briefly runs at normal speed (up to a quarter second). This lets a quick
+tap move the cursor once instead of skipping several choices. Holding the direction
+longer resumes fast forward; ordinary walking is exempt when the field is detected.
+For continuous fast forward while choosing battle commands, turn **FAST FORWARD**
+on in the pause menu, or set **FAST FORWARD BUTTON** to **TOGGLE** and press the
+button once. Press it again, or turn the menu switch off, to stop. This uses the
+existing continuous mode and keeps the cursor assistance available in Hold mode.
+
 GBA state slots are replaced only after the new state has been written and closed
 successfully. The previous successful state stays beside the slot as `.ss.previous`;
 an interrupted or failed write stays as `.ss.pending` without replacing the slot.
