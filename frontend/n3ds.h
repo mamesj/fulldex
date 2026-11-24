@@ -674,7 +674,10 @@ struct Prep
     std::chrono::steady_clock::time_point started{};
     std::string code, name, step, error;
 };
-inline Prep& P() { static Prep p; return p; }
+// A preparation worker may still run during exit. Its mutex and strings must
+// outlive static teardown too: destroying Prep while the worker still uses it
+// is a use-after-free. One process-lifetime instance keeps quitting non-blocking.
+inline Prep& P() { static Prep* const p = new Prep; return *p; }
 
 inline void StartPrepare(const std::string& appDir, const Launcher::Game& g)
 {
