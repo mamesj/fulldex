@@ -37,6 +37,7 @@
 #endif
 #if defined(__linux__) && !defined(__ANDROID__) && !defined(__SWITCH__)
 #include <sys/wait.h>
+#include <cerrno>
 #include <unistd.h>
 #include <climits>
 #endif
@@ -741,17 +742,25 @@ inline void StartPrepare(const std::string& appDir, const Launcher::Game& g)
                     std::string line;
                     char buf[512];
                     ssize_t got;
-                    while ((got = read(fd[0], buf, sizeof buf)) > 0)
+                    for (;;)
+                    {
+                        got = read(fd[0], buf, sizeof buf);
+                        if (got < 0 && errno == EINTR) continue;
+                        if (got <= 0) break;
                         for (ssize_t i = 0; i < got; i++)
                         {
                             if (buf[i] == '\n') { if (!line.empty() && line.back() == '\r') line.pop_back(); take(line); line.clear(); }
                             else line += buf[i];
                         }
+                    }
+                    if (got < 0) fail("COULDN'T READ ITS PREPARATION OUTPUT");
                     if (!line.empty()) take(line);
                     close(fd[0]);
                     int st = 0;
-                    waitpid(pid, &st, 0);
-                    if (!(WIFEXITED(st) && WEXITSTATUS(st) == 0) && !p.failed) fail("IT STOPPED (SEE data/prepare.log IN ITS FOLDER)");
+                    pid_t waited;
+                    do { waited = waitpid(pid, &st, 0); } while (waited < 0 && errno == EINTR);
+                    if (waited != pid && !p.failed) fail("COULDN'T CHECK ITS PREPARATION RESULT");
+                    else if (waited == pid && !(WIFEXITED(st) && WEXITSTATUS(st) == 0) && !p.failed) fail("IT STOPPED (SEE data/prepare.log IN ITS FOLDER)");
                 }
             }
         }
