@@ -91,6 +91,9 @@ public class GameActivity extends SDLActivity {
             Intent clean = new Intent(getIntent()); clean.setData(null); setIntent(clean);
         }
         super.onCreate(state);
+        // (The launcher starts fullscreen. Queue it before SDL can render into the
+        // first surface, which would otherwise be sized with the system bars.)
+        if (!mBrokenLibraries) SDLActivity.setWindowStyle(true);
         startupTrace("Activity created", true);
         getContentResolver().registerContentObserver(Settings.System.getUriFor(
             Settings.System.ACCELEROMETER_ROTATION), false, rotationObserver);
