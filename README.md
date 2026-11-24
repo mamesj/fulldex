@@ -382,11 +382,16 @@ The game's code is built once from your dump for the best speed; until then it c
 - **Android (64-bit phones):** put your `.3ds` in your ROMs folder and pick the game. It is copied
   into FullDex once (about 2 GB) and starts. In the game's menu, **Build For Best Speed** builds it
   on the phone (about 25 minutes, keep it plugged in), or **Use Game Code From PC** takes the file
-  the FullDex Builder makes.
-- **Switch:** the Switch cannot build it itself. Use the
-  [FullDex Builder](https://github.com/mamesj/pokemon-fulldex/releases/tag/fulldex-builder-0.1) on a
-  Windows PC to make the game's folder from your dump, copy it into `/switch/` with your
-  `game.3ds`, and FullDex lists it.
+  **Put On My Phone** makes in FullDex on a Windows PC (the game's **Game Options**).
+- **Switch:** use FullDex 1.7 or newer on a Windows PC. Put your own `.3ds` dump in its
+  ROMs folder, open the game's **Game Options**, and choose **Put On My Switch**.
+  Insert the Switch's SD card and select it, or choose **Save To A Folder Instead**.
+  Wait for all the steps to finish. The folder option produces a complete game folder
+  to copy into `/switch/` on the SD card; the SD-card option copies it there for you.
+  Put the card back in the Switch and choose the game in FullDex's **3DS Beta** tab.
+  The separate **FullDex Builder 0.1** download is obsolete; generated `.c`, `.o` and
+  `.h` files alone are not a playable game folder. If setup fails, keep the first
+  failing step and its log when [reporting it](#reporting-a-bug).
 
 It is a beta: back up your saves, and please [report](#reporting-a-bug) anything that goes wrong.
 

@@ -54,8 +54,12 @@ The Windows download also plays your own copies of Pokemon Omega Ruby and Alpha 
    on choosing other games meanwhile. This needs no download.
 3. Then choose it again to play. Quitting it brings you back to the list.
 Each game keeps its own folder, with its saves and settings, in 3ds (3ds\000400000011C400 is
-Omega Ruby, 3ds\000400000011C500 Alpha Sapphire). For the Switch and Android, see the FullDex
-Builder on the releases page.
+Omega Ruby, 3ds\000400000011C500 Alpha Sapphire).
+For the Switch, use Game Options > Put On My Switch in FullDex 1.7 or newer on Windows.
+Choose the Switch's SD card, or Save To A Folder Instead and copy the finished game folder
+into /switch/ on the card. Wait until every step succeeds; .c, .o and .h files alone are not
+a playable folder. For Android, use Game Options > Put On My Phone and copy the file it
+makes to the phone's ROMs folder. The separate FullDex Builder 0.1 is obsolete.
 
 
 STEAM DECK
