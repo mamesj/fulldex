@@ -271,9 +271,7 @@ void Compiler::Comp_MemAccess(int rd, int rn, Op2 offset, int size, int flags)
             SetJumpTarget(notDtcm);
         }
 
-        // (With the DTCM way compiled, no register is unloaded here: both ways meet after the call
-        // with the register cache as it is now, the call's way saving and loading them back.)
-        PushRegs(false, false, !dtcmInline);
+        PushRegs(false, false);
 
         if (func)
         {
