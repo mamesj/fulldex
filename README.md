@@ -395,6 +395,11 @@ The game's code is built once from your dump for the best speed; until then it c
 
 It is a beta: back up your saves, and please [report](#reporting-a-bug) anything that goes wrong.
 
+**Custom 3DS textures:** the runtime accepts Citra-style PNG replacements in the
+game's `hd-textures` folder. See [installing a texture pack](docs/howto/3ds-texture-packs.md)
+for the folder, file naming and **3DS > HD textures** setting. The packs are supplied
+separately; compatibility of the individual packs requested in #266 still needs testing.
+
 ## Features
 
 ### Settings
