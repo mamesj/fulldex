@@ -430,6 +430,13 @@ session so the damaged file can be recovered; turn resume off to start normally.
 This feature currently covers DS and FullDex's embedded GBA player, not 3DS. Mobile lifecycle behavior
 still depends on the operating system giving the app time to finish writing.
 
+For DS games on a phone, choose **Display → Screen Layout → Vertical** for two
+stacked screens with the default touch controls in a separate panel below them.
+This explicit layout requests portrait orientation on Android and iOS; other game
+layouts keep landscape orientation. Portrait defaults scale to the phone's width,
+and the existing touch editor still stores separate portrait and landscape positions.
+This change covers DS games; GBA and 3DS portrait modes remain separate work.
+
 The pause menu also has RESUME, SAVE STATE, LOAD STATE, FAST FORWARD, CHEATS
 ([below](#cheats)), RETROACHIEVEMENTS ([below](#retroachievements)), RESET GAME and QUIT
 (back to the game list). LOAD STATE takes you back to where the state was made but leaves your

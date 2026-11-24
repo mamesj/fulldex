@@ -64,6 +64,7 @@
 #ifdef SSR_IOS
 #include "ios_orient.h"
 #endif
+#include "mobile_orientation.h"
 #ifdef SSR_IOS
 // The list is drawn inside the screen's safe area (#153): its tabs were under the Dynamic Island.
 // Insets in window points; taps are moved by them as they arrive, and the list's own window size
@@ -4736,14 +4737,9 @@ bool Start(int& argc, char**& argv)
         }
 #endif
 #if defined(__ANDROID__) || defined(SSR_IOS)
-        // Sideways before either engine opens its window. On Android the hint alone can
+        // Orient before either engine opens its window. On Android the hint alone can
         // leave the shared activity upright; on iOS the same, until the window asks.
-        SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
-#ifdef __ANDROID__
-        JavaVoid("showGameOrientation");
-#else
-        IosOrientGame();
-#endif
+        MobileOrientation::Game(games[chosen].platform == Launcher::DS && Launcher::ConfigValue(fo.cfg, "view") == "vertical");
 #endif
 #ifdef SSR_GBA
         // A GBA game: played here (Pokemon GBA Widescreen, built in), then the list again.

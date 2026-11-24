@@ -211,6 +211,7 @@ public class GameActivity extends SDLActivity {
     // The launcher and both game engines share one activity. Keep its orientation tied to
     // the current screen, including when SDL recreates its window with a stale size/hint.
     private static volatile boolean playingGame;
+    private static volatile boolean portraitGame;
     // A launcher page (Settings, Launcher, ...) is shown sideways, but it is still the launcher: it
     // turns the screen, not the camera cutout, to the game's way.
     private static volatile boolean landscapeOnly;
@@ -251,7 +252,7 @@ public class GameActivity extends SDLActivity {
         runOnUiThread(() -> {
             boolean autoRotate = Settings.System.getInt(getContentResolver(),
                 Settings.System.ACCELEROMETER_ROTATION, 0) != 0;
-            setRequestedOrientation(playingGame || landscapeOnly
+            setRequestedOrientation(playingGame && portraitGame ? ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT : playingGame || landscapeOnly
                 ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
                 : autoRotate ? ActivityInfo.SCREEN_ORIENTATION_FULL_USER
                              : ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
@@ -260,6 +261,7 @@ public class GameActivity extends SDLActivity {
 
     public static void showLauncherOrientation() {
         playingGame = false;
+        portraitGame = false;
         landscapeOnly = false;
         setDsRunning(false);
         if (self != null) self.applyScreenOrientation();
@@ -267,6 +269,13 @@ public class GameActivity extends SDLActivity {
 
     public static void showGameOrientation() {
         playingGame = true;
+        portraitGame = false;
+        if (self != null) self.applyScreenOrientation();
+    }
+
+    public static void showPortraitGameOrientation() {
+        playingGame = true;
+        portraitGame = true;
         if (self != null) self.applyScreenOrientation();
     }
 

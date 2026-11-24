@@ -1,13 +1,13 @@
 #pragma once
 // iPhone and iPad (tools/ios/build_all.sh). The game list turns with the device (upright or
-// sideways) and a game is sideways, on a phone or a tablet. SDL reads its orientation hint when a window is
+// sideways). Games are sideways except the explicit Vertical DS layout, which is upright. SDL reads its orientation hint when a window is
 // made, and from iOS 16 a window already on screen does not turn unless asked.
 
 // The list. Call before its window is made, and again once that window exists.
 void IosOrientLauncher();
-// A DS or GBA game. Call before its window is made. A window made later (the GBA
+// A DS or GBA game (portrait for stacked DS screens). Call before its window is made. A window made later (the GBA
 // game's own) is turned when it is shown.
-void IosOrientGame();
+void IosOrientGame(bool portrait = false);
 // The screen's safe area (clear of the Dynamic Island, the notch and the home bar), in the
 // window's points, for the list to keep its tabs and buttons in (#153).
 void IosSafeInsets(int* top, int* bottom, int* left, int* right);

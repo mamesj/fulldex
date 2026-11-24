@@ -39,6 +39,9 @@ struct TouchPad
     std::map<SDL_FingerID, SDL_FPoint> fingerAt;   // where each finger is, in output pixels
     std::map<SDL_FingerID, int> lifted;            // up, frames left to count as held (see Up)
 
+    // A portrait phone's controls fit its width and occupy a separate lower panel.
+    static int PortraitHeight(int width, int height) { return height > width ? width / 2 : 0; }
+
     SDL_Texture* labels = nullptr;
     int labelsLanguage = -1;
     std::map<std::string, SDL_Rect> labelRect;
@@ -49,7 +52,8 @@ struct TouchPad
         w = outW;
         h = outH;
         dpadHidden = false;
-        const float u = outH / 10.0f;
+        const bool portrait = outH > outW;
+        const float u = portrait ? outW / 12.0f : outH / 10.0f;
         dpadR = 1.55f * u;
         dpadX = 0.35f * u + dpadR;
         dpadY = outH - 0.45f * u - dpadR;
@@ -82,6 +86,10 @@ struct TouchPad
                     b.y = 0.55f * u;
                     b.w = 1.8f * u;
                 }
+        if (portrait)
+            for (Button& b : buttons)
+                if (b.pad == PAD_LB || b.pad == PAD_RB || b.pad == MENU || b.pad == FAST || b.pad == NAV)
+                    b.y = outH - 5.3f * u;
         if (customise)
         {
             const auto controls = profile.Apply(Geometry(), w, h);
@@ -125,7 +133,8 @@ struct TouchPad
             if (b.w > 0)
             {
                 // A little slack around the small pills.
-                if (fabsf(x - b.x) <= b.w / 2 + h * 0.02f && fabsf(y - b.y) <= b.h / 2 + h * 0.02f) return b.pad;
+                const float slack = std::min(w, h) * 0.02f;
+                if (fabsf(x - b.x) <= b.w / 2 + slack && fabsf(y - b.y) <= b.h / 2 + slack) return b.pad;
             }
             else if ((x - b.x) * (x - b.x) + (y - b.y) * (y - b.y) <= b.r * b.r * 1.3f) return b.pad;
         }

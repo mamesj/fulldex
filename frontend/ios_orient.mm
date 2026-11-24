@@ -1,5 +1,5 @@
 // Lets the game list turn with an iPhone or iPad (upright or sideways, as it is held), and
-// turns the screen sideways for a game.
+// turns the screen sideways for a game, or upright for stacked DS screens.
 // Info.plist allows both (tools/ios/build_all.sh); this asks iOS to use one of them.
 // SDL's hint alone does not turn a screen that is already up, which is how the list
 // and a game share one app.
@@ -99,7 +99,7 @@ static void Set(bool landscape, bool free)
 }
 
 void IosOrientLauncher() { Set(false, true); }
-void IosOrientGame() { Set(true, false); }
+void IosOrientGame(bool portrait) { Set(!portrait, false); }
 
 void IosSafeInsets(int* top, int* bottom, int* left, int* right)
 {
