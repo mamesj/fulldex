@@ -76,6 +76,14 @@
 
 
 ## FullDex 1.7 (20 November 2026)
+- Steam shortcuts reject excessively nested, damaged VDF data instead of exhausting the launcher stack. Unsupported files are left untouched.
+- Save-state dates classify Today and Yesterday using local calendar dates, including 23-hour and 25-hour daylight-saving days. Future-dated files show their actual date. FullDex DS/GBA state timestamps on Switch use the console time zone rather than newlib UTC.
+
+- Switching games while a cloud save is still busy clears the previous game's sync context. If the new game cannot start syncing yet, a message explains that cloud sync is off for that session; later save events cannot reuse the previous game's path.
+- DS: reuse the overlapping colour sums when drawing soft side bars, keeping their pixels unchanged while reducing CPU work.
+
+
+## FullDex 1.7 (not released yet)
 
 - **Pokémon X, Y, Ultra Sun and Ultra Moon (3DS beta).** FullDex lists a .3ds dump of any of them with your ROMs and plays it the same way as Omega Ruby and Alpha Sapphire: on a PC the game's code is built once from your dump (about 5 minutes), on a phone too. Each keeps its own save (pokemonx.sav, pokemony.sav, ultrasun.sav, ultramoon.sav) with your other saves.
 - **The 3DS games on your Switch, set up from FullDex on a Windows PC.** In a 3DS game's Game Options, Put On My Switch finds the Switch's SD card in the PC, builds the game from your own dump (5 to 10 minutes) and copies it to the card, with the shaders the Switch saved as missing. The Switch tools download once (about 90 MB). On the Switch, a dump that is not set up yet says how. Save To A Folder Instead works without a card.

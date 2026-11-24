@@ -1253,16 +1253,24 @@ inline void MergedNarrowBars(const ScreenImage& s, uint32_t left[192], uint32_t 
             rowSum[y][2] = b;
         }
         uint32_t* out = side ? right : left;
+        uint32_t r = 0, g = 0, b = 0;
+        for (int k = 0; k <= reach; k++)
+        {
+            r += rowSum[k][0]; g += rowSum[k][1]; b += rowSum[k][2];
+        }
         for (int y = 0; y < 192; y++)
         {
-            uint32_t r = 0, g = 0, b = 0, n = 0;
-            for (int k = std::max(0, y - reach); k <= std::min(191, y + reach); k++, n += 8)
-            {
-                r += rowSum[k][0];
-                g += rowSum[k][1];
-                b += rowSum[k][2];
-            }
+            const uint32_t n = (std::min(191, y + reach) - std::max(0, y - reach) + 1) * 8;
             out[y] = 0xFF000000 | (r / n * keep >> 8) << 16 | (g / n * keep >> 8) << 8 | (b / n * keep >> 8);
+            // (The next row's blur differs only at the two ends of its window.)
+            if (y >= reach)
+            {
+                r -= rowSum[y - reach][0]; g -= rowSum[y - reach][1]; b -= rowSum[y - reach][2];
+            }
+            if (y + reach + 1 < 192)
+            {
+                r += rowSum[y + reach + 1][0]; g += rowSum[y + reach + 1][1]; b += rowSum[y + reach + 1][2];
+            }
         }
     }
 }
