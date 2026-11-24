@@ -26,6 +26,52 @@
 - **3DS games: the Mega Evolution button shows in ordinary battles** (#199), not only in the Battle Maison.
 - **3DS games: building a game no longer stops at one part that fails to compile** (#204). That part is built again on its own, then without optimisation, and the rest goes on.
 
+### Guides
+
+- Guide: explain Hold-mode cursor assistance and how to keep fast forward continuous while selecting DS battle commands (#246).
+- Explain custom DS Action Replay files on Android, accessible Cheats Folder selection, exact ROM filenames and the current lack of an in-app text editor (#259).
+- Guide: replace obsolete Builder 0.1 instructions with the current Put On My Switch/Phone setup flow (#261).
+- Guide: explain the existing custom 3DS PNG texture-pack loader, supported folders and filenames, and the HD textures setting (#266).
+- Linux guide: explain x86_64 versus aarch64 downloads and how to diagnose an exec format error (#254).
+
+### DS and GBA
+
+- DS and GBA zoom offer finer 1.1x, 1.2x, 1.3x and 1.4x choices (#253). GBA keeps larger whole-pixel choices and limits fine choices to its supported map window. Text, menus and battles still pull the camera close automatically.
+- GBA: pace presentation at 60 pictures per second when the graphics driver accepts vsync but does not wait for it (#250). This addresses the runaway presentation counter; the broader DS/3DS slowdown still needs device verification.
+- DS games on phones can use the explicit Vertical layout in portrait orientation, with touch controls below the stacked screens. Other layouts stay in landscape; GBA and 3DS portrait support are unchanged (#58).
+- Save-state dates classify Today and Yesterday using local calendar dates, including 23-hour and 25-hour daylight-saving days. Future-dated files show their actual date. FullDex DS/GBA state timestamps on Switch use the console time zone rather than newlib UTC.
+- DS save states refuse directories or special files at a slot or previous-state path, preserving those paths instead of moving or deleting them during a save.
+- DS and GBA state recovery refuses directories or special files at pending/recovery filenames, preserving those paths rather than moving or deleting them as interrupted state files.
+
+### Saves and folders
+
+- Changing the saves folder now stops on unreadable folders, failed copies or linked paths inside either folder, keeping the current folder active. Existing destination saves are preserved, and sibling folders such as `saves-backup` are accepted.
+- Choosing a folder for save states, cheats or settings now keeps the current folder active if copying fails. Nested destinations and linked entries are rejected instead of switching to an incomplete copy.
+- Recovery after an interrupted folder move keeps files on both sides while the move was still copying. It no longer deletes matching destination files that may have existed before the move; a retry can reuse complete copies.
+- A folder move now checks that its recovery journal closed successfully before using it. A buffered write failure keeps the previous journal instead of replacing it with a truncated one.
+- Folder-layout migration and undo stop if a directory cannot be fully listed or contains linked paths. FullDex keeps the current layout instead of moving only the readable files and hiding the rest.
+- Folder moves refuse source and destination paths that identify the same file. Recovery also preserves such files in older move journals instead of deleting the only copy through a folder alias.
+- Folder-based cloud sync stops when an existing remote save cannot be read, instead of treating it as missing and uploading over it. Resolve the read problem before retrying.
+- Switching games while a cloud save is still busy clears the previous game's sync context. If the new game cannot start syncing yet, a message explains that cloud sync is off for that session; later save events cannot reuse the previous game's path.
+
+### Shortcuts
+
+- Desktop shortcut lookup and removal now use the same supported-game rules as creation. Selecting a ROM hack on Windows or macOS no longer finds or removes the original game's shortcut instead.
+- Desktop shortcut removal now reports permission and deletion failures instead of saying the shortcut was removed. If the launcher entry cannot be removed, its icon is kept and later removal steps stop; already missing entries remain harmless.
+- Linux desktop shortcuts honor a custom XDG config folder and a disabled desktop. Applications-menu shortcuts still work, while home-directory desktop entries are left alone when the desktop is disabled. Invalid relative XDG base paths use the standard defaults.
+- Linux shortcuts decode quoted desktop-directory paths correctly, including escaped quotes, backslashes and dollar signs. Malformed or unsupported assignments are ignored without executing shell text.
+- Linux shortcut names preserve leading spaces in custom display names. Desktop-entry spaces are escaped explicitly; exact ROM arguments and working directories remain covered by launch tests.
+- Steam shortcuts reject excessively nested, damaged VDF data instead of exhausting the launcher stack. Unsupported files are left untouched.
+
+### 3DS setup
+
+- **3DS preparation on Linux:** signals no longer interrupt the output reader or make an unfinished preparation process appear successful. Failed reads and unavailable process results are reported as errors.
+- **Quitting during 3DS preparation:** the background worker keeps its state alive through shutdown, avoiding access to freed preparation text or a destroyed mutex. Quitting still does not wait for the build.
+- 3DS setup reports a blocked tool path when a directory or special file occupies the place of a required file. It preserves the obstruction and allows retry after it is resolved, instead of reporting an incomplete copy as successful.
+- 3DS runtime-kit copying refuses overlapping source and destination folders before creating files. This prevents copying a kit back into itself or modifying its source through an enclosing destination; separate sibling folders remain supported.
+- 3DS setup on Windows enumerates long runtime-kit folders through the wide Windows API, preventing the MinGW directory iterator from reading the wrong folder and failing to copy required files. Existing destination files are preserved.
+
+
 ## FullDex 1.7 (20 November 2026)
 
 - **Pokémon X, Y, Ultra Sun and Ultra Moon (3DS beta).** FullDex lists a .3ds dump of any of them with your ROMs and plays it the same way as Omega Ruby and Alpha Sapphire: on a PC the game's code is built once from your dump (about 5 minutes), on a phone too. Each keeps its own save (pokemonx.sav, pokemony.sav, ultrasun.sav, ultramoon.sav) with your other saves.

@@ -382,13 +382,23 @@ The game's code is built once from your dump for the best speed; until then it c
 - **Android (64-bit phones):** put your `.3ds` in your ROMs folder and pick the game. It is copied
   into FullDex once (about 2 GB) and starts. In the game's menu, **Build For Best Speed** builds it
   on the phone (about 25 minutes, keep it plugged in), or **Use Game Code From PC** takes the file
-  the FullDex Builder makes.
-- **Switch:** the Switch cannot build it itself. Use the
-  [FullDex Builder](https://github.com/mamesj/pokemon-fulldex/releases/tag/fulldex-builder-0.1) on a
-  Windows PC to make the game's folder from your dump, copy it into `/switch/` with your
-  `game.3ds`, and FullDex lists it.
+  **Put On My Phone** makes in FullDex on a Windows PC (the game's **Game Options**).
+- **Switch:** use FullDex 1.7 or newer on a Windows PC. Put your own `.3ds` dump in its
+  ROMs folder, open the game's **Game Options**, and choose **Put On My Switch**.
+  Insert the Switch's SD card and select it, or choose **Save To A Folder Instead**.
+  Wait for all the steps to finish. The folder option produces a complete game folder
+  to copy into `/switch/` on the SD card; the SD-card option copies it there for you.
+  Put the card back in the Switch and choose the game in FullDex's **3DS Beta** tab.
+  The separate **FullDex Builder 0.1** download is obsolete; generated `.c`, `.o` and
+  `.h` files alone are not a playable game folder. If setup fails, keep the first
+  failing step and its log when [reporting it](#reporting-a-bug).
 
 It is a beta: back up your saves, and please [report](#reporting-a-bug) anything that goes wrong.
+
+**Custom 3DS textures:** the runtime accepts Citra-style PNG replacements in the
+game's `hd-textures` folder. See [installing a texture pack](docs/howto/3ds-texture-packs.md)
+for the folder, file naming and **3DS > HD textures** setting. The packs are supplied
+separately; compatibility of the individual packs requested in #266 still needs testing.
 
 ## Features
 
@@ -420,11 +430,27 @@ session so the damaged file can be recovered; turn resume off to start normally.
 This feature currently covers DS and FullDex's embedded GBA player, not 3DS. Mobile lifecycle behavior
 still depends on the operating system giving the app time to finish writing.
 
+For DS games on a phone, choose **Display → Screen Layout → Vertical** for two
+stacked screens with the default touch controls in a separate panel below them.
+This explicit layout requests portrait orientation on Android and iOS; other game
+layouts keep landscape orientation. Portrait defaults scale to the phone's width,
+and the existing touch editor still stores separate portrait and landscape positions.
+This change covers DS games; GBA and 3DS portrait modes remain separate work.
+
 The pause menu also has RESUME, SAVE STATE, LOAD STATE, FAST FORWARD, CHEATS
 ([below](#cheats)), RETROACHIEVEMENTS ([below](#retroachievements)), RESET GAME and QUIT
 (back to the game list). LOAD STATE takes you back to where the state was made but leaves your
 in-game save as it is; saving in the game afterwards writes over it as usual. Not every platform has
 every setting: a phone and the Switch are always full screen, for one.
+
+When **FAST FORWARD BUTTON** is set to **HOLD**, a new direction in a DS menu or
+battle briefly runs at normal speed (up to a quarter second). This lets a quick
+tap move the cursor once instead of skipping several choices. Holding the direction
+longer resumes fast forward; ordinary walking is exempt when the field is detected.
+For continuous fast forward while choosing battle commands, turn **FAST FORWARD**
+on in the pause menu, or set **FAST FORWARD BUTTON** to **TOGGLE** and press the
+button once. Press it again, or turn the menu switch off, to stop. This uses the
+existing continuous mode and keeps the cursor assistance available in Hold mode.
 
 GBA state slots are replaced only after the new state has been written and closed
 successfully. The previous successful state stays beside the slot as `.ss.previous`;
@@ -521,7 +547,7 @@ in a `cheats` folder (make it if it isn't there):
 | PC (Windows, Linux, Steam Deck) | `cheats` beside the program (next to `saves`) |
 | Linux AppImage | `~/.local/share/pokemon-ds-wide/cheats` |
 | Mac | `~/Library/Application Support/Pokemon DS Widescreen/cheats` |
-| Android | `cheats` inside the folder you chose for your ROMs |
+| Android | `FullDex/cheats` inside the shared ROM folder with the tidy layout, or your configured Cheats Folder; imported libraries can use the app's private folder |
 | iPhone and iPad | Files app: On My iPhone (or iPad) > Pokémon Fulldex > `cheats` |
 | Nintendo Switch | `/switch/pokemon-ds-wide/cheats/` on the SD card |
 
@@ -558,6 +584,7 @@ in a `cheats` folder (make it if it isn't there):
   D2000000 00000000
   ```
   melonDS's own cheat files (`IPKE.mch` and so on) work too.
+
 - **Codes for one ROM:** name the text or melonDS cheat file after the ROM, without `.nds`:
   `My Hack.txt` for `My Hack.nds`. If either ROM-specific file exists, those files take
   priority over the game-code files. ROM hacks keep their enabled cheats separately,
@@ -583,6 +610,31 @@ letter chooser with a controller or touch.
   Pictures over 2048 pixels on a side are read at a fraction of their size.
 
 ---
+
+### Add your own DS codes on Android
+
+Custom DS Action Replay files are supported; there is currently no in-app **Add Cheat**
+text editor. For SoulSilver or another DS game:
+
+1. Quit the game to the library. Open **Settings > Game List > Cheats Folder** and
+   choose a writable shared-storage folder you can open in a text editor, such as
+   `Documents/FullDex Cheats`. Allow the requested file access. This also avoids
+   needing a file manager that can open `Android/data` for an imported library.
+2. Create a plain-text file named exactly like the ROM, replacing `.nds` with `.txt`:
+   `Pokemon SoulSilver.nds` uses `Pokemon SoulSilver.txt`. Avoid an extra `.txt`
+   extension added by your editor. Alternatively use the game's cartridge code as
+   listed above; game-code names depend on the ROM's language/version.
+3. Put a cheat name on its own line, followed by its verified Action Replay code
+   lines (two eight-digit hexadecimal words per line). Start the next cheat with
+   its name on a new line. Empty lines and lines beginning with `#` or `;` are ignored.
+4. Save the file in the chosen Cheats Folder and start the game again. Open
+   **Cheats** in the pause menu; codes from your text file appear above the database
+   folders and start disabled. Enable only the code you want.
+
+Use codes for the exact game, region and revision. The example above is a file-format
+example, not a code to reuse for every game. A ROM-named `.txt` or `.mch` takes priority
+over the game-code files. This guide covers DS Action Replay files; the GBA and 3DS
+players use separate cheat systems.
 
 ## The games
 

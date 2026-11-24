@@ -3,12 +3,22 @@
 #include <filesystem>
 #include <string>
 #include <system_error>
+#ifdef _WIN32
+#include <windows.h>
+#include <memory>
+#include <string>
+#include <vector>
+#endif
+#include "runtime_kit_windows.h"
 
 namespace RuntimeKit
 {
 inline std::filesystem::path NativePath(const std::filesystem::path& input, std::error_code& ec)
 {
 #ifdef _WIN32
+    // Already extended paths must not pass through MinGW's absolute-path parser.
+    if (input.native().rfind(L"\\\\?\\", 0) == 0)
+    { auto path = input; return path.make_preferred(); }
     auto path = std::filesystem::absolute(input, ec).lexically_normal();
     if (ec) return {};
     const std::wstring wide = path.make_preferred().wstring();
@@ -22,6 +32,95 @@ inline std::filesystem::path NativePath(const std::filesystem::path& input, std:
     (void)ec;
     return input;
 #endif
+}
+
+#ifdef _WIN32
+inline std::filesystem::path OrdinaryPath(const std::filesystem::path& input)
+{
+    auto text = input.native();
+    if (text.rfind(L"\\\\?\\UNC\\", 0) == 0) text = L"\\\\" + text.substr(8);
+    else if (text.rfind(L"\\\\?\\", 0) == 0) text = text.substr(4);
+    return std::filesystem::path(text);
+}
+#endif
+
+inline std::filesystem::path GuardPath(const std::filesystem::path& input, std::error_code& ec)
+{
+#ifdef _WIN32
+    namespace fs = std::filesystem;
+    // MinGW's weakly_canonical misparses extended paths. Resolve the nearest
+    // existing ancestor through Windows instead, including junction targets.
+    auto path = fs::absolute(OrdinaryPath(input), ec).lexically_normal();
+    if (ec) return {};
+    std::vector<fs::path> missing;
+    for (;;)
+    {
+        const auto native = NativePath(path, ec);
+        if (ec) return {};
+        const bool exists = fs::exists(native, ec);
+        if (ec) return {};
+        if (exists) break;
+        const auto parent = path.parent_path();
+        if (parent.empty() || parent == path)
+        { ec = std::make_error_code(std::errc::no_such_file_or_directory); return {}; }
+        missing.push_back(path.filename());
+        path = parent;
+    }
+    const auto native = NativePath(path, ec);
+    if (ec) return {};
+    HANDLE raw = CreateFileW(native.c_str(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                             nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    if (raw == INVALID_HANDLE_VALUE)
+    { ec = std::error_code(GetLastError(), std::system_category()); return {}; }
+    std::unique_ptr<void, decltype(&CloseHandle)> handle(raw, &CloseHandle);
+    std::wstring buffer(256, L'\0');
+    for (;;)
+    {
+        const DWORD length = GetFinalPathNameByHandleW(handle.get(), buffer.data(), static_cast<DWORD>(buffer.size()), FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+        if (!length)
+        { ec = std::error_code(GetLastError(), std::system_category()); return {}; }
+        if (length < buffer.size()) { buffer.resize(length); break; }
+        buffer.resize(static_cast<size_t>(length) + 1);
+    }
+    auto resolved = OrdinaryPath(fs::path(buffer));
+    for (auto it = missing.rbegin(); it != missing.rend(); ++it) resolved /= *it;
+    return resolved.lexically_normal();
+#else
+    return std::filesystem::weakly_canonical(input, ec);
+#endif
+}
+
+// Compare existing physical ancestors, so aliases and Windows case differences
+// cannot turn a sibling check into a copy back into the source tree.
+inline bool ContainsPath(const std::filesystem::path& outer, std::filesystem::path inner, std::error_code& ec)
+{
+    namespace fs = std::filesystem;
+    const auto nativeOuter = NativePath(outer, ec);
+    if (ec) return false;
+    const bool outerExists = fs::exists(nativeOuter, ec);
+    if (ec || !outerExists) return false;
+    auto root = inner.root_path();
+#ifdef _WIN32
+    // A UNC share is the filesystem root; do not probe its server as a folder.
+    if (inner.native().rfind(L"\\\\", 0) == 0 && !inner.relative_path().empty())
+        root /= *inner.relative_path().begin();
+#endif
+    for (;;)
+    {
+        const auto nativeInner = NativePath(inner, ec);
+        if (ec) return false;
+        const bool exists = fs::exists(nativeInner, ec);
+        if (ec) return false;
+        if (exists)
+        {
+            if (fs::equivalent(nativeOuter, nativeInner, ec)) return true;
+            if (ec) return false;
+        }
+        if (inner == root) return false;
+        const auto parent = inner.parent_path();
+        if (parent.empty() || parent == inner) return false;
+        inner = parent;
+    }
 }
 
 // Retry an interrupted kit installation even if its executable was copied first.
@@ -40,8 +139,40 @@ inline bool CopyMissing(const std::filesystem::path& from, const std::filesystem
     if (ec) { Fail("source path", from, ec); return false; }
     const auto nativeTo = NativePath(to, ec);
     if (ec) { Fail("destination path", to, ec); return false; }
+    if (!fs::is_directory(nativeFrom, ec))
+    {
+        if (!ec) ec = std::make_error_code(std::errc::not_a_directory);
+        Fail("source folder", nativeFrom, ec);
+        return false;
+    }
+    // (The destination may not be inside the source, nor the source inside it: the copy would copy its own
+    // output until the path got too long.)
+    const auto source = GuardPath(from, ec);
+    if (ec) { Fail("resolve source", from, ec); return false; }
+    const auto target = GuardPath(to, ec);
+    if (ec) { Fail("resolve destination", to, ec); return false; }
+    const bool intoSource = ContainsPath(source, target, ec);
+    if (ec) { Fail("compare paths", to, ec); return false; }
+    const bool aroundSource = ContainsPath(target, source, ec);
+    if (ec) { Fail("compare paths", from, ec); return false; }
+    if (intoSource || aroundSource)
+    {
+        ec = std::make_error_code(std::errc::invalid_argument);
+        Fail("destination overlaps the source", to, ec);
+        return false;
+    }
     fs::create_directories(nativeTo, ec);
     if (ec) { Fail("destination folder", nativeTo, ec); return false; }
+#ifdef _WIN32
+    // (Windows: its own walker, FindFirstFileW / FindNextFileW over extended paths: MinGW's recursive iterator
+    // gave names from the working folder for a long kit folder.)
+    if (!CopyWindowsTree(nativeFrom, nativeTo, ec))
+    {
+        Fail("copy (Windows walker)", nativeFrom, ec);
+        return false;
+    }
+    return true;
+#else
     auto prefix = nativeFrom.native();
     if (prefix.empty()) { ec = std::make_error_code(std::errc::invalid_argument); Fail("empty source path", nativeFrom, ec); return false; }
     if (prefix.back() != fs::path::preferred_separator) prefix += fs::path::preferred_separator;
@@ -73,6 +204,20 @@ inline bool CopyMissing(const std::filesystem::path& from, const std::filesystem
         {
             const bool exists = fs::exists(dest, ec);
             if (ec) { Fail("check destination", dest, ec); reported = true; break; }
+            if (exists)
+            {
+                const auto status = fs::status(dest, ec);
+                if (ec) { Fail("check destination", dest, ec); reported = true; break; }
+                // An existing directory or special file is not an installed tool.
+                // Keep it, but report the obstruction instead of claiming success.
+                if (!fs::is_regular_file(status))
+                {
+                    ec = std::make_error_code(fs::is_directory(status) ? std::errc::is_a_directory : std::errc::invalid_argument);
+                    Fail("destination is not a file", dest, ec);
+                    reported = true;
+                    break;
+                }
+            }
             if (!exists)
             {
                 fs::copy_file(it->path(), dest, ec);
@@ -98,5 +243,6 @@ inline bool CopyMissing(const std::filesystem::path& from, const std::filesystem
         std::fprintf(stderr, "[3ds] kit copy: walking [%s] stopped at [%s]: %d %s\n",
                      nativeFrom.u8string().c_str(), last.u8string().c_str(), ec.value(), ec.message().c_str());
     return !ec;
+#endif
 }
 }

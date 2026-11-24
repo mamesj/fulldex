@@ -272,7 +272,13 @@ public:
         if (!fs::is_directory(fs::u8path(dir), ec)) { error = "THE SYNC FOLDER IS MISSING"; return false; }
         std::vector<uint8_t> data, json;
         exists = ReadAll(Path(name), data);
-        if (!exists) return true;
+        if (!exists)
+        {
+            const bool present = fs::exists(fs::u8path(Path(name)), ec);
+            if (ec || present)
+            { error = "CANNOT READ THE SAVE IN THE SYNC FOLDER"; return false; }
+            return true;
+        }
         // (A save put in the folder by hand has no .json: it is described from itself.)
         if (!ReadAll(Path(name) + ".json", json) || !MetaFromJson(Bytes(json), meta) || meta.hash != Hash(data))
             meta = MetaOf(data, "", ModifiedTime(Path(name)));

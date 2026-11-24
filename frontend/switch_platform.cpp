@@ -1891,21 +1891,38 @@ bool Start(int& argc, char**& argv)
 bool CanChangeGame() { return g_canChange && envHasNextLoad(); }
 void ChangeGame() { g_changeGame = true; }
 
-bool LocalTime(int& year, int& month, int& day, int& hour, int& minute, int& second)
+bool LocalCalendar(int64_t timestamp, std::tm& calendar)
 {
-    // newlib's localtime() knows no time zone here and gives UTC; the game lights the world
-    // by the hour, so the console's own zone is asked for.
-    u64 now = 0;
-    if (R_FAILED(timeGetCurrentTime(TimeType_UserSystemClock, &now))) return false;
+    if (timestamp < 0) return false;
     TimeCalendarTime cal;
     TimeCalendarAdditionalInfo info;
-    if (R_FAILED(timeToCalendarTimeWithMyRule(now, &cal, &info))) return false;
-    year = cal.year;
-    month = cal.month;
-    day = cal.day;
-    hour = cal.hour;
-    minute = cal.minute;
-    second = cal.second;
+    if (R_FAILED(timeToCalendarTimeWithMyRule(static_cast<u64>(timestamp), &cal, &info))) return false;
+    calendar = {};
+    calendar.tm_year = (int)cal.year - 1900;
+    calendar.tm_mon = (int)cal.month - 1;
+    calendar.tm_mday = cal.day;
+    calendar.tm_hour = cal.hour;
+    calendar.tm_min = cal.minute;
+    calendar.tm_sec = cal.second;
+    calendar.tm_wday = (int)info.wday;
+    calendar.tm_yday = (int)info.yday;
+    calendar.tm_isdst = info.DST ? 1 : 0;
+    return true;
+}
+
+bool LocalTime(int& year, int& month, int& day, int& hour, int& minute, int& second)
+{
+    // newlib's localtime() gives UTC here; use the console's configured zone.
+    u64 now = 0;
+    if (R_FAILED(timeGetCurrentTime(TimeType_UserSystemClock, &now))) return false;
+    std::tm calendar {};
+    if (!LocalCalendar(static_cast<int64_t>(now), calendar)) return false;
+    year = calendar.tm_year + 1900;
+    month = calendar.tm_mon + 1;
+    day = calendar.tm_mday;
+    hour = calendar.tm_hour;
+    minute = calendar.tm_min;
+    second = calendar.tm_sec;
     return true;
 }
 

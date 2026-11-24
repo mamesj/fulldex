@@ -69,8 +69,10 @@ inline bool ReadCstr(const std::vector<uint8_t>& d, size_t& at, std::string& s)
     return true;
 }
 
-inline bool ReadNode(const std::vector<uint8_t>& d, size_t& at, Node& n)
+inline bool ReadNode(const std::vector<uint8_t>& d, size_t& at, Node& n, size_t depth = 0)
 {
+    // Corrupt nested objects must fail without exhausting the launcher's stack.
+    if (depth >= 128) return false;
     if (at >= d.size()) return false;
     n = Node();
     n.begin = at;
@@ -93,7 +95,7 @@ inline bool ReadNode(const std::vector<uint8_t>& d, size_t& at, Node& n)
             if (at >= d.size()) return false;
             if (d[at] == 0x08) { at++; n.end = at; return true; }
             Node child;
-            if (!ReadNode(d, at, child)) return false;
+            if (!ReadNode(d, at, child, depth + 1)) return false;
             n.children.push_back(std::move(child));
         }
     }

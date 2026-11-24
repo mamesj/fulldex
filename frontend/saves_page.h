@@ -547,22 +547,63 @@ inline int CopySavesTo(const std::string& from, const std::string& to, std::stri
     namespace fs = std::filesystem;
     std::error_code ec;
     if (to.empty() || from.empty()) { said = "NO FOLDER CHOSEN"; return -1; }
-    const fs::path a = fs::weakly_canonical(fs::u8path(from), ec), b = fs::weakly_canonical(fs::u8path(to), ec);
-    if (a == b) { said = "THAT IS THE SAVES FOLDER ALREADY"; return -1; }
-    const std::string as = a.u8string(), bs = b.u8string();
-    if (bs.size() > as.size() && bs.compare(0, as.size(), as) == 0) { said = "CHOOSE A FOLDER OUTSIDE THE SAVES FOLDER"; return -1; }
+    const fs::path a = fs::weakly_canonical(fs::u8path(from), ec);
+    if (ec || !fs::is_directory(a, ec) || ec) { said = "CANNOT READ THE CURRENT SAVES FOLDER"; return -1; }
+    const fs::path b = fs::weakly_canonical(fs::u8path(to), ec);
+    if (ec) { said = "CANNOT RESOLVE THAT FOLDER"; return -1; }
+    // Compare actual ancestors, rather than filename prefixes (saves-backup is a sibling).
+    // equivalent also handles case-insensitive Windows paths and existing aliases.
+    for (fs::path parent = b; !parent.empty();)
+    {
+        const bool same = fs::equivalent(a, parent, ec);
+        ec.clear(); // A not-yet-created destination/ancestor is allowed.
+        if (same)
+        {
+            said = parent == b ? "THAT IS THE SAVES FOLDER ALREADY" : "CHOOSE A FOLDER OUTSIDE THE SAVES FOLDER";
+            return -1;
+        }
+        const fs::path next = parent.parent_path();
+        if (next == parent) break;
+        parent = next;
+    }
     fs::create_directories(b, ec);
     if (ec) { said = "CANNOT MAKE THAT FOLDER"; return -1; }
     int n = 0;
     for (fs::recursive_directory_iterator it(a, ec), end; !ec && it != end; it.increment(ec))
     {
-        const fs::path rel = fs::relative(it->path(), a, ec), dst = b / rel;
-        if (it->is_directory(ec)) { fs::create_directories(dst, ec); ec.clear(); continue; }
-        if (!it->is_regular_file(ec) || fs::exists(dst, ec)) { ec.clear(); continue; }
+        // Keep each entry's name: relative() resolves links and can produce ../ paths.
+        const fs::path rel = it->path().lexically_relative(a);
+        const bool linked = it->is_symlink(ec);
+        if (ec) { said = "CANNOT READ " + rel.u8string(); return -1; }
+        if (linked) { said = "CANNOT COPY LINKED PATH " + rel.u8string(); return -1; }
+        const fs::path dst = b / rel;
+        const auto destination = fs::symlink_status(dst, ec);
+        if (ec && ec != std::errc::no_such_file_or_directory) { said = "CANNOT CHECK " + rel.u8string(); return -1; }
+        ec.clear();
+        if (fs::is_symlink(destination)) { said = "CANNOT COPY INTO LINKED PATH " + rel.u8string(); return -1; }
+        const bool directory = it->is_directory(ec);
+        if (ec) { said = "CANNOT READ " + rel.u8string(); return -1; }
+        if (directory)
+        {
+            fs::create_directories(dst, ec);
+            if (ec) { said = "CANNOT MAKE " + rel.u8string(); return -1; }
+            continue;
+        }
+        const bool regular = it->is_regular_file(ec);
+        if (ec) { said = "CANNOT READ " + rel.u8string(); return -1; }
+        if (!regular) continue;
+        const bool exists = fs::exists(dst, ec);
+        if (ec) { said = "CANNOT CHECK " + rel.u8string(); return -1; }
+        if (exists)
+        {
+            if (!fs::is_regular_file(destination)) { said = "A FILE IS BLOCKED BY " + rel.u8string(); return -1; }
+            continue;
+        }
         fs::copy_file(it->path(), dst, ec);
         if (ec) { said = "COULD NOT COPY " + rel.u8string(); return -1; }
         n++;
     }
+    if (ec) { said = "CANNOT READ THE CURRENT SAVES FOLDER"; return -1; }
     return n;
 }
 inline std::vector<std::string> WrapLines(const std::string& msg0, float px, int w, bool bold); // (below)

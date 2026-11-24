@@ -410,6 +410,7 @@ struct PadState
 };
 
 #include "touchpad.h"
+#include "mobile_orientation.h"
 #include "ui_lang_sdl.h"
 #include "controls.h"
 #include "cheats.h"
@@ -2676,6 +2677,9 @@ int main(int argc, char** argv)
     SDL_AudioDeviceID audio = 0;
     Pads pads;
     Layout layout = LayoutFromName(cfg.layout);
+#ifdef SSR_PHONE
+    LayoutMode orientationLayout = layout.mode;
+#endif
     AndroidSecondScreen secondDisplay(!opt.headless);
     const uint8_t* singleScreenFlag = nullptr; // set by the ROM: nonzero while a scene needs both screens
     LayoutMode preSingleLayout = LayoutMode::Merged;
@@ -2695,7 +2699,7 @@ int main(int argc, char** argv)
     if (!opt.headless)
     {
 #ifdef SSR_PHONE
-        SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
+        MobileOrientation::Game(cfg.layout == "vertical");
         SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
         // Fingers are handled one by one (on-screen controls and the touch screen).
         SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "0");
@@ -2759,8 +2763,8 @@ int main(int argc, char** argv)
         // clicked. The list's window was this program's, so it may take the focus.
         if (window) SDL_RaiseWindow(window);
 #ifdef SSR_IOS
-        // The list left the screen upright. Turn it once this window exists.
-        IosOrientGame();
+        // Apply the chosen layout again once the window exists.
+        IosOrientGame(layout.mode == LayoutMode::Vertical);
         // (A controller's buttons not also taken as keys: B opened the menu, #166.)
         IosIgnoreControllerPresses();
 #endif
@@ -12109,10 +12113,22 @@ int main(int argc, char** argv)
         // The ROM says per scene whether it wants both screens (the intro movie).
         if (singleScreenRom && !opt.layoutGiven)
             layout.mode = *singleScreenFlag ? preSingleLayout : LayoutMode::Merged;
+#ifdef SSR_PHONE
+        if (layout.mode != orientationLayout)
+        {
+            MobileOrientation::Game(layout.mode == LayoutMode::Vertical);
+            orientationLayout = layout.mode;
+        }
+#endif
         SDL_Rect rects[2];
         Layout effectiveLayout = layout;
         if (DsDisplayState::Physical(secondScreenState)) effectiveLayout.mode = DsDisplayState::Swapped(secondScreenState) ? LayoutMode::Bottom : LayoutMode::Top;
-        LayoutRects(effectiveLayout, outW, outH, rects);
+        auto placeScreens = [&]() {
+            const int controlPanel = touchPadUsed && touchPad.visible && effectiveLayout.mode == LayoutMode::Vertical
+                                   ? TouchPad::PortraitHeight(outW, outH) : 0;
+            LayoutRects(effectiveLayout, outW, outH - controlPanel, rects);
+        };
+        placeScreens();
         const bool merged = effectiveLayout.mode == LayoutMode::Merged;
         {
             static const float aspectValue[] = { 0.0f, 16.0f / 9, 16.0f / 10, 3.0f / 2, 4.0f / 3 };
@@ -13535,7 +13551,7 @@ int main(int argc, char** argv)
         // (HYBRID: a screen played on the touch screen shows it large, as the Pokeathlon does.)
         if (!merged && focus.mode == 0 && touchLargeNow) layout.swapped = true;
         effectiveLayout.swapped = layout.swapped;
-        LayoutRects(effectiveLayout, outW, outH, rects);
+        placeScreens();
         // (Where the top screen is, until the menu opens: 3D RESOLUTION's preview sets a part of
         // the picture beside the same part of the DS's own.)
         if (!menu.open)

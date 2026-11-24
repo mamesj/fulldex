@@ -52,18 +52,28 @@ inline bool IsStateName(const std::string& n) { return n.find(".state") != std::
 using Pairs = std::vector<std::pair<std::string, std::string>>; // (from, to)
 
 // Every file under from (a file or a folder), as pairs to the same place under to.
-inline void AddTree(const std::string& from, const std::string& to, Pairs& out)
+inline bool AddTree(const std::string& from, const std::string& to, Pairs& out)
 {
     std::error_code e;
     const fs::path f = fs::u8path(from);
-    if (fs::is_regular_file(f, e)) { out.push_back({ from, to }); return; }
-    if (!fs::is_directory(f, e)) return;
+    const auto status = fs::symlink_status(f, e);
+    if (e == std::errc::no_such_file_or_directory) return true; // Optional folders may not exist yet.
+    if (e || fs::is_symlink(status)) return false;
+    if (fs::is_regular_file(status)) { out.push_back({ from, to }); return true; }
+    if (!fs::is_directory(status)) return false;
+    const auto before = out.size();
     for (fs::recursive_directory_iterator it(f, e), end; !e && it != end; it.increment(e))
-        if (it->is_regular_file(e))
+    {
+        const auto entry = it->symlink_status(e);
+        if (e || fs::is_symlink(entry)) { out.resize(before); return false; }
+        if (fs::is_regular_file(entry))
         {
-            const std::string rel = fs::relative(it->path(), f, e).u8string();
+            const std::string rel = it->path().lexically_relative(f).u8string();
             out.push_back({ it->path().u8string(), to + "/" + rel });
         }
+    }
+    if (e) { out.resize(before); return false; }
+    return true;
 }
 
 inline bool SameFile(const std::string& a, const std::string& b)
@@ -88,6 +98,7 @@ inline bool WriteJournal(const std::string& path, const char* stage, const Pairs
         if (!j) return false;
         j << "fulldex-folders-move-v1\n" << stage << "\n";
         for (const auto& p : pairs) j << p.first << "\t" << p.second << "\n";
+        j.close(); // Buffered writes can fail only at close (disk full or a file-size limit).
         if (!j.good()) return false;
     }
     std::error_code e;
@@ -129,6 +140,17 @@ inline void RemoveEmptyParents(const std::string& file, const std::vector<std::s
 inline bool Move(const Pairs& pairs, const std::string& journal, const std::vector<std::string>& keep, std::string& why)
 {
     std::error_code e;
+    // Equal bytes are not a second copy when both paths identify the same file.
+    // Check the whole plan before writing notes or removing any source.
+    for (const auto& p : pairs)
+    {
+        std::error_code identity;
+        if (fs::equivalent(fs::u8path(p.first), fs::u8path(p.second), identity))
+        {
+            why = "SOURCE AND DESTINATION ARE THE SAME FILE: " + p.first;
+            return false;
+        }
+    }
     if (!WriteJournal(journal, "copying", pairs)) { why = "COULD NOT WRITE ITS NOTES"; return false; }
     Pairs made;
     bool ok = true;
@@ -158,23 +180,26 @@ inline bool Move(const Pairs& pairs, const std::string& journal, const std::vect
     return true;
 }
 
-// A move cut short (the program stopped while it ran): one still copying is taken back (its copies
-// removed), one removing is finished. True when there was one.
+// A move cut short: while copying keep both sides, since the journal does not say
+// which destination files already existed. The next move can reuse equal copies.
+// Once removing, finish it. True when there was an interrupted move.
 inline bool FinishCutShort(const std::string& journal, const std::vector<std::string>& keep)
 {
     std::string stage; Pairs pairs; std::error_code e;
     if (!ReadJournal(journal, stage, pairs)) return false;
     if (stage == "copying")
     {
-        for (const auto& p : pairs)
-            if (IsFile(p.first) && IsFile(p.second) && SameFile(p.first, p.second)) { fs::remove(fs::u8path(p.second), e); RemoveEmptyParents(p.second, keep); }
         fs::remove(fs::u8path(journal), e);
         return true;
     }
     if (stage == "removing")
     {
         for (const auto& p : pairs)
-            if (IsFile(p.first) && IsFile(p.second) && SameFile(p.first, p.second)) { fs::remove(fs::u8path(p.first), e); RemoveEmptyParents(p.first, keep); }
+            if (IsFile(p.first) && IsFile(p.second) && SameFile(p.first, p.second))
+            {
+                const bool alias = fs::equivalent(fs::u8path(p.first), fs::u8path(p.second), e);
+                if (!e && !alias) { fs::remove(fs::u8path(p.first), e); RemoveEmptyParents(p.first, keep); }
+            }
         WriteJournal(journal, "done", pairs);
         return true;
     }
@@ -193,7 +218,8 @@ inline bool Undo(const std::string& journal, const std::vector<std::pair<std::st
     // (New files in the tidy folders since: each to its folder's classic place.)
     for (const auto& f : folders)
     {
-        Pairs all; AddTree(f.first, f.second, all);
+        Pairs all;
+        if (!AddTree(f.first, f.second, all)) { why = "CANNOT READ " + f.first; return false; }
         for (const auto& a : all)
         {
             bool known = false;

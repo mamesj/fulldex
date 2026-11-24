@@ -1421,7 +1421,9 @@
       "COPY AGAIN": "COPIAR OTRA VEZ",
       "Paste it into Discord or a GitHub issue.": "Pégalo en Discord o en una incidencia de GitHub.",
       "Attach diagnostics.txt, beside game.log, to your report.": "Adjunta diagnostics.txt, junto a game.log, a tu informe.",
-      "The folder could not be written. Copy the details another way.": "No se pudo escribir en la carpeta. Copia los detalles de otra forma."
+      "The folder could not be written. Copy the details another way.": "No se pudo escribir en la carpeta. Copia los detalles de otra forma.",
+      "CANNOT READ THE SAVE IN THE SYNC FOLDER": "NO SE PUEDE LEER LA PARTIDA DE LA CARPETA DE SINCRONIZACIÓN",
+      "CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION": "LAS PARTIDAS EN LA NUBE SIGUEN OCUPADAS: ESTE JUEGO NO SE SINCRONIZARÁ EN ESTA SESIÓN"
     },
     "it": {
       " (NEXT START)": " (AL RIAVVIO)",
@@ -2835,7 +2837,9 @@
       "COPY AGAIN": "COPIA DI NUOVO",
       "Paste it into Discord or a GitHub issue.": "Incollalo in Discord o in una segnalazione su GitHub.",
       "Attach diagnostics.txt, beside game.log, to your report.": "Allega diagnostics.txt, accanto a game.log, alla tua segnalazione.",
-      "The folder could not be written. Copy the details another way.": "Impossibile scrivere nella cartella. Copia i dettagli in un altro modo."
+      "The folder could not be written. Copy the details another way.": "Impossibile scrivere nella cartella. Copia i dettagli in un altro modo.",
+      "CANNOT READ THE SAVE IN THE SYNC FOLDER": "IMPOSSIBILE LEGGERE IL SALVATAGGIO NELLA CARTELLA DI SINCRONIZZAZIONE",
+      "CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION": "I SALVATAGGI CLOUD SONO ANCORA OCCUPATI: QUESTO GIOCO NON SI SINCRONIZZERÀ IN QUESTA SESSIONE"
     },
     "fr": {
       " (NEXT START)": " (PROCHAIN DÉBUT)",
@@ -4249,7 +4253,9 @@
       "COPY AGAIN": "COPIER À NOUVEAU",
       "Paste it into Discord or a GitHub issue.": "Collez-le dans Discord ou dans un problème GitHub.",
       "Attach diagnostics.txt, beside game.log, to your report.": "Joignez diagnostics.txt, à côté de game.log, à votre rapport.",
-      "The folder could not be written. Copy the details another way.": "Impossible d'écrire dans le dossier. Copiez les détails autrement."
+      "The folder could not be written. Copy the details another way.": "Impossible d'écrire dans le dossier. Copiez les détails autrement.",
+      "CANNOT READ THE SAVE IN THE SYNC FOLDER": "IMPOSSIBLE DE LIRE LA SAUVEGARDE DANS LE DOSSIER DE SYNCHRONISATION",
+      "CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION": "LES SAUVEGARDES CLOUD SONT ENCORE OCCUPÉES : CE JEU NE SERA PAS SYNCHRONISÉ PENDANT CETTE SESSION"
     },
     "de": {
       " (NEXT START)": " (NÄCHSTER START)",
@@ -5663,7 +5669,9 @@
       "COPY AGAIN": "NOCHMAL KOPIEREN",
       "Paste it into Discord or a GitHub issue.": "Füge es in Discord oder ein GitHub-Problem ein.",
       "Attach diagnostics.txt, beside game.log, to your report.": "Hänge diagnostics.txt, neben game.log, an deinen Bericht an.",
-      "The folder could not be written. Copy the details another way.": "Der Ordner konnte nicht beschrieben werden. Kopiere die Details anders."
+      "The folder could not be written. Copy the details another way.": "Der Ordner konnte nicht beschrieben werden. Kopiere die Details anders.",
+      "CANNOT READ THE SAVE IN THE SYNC FOLDER": "DER SPIELSTAND IM SYNCHRONISIERUNGSORDNER KANN NICHT GELESEN WERDEN",
+      "CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION": "CLOUD-SPIELSTÄNDE SIND NOCH BESCHÄFTIGT: DIESES SPIEL WIRD IN DIESER SITZUNG NICHT SYNCHRONISIERT"
     },
     "ja": {
       " (NEXT START)": " (次のスタート)",
@@ -7077,7 +7085,9 @@
       "COPY AGAIN": "もう一度コピー",
       "Paste it into Discord or a GitHub issue.": "Discord または GitHub の Issue に貼り付けてください。",
       "Attach diagnostics.txt, beside game.log, to your report.": "game.log の隣にある diagnostics.txt を報告に添付してください。",
-      "The folder could not be written. Copy the details another way.": "フォルダに書き込めませんでした。別の方法で詳細をコピーしてください。"
+      "The folder could not be written. Copy the details another way.": "フォルダに書き込めませんでした。別の方法で詳細をコピーしてください。",
+      "CANNOT READ THE SAVE IN THE SYNC FOLDER": "同期フォルダのセーブを読み込めません",
+      "CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION": "クラウドセーブはまだ処理中です: このゲームは今回同期されません"
     },
     "ko": {
       " (NEXT START)": " (다음 시작)",
@@ -8491,7 +8501,9 @@
       "COPY AGAIN": "다시 복사",
       "Paste it into Discord or a GitHub issue.": "Discord나 GitHub 이슈에 붙여넣으세요.",
       "Attach diagnostics.txt, beside game.log, to your report.": "game.log 옆의 diagnostics.txt를 신고에 첨부하세요.",
-      "The folder could not be written. Copy the details another way.": "폴더에 쓸 수 없습니다. 다른 방법으로 세부 정보를 복사하세요."
+      "The folder could not be written. Copy the details another way.": "폴더에 쓸 수 없습니다. 다른 방법으로 세부 정보를 복사하세요.",
+      "CANNOT READ THE SAVE IN THE SYNC FOLDER": "동기화 폴더의 세이브를 읽을 수 없습니다",
+      "CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION": "클라우드 세이브가 아직 처리 중입니다: 이번에는 이 게임이 동기화되지 않습니다"
     }
   }
 }

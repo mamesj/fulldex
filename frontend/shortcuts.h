@@ -34,9 +34,14 @@
 #endif
 
 #include "launcher.h"
+#include "xdg_desktop_path.h"
 
 namespace Shortcuts
 {
+#if !defined(_WIN32) && !defined(__APPLE__)
+inline std::string LinuxAppsDir();
+inline std::string LinuxDesktopDir();
+#endif
 // ---------------------------------------------------------------------------
 // Pictures: the game's picture at the icon sizes, and as PNG files (uncompressed: the few
 // hundred kilobytes do not matter, and no library is needed).
@@ -253,7 +258,8 @@ inline std::string DesktopValue(const std::string& value)
 {
     std::string out;
     for (char c : value)
-        if (c == '\\') out += "\\\\";
+        if (c == ' ') out += "\\s";
+        else if (c == '\\') out += "\\\\";
         else if (c == '\n') out += "\\n";
         else if (c == '\r') out += "\\r";
         else if (c == '\t') out += "\\t";
@@ -270,6 +276,17 @@ inline std::string DesktopArg(const std::string& value)
     }
     out += '"';
     return DesktopValue(out);
+}
+
+// Creation, lookup and removal must agree: a hack's game code can name the original's shortcut.
+inline bool Supported(const Launcher::Game& g)
+{
+    if (!g.known || g.platform == Launcher::N3DS) return false;
+#if defined(_WIN32) || defined(__APPLE__)
+    return !g.hack;
+#else
+    return !g.rom.empty();
+#endif
 }
 
 // Makes shortcuts for the library. Linux targets each ROM separately, including hacks. dir is
@@ -301,7 +318,7 @@ inline int Make(const std::string& dir, const std::vector<Launcher::Game>& games
     for (const Launcher::Game& g : games)
     {
         if (g.platform == Launcher::N3DS) continue; // (3DS games: their own programs, n3ds.h)
-        if (!g.known || g.hack || !done.insert(g.code).second) continue; // (the games, not hacks of them)
+        if (!Supported(g) || !done.insert(g.code).second) continue; // (the games, not hacks of them)
         IShellLinkW* link = nullptr;
         if (FAILED(CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_IShellLinkW, (void**)&link))) break;
         link->SetPath(exe);
@@ -367,7 +384,7 @@ inline int Make(const std::string& dir, const std::vector<Launcher::Game>& games
     for (const Launcher::Game& g : games)
     {
         if (g.platform == Launcher::N3DS) continue; // (3DS games: their own programs, n3ds.h)
-        if (!g.known || g.hack || !done.insert(g.code).second) continue; // (the games, not hacks of them)
+        if (!Supported(g) || !done.insert(g.code).second) continue; // (the games, not hacks of them)
         std::string lower = g.code;
         for (char& c : lower) c = (char)tolower((unsigned char)c);
         // The app is a shell script that starts the program on the game; the program, inside
@@ -418,28 +435,12 @@ inline int Make(const std::string& dir, const std::vector<Launcher::Game>& games
     const char* homeEnv = getenv("HOME");
     const std::string home = homeEnv ? homeEnv : "";
     // The applications menu (and Steam's "Add a Non-Steam Game" list on the Steam Deck).
-    const std::string dataHome = getenv("XDG_DATA_HOME") && *getenv("XDG_DATA_HOME") ? getenv("XDG_DATA_HOME") : home + "/.local/share";
-    const std::string apps = dataHome + "/applications";
+    const std::string apps = LinuxAppsDir();
     // (Each folder on the way, as mkdir -p: a new account may have no ~/.local yet.)
     for (size_t i = 1; i <= apps.size(); i++)
         if (i == apps.size() || apps[i] == '/') mkdir(apps.substr(0, i).c_str(), 0755);
-    // The desktop folder: XDG_DESKTOP_DIR from ~/.config/user-dirs.dirs, else ~/Desktop.
-    std::string desk = home + "/Desktop";
-    if (FILE* f = fopen((home + "/.config/user-dirs.dirs").c_str(), "r"))
-    {
-        char line[1024];
-        while (fgets(line, sizeof line, f))
-        {
-            std::string l = line;
-            if (l.compare(0, 16, "XDG_DESKTOP_DIR=") != 0) continue;
-            l = l.substr(16);
-            while (!l.empty() && (l.back() == '\n' || l.back() == '\r' || l.back() == '"')) l.pop_back();
-            if (!l.empty() && l[0] == '"') l = l.substr(1);
-            if (l.compare(0, 5, "$HOME") == 0) l = home + l.substr(5);
-            desk = l;
-        }
-        fclose(f);
-    }
+    // Use the same directory policy for creation, lookup and removal.
+    const std::string desk = LinuxDesktopDir();
     struct stat st;
     const bool hasDesk = stat(desk.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
     // GIO checks the executable before expanding %% field escapes; env avoids that check
@@ -448,7 +449,7 @@ inline int Make(const std::string& dir, const std::vector<Launcher::Game>& games
     for (const Launcher::Game& g : games)
     {
         if (g.platform == Launcher::N3DS) continue; // (3DS games: their own programs, n3ds.h)
-        if (!g.known || g.rom.empty() || !done.insert(g.rom).second) continue;
+        if (!Supported(g) || !done.insert(g.rom).second) continue;
         // A ROM path identifies hacks and duplicate releases without choosing another game.
         char suffix[16];
         snprintf(suffix, sizeof suffix, "%08x", Crc32((const uint8_t*)g.rom.data(), g.rom.size()));
@@ -487,29 +488,25 @@ inline std::string LinuxAppsDir()
     const char* home = getenv("HOME");
     const std::string h = home ? home : "";
     const char* xdg = getenv("XDG_DATA_HOME");
-    return (xdg && *xdg ? std::string(xdg) : h + "/.local/share") + "/applications";
+    return (xdg && *xdg && std::filesystem::u8path(xdg).is_absolute() ? std::string(xdg) : h + "/.local/share") + "/applications";
 }
 inline std::string LinuxDesktopDir()
 {
     const char* home = getenv("HOME");
     const std::string h = home ? home : "";
-    std::string desk = h + "/Desktop";
-    if (FILE* f = fopen((h + "/.config/user-dirs.dirs").c_str(), "r"))
-    {
-        char line[1024];
-        while (fgets(line, sizeof line, f))
-        {
-            std::string l = line;
-            if (l.compare(0, 16, "XDG_DESKTOP_DIR=") != 0) continue;
-            l = l.substr(16);
-            while (!l.empty() && (l.back() == '\n' || l.back() == '\r' || l.back() == '"')) l.pop_back();
-            if (!l.empty() && l[0] == '"') l = l.substr(1);
-            if (l.compare(0, 5, "$HOME") == 0) l = h + l.substr(5);
-            desk = l;
-        }
-        fclose(f);
-    }
-    return desk;
+    if (h.empty()) return {};
+    const char* xdg = getenv("XDG_CONFIG_HOME");
+    const std::string config = xdg && *xdg && std::filesystem::u8path(xdg).is_absolute() ? xdg : h + "/.config";
+    const std::string desk = ReadDesktopPath(config, h);
+    // XDG defines a directory pointed at HOME as disabled, not a desktop at HOME.
+    // https://www.freedesktop.org/projects/xdg-user-dirs/
+    if (desk.empty()) return {};
+    auto normalized = [](const std::string& value) {
+        auto path = std::filesystem::u8path(value).lexically_normal();
+        if (path.filename().empty()) path = path.parent_path();
+        return path;
+    };
+    return normalized(desk) == normalized(h) ? std::string() : desk;
 }
 // The same id Make() gives this ROM's files: <code>-<crc of the ROM path>.
 inline std::string LinuxShortcutId(const Launcher::Game& g)
@@ -527,6 +524,7 @@ inline std::string Lower(std::string s)
 
 inline bool Exists(const std::string& dir, const Launcher::Game& g)
 {
+    if (!Supported(g)) return false;
     (void)dir;
 #ifdef _WIN32
     PWSTR desktop = nullptr;
@@ -546,19 +544,30 @@ inline bool Exists(const std::string& dir, const Launcher::Game& g)
     (void)dir;
     const std::string file = "pokemon-ds-wide-" + Lower(LinuxShortcutId(g)) + ".desktop";
     std::error_code ec;
+    const std::string desktop = LinuxDesktopDir();
     return std::filesystem::exists(std::filesystem::u8path(LinuxAppsDir() + "/" + file), ec) ||
-           std::filesystem::exists(std::filesystem::u8path(LinuxDesktopDir() + "/" + file), ec);
+           (!desktop.empty() && std::filesystem::exists(std::filesystem::u8path(desktop + "/" + file), ec));
 #endif
 }
 
 inline bool Remove(const std::string& dir, const Launcher::Game& g, std::string& where)
 {
+    if (!Supported(g)) { where = "NO DESKTOP SHORTCUT FOR THIS GAME"; return false; }
 #ifdef _WIN32
     PWSTR desktop = nullptr;
     if (FAILED(SHGetKnownFolderPath(FOLDERID_Desktop, 0, nullptr, &desktop))) { where = "NO DESKTOP FOLDER"; return false; }
     const std::wstring desk = desktop;
     CoTaskMemFree(desktop);
-    DeleteFileW((desk + L"\\" + Wide(Title(g)) + L".lnk").c_str());
+    const std::wstring link = desk + L"\\" + Wide(Title(g)) + L".lnk";
+    if (!DeleteFileW(link.c_str()))
+    {
+        const DWORD error = GetLastError();
+        if (error != ERROR_FILE_NOT_FOUND && error != ERROR_PATH_NOT_FOUND)
+        {
+            where = "COULD NOT REMOVE THE DESKTOP SHORTCUT";
+            return false;
+        }
+    }
     DeleteFileW(Wide(dir + "/shortcut-icons/" + g.code + ".ico").c_str());
     where = "FROM YOUR DESKTOP";
 #elif defined(__APPLE__)
@@ -567,16 +576,25 @@ inline bool Remove(const std::string& dir, const Launcher::Game& g, std::string&
     const std::string h = home;
     std::error_code ec;
     std::filesystem::remove_all(std::filesystem::u8path(h + "/Applications/" + Title(g) + ".app"), ec);
+    if (ec) { where = "COULD NOT REMOVE THE APP SHORTCUT"; return false; }
     std::filesystem::remove_all(std::filesystem::u8path(h + "/Desktop/" + Title(g) + ".app"), ec);
+    if (ec) { where = "COULD NOT REMOVE THE DESKTOP SHORTCUT"; return false; }
     where = "FROM YOUR APPS AND DESKTOP";
 #else
     const std::string id = LinuxShortcutId(g);
     const std::string file = "pokemon-ds-wide-" + Lower(id) + ".desktop";
     std::error_code ec;
     std::filesystem::remove(std::filesystem::u8path(LinuxAppsDir() + "/" + file), ec);
-    std::filesystem::remove(std::filesystem::u8path(LinuxDesktopDir() + "/" + file), ec);
+    if (ec) { where = "COULD NOT REMOVE THE APPS MENU SHORTCUT"; return false; }
+    // (No desktop entry to remove when the desktop is turned off: XDG_DESKTOP_DIR is $HOME or empty.)
+    const std::string desktop = LinuxDesktopDir();
+    if (!desktop.empty())
+    {
+        std::filesystem::remove(std::filesystem::u8path(desktop + "/" + file), ec);
+        if (ec) { where = "COULD NOT REMOVE THE DESKTOP SHORTCUT"; return false; }
+    }
     std::filesystem::remove(std::filesystem::u8path(dir + "/shortcut-icons/" + id + ".png"), ec);
-    where = "FROM YOUR APPS MENU AND DESKTOP";
+    where = desktop.empty() ? "FROM YOUR APPS MENU" : "FROM YOUR APPS MENU AND DESKTOP";
 #endif
     return true;
 }

@@ -16,9 +16,12 @@ inline bool Save(const std::string& path, const std::function<bool(const std::st
     // (refusing left it unsaveable until the file was deleted by hand).
     if (fs::exists(pending, ec))
     {
+        if (!fs::is_regular_file(pending, ec) || ec) return false;
         const auto failed = fs::u8path(path + ".pending.failed");
+        const bool kept = fs::exists(failed, ec);
+        if (ec || (kept && !fs::is_regular_file(failed, ec)) || ec) return false;
         fs::remove(failed, ec);
-        ec.clear();
+        if (ec) return false;
         fs::rename(pending, failed, ec);
         if (ec) return false;
     }

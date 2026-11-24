@@ -64,6 +64,7 @@
 #ifdef SSR_IOS
 #include "ios_orient.h"
 #endif
+#include "mobile_orientation.h"
 #ifdef SSR_IOS
 // The list is drawn inside the screen's safe area (#153): its tabs were under the Dynamic Island.
 // Insets in window points; taps are moved by them as they arrive, and the list's own window size
@@ -4160,23 +4161,32 @@ void ResolveFolders(Folders& fo, bool atStart)
                 // phone the cheats folder beside it.)
                 FolderSet::Pairs pairs;
                 std::error_code e;
-                if (FolderSet::IsDir(fo.saves))
-                    for (fs::directory_iterator it(fs::u8path(fo.saves), e), end; !e && it != end; it.increment(e))
+                bool collected = true;
+                const bool sourceExists = fs::exists(fs::u8path(fo.saves), e);
+                if (e) collected = false;
+                else if (sourceExists)
+                {
+                    if (!fs::is_directory(fs::u8path(fo.saves), e) || e) collected = false;
+                    else for (fs::directory_iterator it(fs::u8path(fo.saves), e), end; !e && collected && it != end; it.increment(e))
                     {
                         const std::string name = it->path().filename().u8string(), path = it->path().u8string();
                         const bool dir = it->is_directory(e);
-                        if (FolderSet::IsSettingsName(name, dir)) FolderSet::AddTree(path, root + "/settings/" + name, pairs);
-                        else if (!dir && FolderSet::IsStateName(name)) FolderSet::AddTree(path, root + "/states/" + name, pairs);
-                        else if (!sameSaves) FolderSet::AddTree(path, tidySaves + "/" + name, pairs);
+                        if (e) { collected = false; break; }
+                        if (FolderSet::IsSettingsName(name, dir)) collected = FolderSet::AddTree(path, root + "/settings/" + name, pairs);
+                        else if (!dir && FolderSet::IsStateName(name)) collected = FolderSet::AddTree(path, root + "/states/" + name, pairs);
+                        else if (!sameSaves) collected = FolderSet::AddTree(path, tidySaves + "/" + name, pairs);
                     }
+                }
+                if (e) collected = false;
                 const fs::path sp = fs::u8path(fo.saves);
                 if (sp.filename() == "saves")
                 {
                     const std::string oldCheats = sp.parent_path().u8string() + "/cheats", newCheats = root + "/cheats";
-                    if (fs::u8path(oldCheats).lexically_normal() != fs::u8path(newCheats).lexically_normal() && FolderSet::IsDir(oldCheats))
-                        FolderSet::AddTree(oldCheats, newCheats, pairs);
+                    if (collected && fs::u8path(oldCheats).lexically_normal() != fs::u8path(newCheats).lexically_normal())
+                        collected = FolderSet::AddTree(oldCheats, newCheats, pairs);
                 }
-                if (pairs.empty()) layout = "tidy";
+                if (!collected) fprintf(stderr, "[folders] not moved: cannot read all current files; keeping the classic folders\n");
+                else if (pairs.empty()) layout = "tidy";
                 else
                 {
                     std::string why;
@@ -4250,12 +4260,12 @@ std::string SwitchFolders(Folders& fo, const std::vector<Launcher::Game>& games)
         const std::string root = fo.dir, classic = fo.dir + "/saves";
 #endif
         FolderSet::Pairs pairs;
-        FolderSet::AddTree(root + "/states", classic, pairs);
-        FolderSet::AddTree(root + "/settings", classic, pairs);
+        if (!FolderSet::AddTree(root + "/states", classic, pairs) ||
+            !FolderSet::AddTree(root + "/settings", classic, pairs)) return "NOT MOVED: CANNOT READ ALL CURRENT FILES";
         if (fs::u8path(root + "/saves").lexically_normal() != fs::u8path(classic).lexically_normal())
         {
-            FolderSet::AddTree(root + "/saves", classic, pairs);
-            FolderSet::AddTree(root + "/cheats", fs::u8path(classic).parent_path().u8string() + "/cheats", pairs);
+            if (!FolderSet::AddTree(root + "/saves", classic, pairs) ||
+                !FolderSet::AddTree(root + "/cheats", fs::u8path(classic).parent_path().u8string() + "/cheats", pairs)) return "NOT MOVED: CANNOT READ ALL CURRENT FILES";
         }
         std::vector<std::string> keep = { fo.dir, classic };
         if (!fo.roms.empty()) keep.push_back(fo.roms);
@@ -4291,6 +4301,76 @@ std::string OwnFolderShown(const Folders& fo, const char* key)
     const size_t s = v.find_last_of("/\\");
     return s == std::string::npos ? v : v.substr(s + 1);
 }
+// Copy a chosen kind before changing its setting. Missing optional folders are empty;
+// unreadable folders and partial copies are errors, so the old setting stays active.
+static int CopyOwnFolder(const std::string& from, const std::string& to, const std::string& kind,
+                         bool amongSaves, std::string& why)
+{
+    namespace fs = std::filesystem;
+    std::error_code e;
+    const auto a = fs::weakly_canonical(fs::u8path(from), e);
+    if (e) { why = "CANNOT READ THE CURRENT FOLDER"; return -1; }
+    const bool exists = fs::exists(a, e);
+    if (e) { why = "CANNOT READ THE CURRENT FOLDER"; return -1; }
+    if (!exists) return 0;
+    if (!fs::is_directory(a, e) || e) { why = "CANNOT READ THE CURRENT FOLDER"; return -1; }
+    const auto b = fs::weakly_canonical(fs::u8path(to), e);
+    if (e) { why = "CANNOT RESOLVE THAT FOLDER"; return -1; }
+    for (auto parent = b; !parent.empty();)
+    {
+        const bool same = fs::equivalent(a, parent, e);
+        e.clear();
+        if (same)
+        {
+            if (parent == b) return 0;
+            why = "CHOOSE A FOLDER OUTSIDE THE CURRENT FOLDER"; return -1;
+        }
+        const auto next = parent.parent_path();
+        if (next == parent) break;
+        parent = next;
+    }
+    int copied = 0;
+    for (fs::recursive_directory_iterator it(a, e), end; !e && it != end; it.increment(e))
+    {
+        const auto rel = it->path().lexically_relative(a);
+        const bool directory = it->is_directory(e);
+        if (e) { why = "CANNOT READ " + rel.u8string(); return -1; }
+        if (amongSaves && it.depth() == 0)
+        {
+            const auto name = it->path().filename().u8string();
+            const bool selected = kind == "states" ? (!directory && FolderSet::IsStateName(name)) : FolderSet::IsSettingsName(name, directory);
+            if (!selected) { it.disable_recursion_pending(); continue; }
+        }
+        const bool linked = it->is_symlink(e);
+        if (e || linked) { why = "CANNOT COPY LINKED OR UNREADABLE PATH " + rel.u8string(); return -1; }
+        const auto dst = b / rel;
+        const auto status = fs::symlink_status(dst, e);
+        if (e && e != std::errc::no_such_file_or_directory) { why = "CANNOT CHECK " + rel.u8string(); return -1; }
+        e.clear();
+        if (fs::is_symlink(status)) { why = "CANNOT COPY INTO LINKED PATH " + rel.u8string(); return -1; }
+        if (directory)
+        {
+            fs::create_directories(dst, e);
+            if (e) { why = "CANNOT MAKE " + rel.u8string(); return -1; }
+            continue;
+        }
+        const bool regular = it->is_regular_file(e);
+        if (e) { why = "CANNOT READ " + rel.u8string(); return -1; }
+        if (!regular) continue;
+        const bool present = fs::exists(dst, e);
+        if (e) { why = "CANNOT CHECK " + rel.u8string(); return -1; }
+        if (present)
+        {
+            if (!fs::is_regular_file(status)) { why = "A FILE IS BLOCKED BY " + rel.u8string(); return -1; }
+            continue;
+        }
+        fs::copy_file(it->path(), dst, e);
+        if (e) { why = "COULD NOT COPY " + rel.u8string(); return -1; }
+        ++copied;
+    }
+    if (e) { why = "CANNOT READ THE CURRENT FOLDER"; return -1; }
+    return copied;
+}
 // A folder for one kind: the files of that kind copied there (none replaced; the old ones stay where
 // they were), then used at once. dir: the folder ("" none chosen; "!" one that cannot be used).
 std::string UseOwnFolder(Folders& fo, const std::string& kind, const std::string& dir, const std::vector<Launcher::Game>& games)
@@ -4312,23 +4392,9 @@ std::string UseOwnFolder(Folders& fo, const std::string& kind, const std::string
         const std::string cheatsNow = !fo.cheats.empty() ? fo.cheats : sp.filename() == "saves" ? sp.parent_path().u8string() + "/cheats" : fo.saves + "/cheats";
         const std::string from = kind == "states" ? (fo.states.empty() ? fo.saves : fo.states) : kind == "cheats" ? cheatsNow : fo.settings;
         const bool amongSaves = (kind == "states" && fo.states.empty()) || (kind == "settings" && fo.settings == fo.saves);
-        FolderSet::Pairs pairs;
-        std::error_code e;
-        if (FolderSet::IsDir(from))
-            for (fs::directory_iterator it(fs::u8path(from), e), end; !e && it != end; it.increment(e))
-            {
-                const std::string name = it->path().filename().u8string();
-                const bool isDir = it->is_directory(e);
-                if (amongSaves && !(kind == "states" ? (!isDir && FolderSet::IsStateName(name)) : FolderSet::IsSettingsName(name, isDir))) continue;
-                FolderSet::AddTree(it->path().u8string(), dir + "/" + name, pairs);
-            }
-        for (const auto& p : pairs)
-        {
-            if (fs::exists(fs::u8path(p.second), e)) continue;
-            fs::create_directories(fs::u8path(p.second).parent_path(), e);
-            fs::copy_file(fs::u8path(p.first), fs::u8path(p.second), e);
-            if (!e) copied++;
-        }
+        std::string why;
+        copied = CopyOwnFolder(from, dir, kind, amongSaves, why);
+        if (copied < 0) return why;
     }
     SetConfigValues(fo.cfg, { { kind + "_folder", dir } });
 #ifndef __ANDROID__
@@ -4671,14 +4737,9 @@ bool Start(int& argc, char**& argv)
         }
 #endif
 #if defined(__ANDROID__) || defined(SSR_IOS)
-        // Sideways before either engine opens its window. On Android the hint alone can
+        // Orient before either engine opens its window. On Android the hint alone can
         // leave the shared activity upright; on iOS the same, until the window asks.
-        SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
-#ifdef __ANDROID__
-        JavaVoid("showGameOrientation");
-#else
-        IosOrientGame();
-#endif
+        MobileOrientation::Game(games[chosen].platform == Launcher::DS && Launcher::ConfigValue(fo.cfg, "view") == "vertical");
 #endif
 #ifdef SSR_GBA
         // A GBA game: played here (Pokemon GBA Widescreen, built in), then the list again.

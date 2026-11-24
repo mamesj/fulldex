@@ -735,3 +735,29 @@ ROMS FOLDER	ROMフォルダ
 WHERE FULLDEX LOOKS FOR YOUR ROMS, AND IN THE FOLDERS INSIDE IT.	FULLDEXがROMを探す場所（中のフォルダも含む）。
 CHOOSE TO PICK ANOTHER FOLDER.	選ぶと別のフォルダにできます。
 THE ROMS PAGE HAS THIS TOO.	ROMページでも変更できます。
+# 1.7.1: file, shortcut, 3DS setup and cloud messages
+A FILE IS BLOCKED BY {}	{} がファイルをふさいでいます
+CANNOT CHECK {}	{} を確認できません
+CANNOT COPY INTO LINKED PATH {}	リンクされたパス {} にはコピーできません
+CANNOT COPY LINKED PATH {}	リンクされたパス {} はコピーできません
+CANNOT COPY LINKED OR UNREADABLE PATH {}	リンクされた、または読めないパス {} はコピーできません
+CANNOT MAKE {}	{} を作成できません
+CANNOT READ {}	{} を読み込めません
+CANNOT READ THE CURRENT SAVES FOLDER	現在のセーブフォルダを読み込めません
+CANNOT READ THE CURRENT FOLDER	現在のフォルダを読み込めません
+CANNOT RESOLVE THAT FOLDER	そのフォルダを特定できません
+CHOOSE A FOLDER OUTSIDE THE CURRENT FOLDER	現在のフォルダの外にあるフォルダを選んでください
+COULD NOT COPY {}	{} をコピーできませんでした
+NOT MOVED: CANNOT READ ALL CURRENT FILES	移動していません: 現在のファイルをすべて読み込めません
+NOT MOVED: SOURCE AND DESTINATION ARE THE SAME FILE: {}	移動していません: 移動元と移動先が同じファイルです: {}
+NO DESKTOP SHORTCUT FOR THIS GAME	このゲームのデスクトップショートカットはありません
+COULD NOT REMOVE THE APP SHORTCUT	アプリのショートカットを削除できませんでした
+COULD NOT REMOVE THE APPS MENU SHORTCUT	アプリメニューのショートカットを削除できませんでした
+COULD NOT REMOVE THE DESKTOP SHORTCUT	デスクトップのショートカットを削除できませんでした
+COULD NOT REMOVE THE SHORTCUT	ショートカットを削除できませんでした
+REMOVED FROM YOUR APPS MENU	アプリメニューから削除しました
+REMOVED FROM YOUR APPS MENU AND DESKTOP	アプリメニューとデスクトップから削除しました
+COULDN'T CHECK ITS PREPARATION RESULT	準備の結果を確認できませんでした
+COULDN'T READ ITS PREPARATION OUTPUT	準備の出力を読み込めませんでした
+CANNOT READ THE SAVE IN THE SYNC FOLDER	同期フォルダのセーブを読み込めません
+CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION	クラウドセーブはまだ処理中です: このゲームは今回同期されません

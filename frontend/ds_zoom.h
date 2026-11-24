@@ -1,4 +1,4 @@
-// ZOOM AND LOOK AROUND for the DS games: the overworld drawn smaller (1.5x, 2x out), the view moved with the right
+// ZOOM AND LOOK AROUND for the DS games: the overworld drawn smaller (1.1x through 1.5x, then 2x out), the view moved with the right
 // stick, and back close by itself for text, menus and battles. The drawing is melonDS's widescreen replay
 // (GPU3D_Wide.cpp: WideState::Zoom, LookX, LookY); this is the camera that sets those, once a frame.
 #pragma once
@@ -7,8 +7,8 @@
 
 struct DsZoom
 {
-    static constexpr int Levels = 3;
-    static constexpr float Steps[Levels] = { 1.0f, 1.5f, 2.0f };
+    static constexpr int Levels = 7;
+    static constexpr float Steps[Levels] = { 1.0f, 1.1f, 1.2f, 1.3f, 1.4f, 1.5f, 2.0f };
     static constexpr float MaxLook = 0.3f; // how far the view goes, in halves of the picture
 
     int level = 0;          // the step picked (0 = 1x)
