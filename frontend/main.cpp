@@ -9207,7 +9207,7 @@ int main(int argc, char** argv)
     double perfAcc[6] = {};
     double perfWorst = 0;
     int perfN = 0;
-    uint64_t perfWait3D = 0, perfWaitWide = 0;
+    uint64_t perfWait3D = SsrStats().Wait3DNs.load(), perfWaitWide = SsrStats().WaitWideNs.load();
     auto perfNow = []() { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count(); };
     double perfT = perfNow(), perfFrameStart = perfT;
     // Of "scene" in the timing lines (SSR_EMU_PROF): the screens' sections and focus, choosing
