@@ -4291,6 +4291,76 @@ std::string OwnFolderShown(const Folders& fo, const char* key)
     const size_t s = v.find_last_of("/\\");
     return s == std::string::npos ? v : v.substr(s + 1);
 }
+// Copy a chosen kind before changing its setting. Missing optional folders are empty;
+// unreadable folders and partial copies are errors, so the old setting stays active.
+static int CopyOwnFolder(const std::string& from, const std::string& to, const std::string& kind,
+                         bool amongSaves, std::string& why)
+{
+    namespace fs = std::filesystem;
+    std::error_code e;
+    const auto a = fs::weakly_canonical(fs::u8path(from), e);
+    if (e) { why = "CANNOT READ THE CURRENT FOLDER"; return -1; }
+    const bool exists = fs::exists(a, e);
+    if (e) { why = "CANNOT READ THE CURRENT FOLDER"; return -1; }
+    if (!exists) return 0;
+    if (!fs::is_directory(a, e) || e) { why = "CANNOT READ THE CURRENT FOLDER"; return -1; }
+    const auto b = fs::weakly_canonical(fs::u8path(to), e);
+    if (e) { why = "CANNOT RESOLVE THAT FOLDER"; return -1; }
+    for (auto parent = b; !parent.empty();)
+    {
+        const bool same = fs::equivalent(a, parent, e);
+        e.clear();
+        if (same)
+        {
+            if (parent == b) return 0;
+            why = "CHOOSE A FOLDER OUTSIDE THE CURRENT FOLDER"; return -1;
+        }
+        const auto next = parent.parent_path();
+        if (next == parent) break;
+        parent = next;
+    }
+    int copied = 0;
+    for (fs::recursive_directory_iterator it(a, e), end; !e && it != end; it.increment(e))
+    {
+        const auto rel = it->path().lexically_relative(a);
+        const bool directory = it->is_directory(e);
+        if (e) { why = "CANNOT READ " + rel.u8string(); return -1; }
+        if (amongSaves && it.depth() == 0)
+        {
+            const auto name = it->path().filename().u8string();
+            const bool selected = kind == "states" ? (!directory && FolderSet::IsStateName(name)) : FolderSet::IsSettingsName(name, directory);
+            if (!selected) { it.disable_recursion_pending(); continue; }
+        }
+        const bool linked = it->is_symlink(e);
+        if (e || linked) { why = "CANNOT COPY LINKED OR UNREADABLE PATH " + rel.u8string(); return -1; }
+        const auto dst = b / rel;
+        const auto status = fs::symlink_status(dst, e);
+        if (e && e != std::errc::no_such_file_or_directory) { why = "CANNOT CHECK " + rel.u8string(); return -1; }
+        e.clear();
+        if (fs::is_symlink(status)) { why = "CANNOT COPY INTO LINKED PATH " + rel.u8string(); return -1; }
+        if (directory)
+        {
+            fs::create_directories(dst, e);
+            if (e) { why = "CANNOT MAKE " + rel.u8string(); return -1; }
+            continue;
+        }
+        const bool regular = it->is_regular_file(e);
+        if (e) { why = "CANNOT READ " + rel.u8string(); return -1; }
+        if (!regular) continue;
+        const bool present = fs::exists(dst, e);
+        if (e) { why = "CANNOT CHECK " + rel.u8string(); return -1; }
+        if (present)
+        {
+            if (!fs::is_regular_file(status)) { why = "A FILE IS BLOCKED BY " + rel.u8string(); return -1; }
+            continue;
+        }
+        fs::copy_file(it->path(), dst, e);
+        if (e) { why = "COULD NOT COPY " + rel.u8string(); return -1; }
+        ++copied;
+    }
+    if (e) { why = "CANNOT READ THE CURRENT FOLDER"; return -1; }
+    return copied;
+}
 // A folder for one kind: the files of that kind copied there (none replaced; the old ones stay where
 // they were), then used at once. dir: the folder ("" none chosen; "!" one that cannot be used).
 std::string UseOwnFolder(Folders& fo, const std::string& kind, const std::string& dir, const std::vector<Launcher::Game>& games)
@@ -4312,23 +4382,9 @@ std::string UseOwnFolder(Folders& fo, const std::string& kind, const std::string
         const std::string cheatsNow = !fo.cheats.empty() ? fo.cheats : sp.filename() == "saves" ? sp.parent_path().u8string() + "/cheats" : fo.saves + "/cheats";
         const std::string from = kind == "states" ? (fo.states.empty() ? fo.saves : fo.states) : kind == "cheats" ? cheatsNow : fo.settings;
         const bool amongSaves = (kind == "states" && fo.states.empty()) || (kind == "settings" && fo.settings == fo.saves);
-        FolderSet::Pairs pairs;
-        std::error_code e;
-        if (FolderSet::IsDir(from))
-            for (fs::directory_iterator it(fs::u8path(from), e), end; !e && it != end; it.increment(e))
-            {
-                const std::string name = it->path().filename().u8string();
-                const bool isDir = it->is_directory(e);
-                if (amongSaves && !(kind == "states" ? (!isDir && FolderSet::IsStateName(name)) : FolderSet::IsSettingsName(name, isDir))) continue;
-                FolderSet::AddTree(it->path().u8string(), dir + "/" + name, pairs);
-            }
-        for (const auto& p : pairs)
-        {
-            if (fs::exists(fs::u8path(p.second), e)) continue;
-            fs::create_directories(fs::u8path(p.second).parent_path(), e);
-            fs::copy_file(fs::u8path(p.first), fs::u8path(p.second), e);
-            if (!e) copied++;
-        }
+        std::string why;
+        copied = CopyOwnFolder(from, dir, kind, amongSaves, why);
+        if (copied < 0) return why;
     }
     SetConfigValues(fo.cfg, { { kind + "_folder", dir } });
 #ifndef __ANDROID__
