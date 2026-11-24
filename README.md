@@ -530,7 +530,7 @@ in a `cheats` folder (make it if it isn't there):
 | PC (Windows, Linux, Steam Deck) | `cheats` beside the program (next to `saves`) |
 | Linux AppImage | `~/.local/share/pokemon-ds-wide/cheats` |
 | Mac | `~/Library/Application Support/Pokemon DS Widescreen/cheats` |
-| Android | `cheats` inside the folder you chose for your ROMs |
+| Android | `FullDex/cheats` inside the shared ROM folder with the tidy layout, or your configured Cheats Folder; imported libraries can use the app's private folder |
 | iPhone and iPad | Files app: On My iPhone (or iPad) > Pokémon Fulldex > `cheats` |
 | Nintendo Switch | `/switch/pokemon-ds-wide/cheats/` on the SD card |
 
@@ -567,6 +567,7 @@ in a `cheats` folder (make it if it isn't there):
   D2000000 00000000
   ```
   melonDS's own cheat files (`IPKE.mch` and so on) work too.
+
 - **Codes for one ROM:** name the text or melonDS cheat file after the ROM, without `.nds`:
   `My Hack.txt` for `My Hack.nds`. If either ROM-specific file exists, those files take
   priority over the game-code files. ROM hacks keep their enabled cheats separately,
@@ -592,6 +593,31 @@ letter chooser with a controller or touch.
   Pictures over 2048 pixels on a side are read at a fraction of their size.
 
 ---
+
+### Add your own DS codes on Android
+
+Custom DS Action Replay files are supported; there is currently no in-app **Add Cheat**
+text editor. For SoulSilver or another DS game:
+
+1. Quit the game to the library. Open **Settings > Game List > Cheats Folder** and
+   choose a writable shared-storage folder you can open in a text editor, such as
+   `Documents/FullDex Cheats`. Allow the requested file access. This also avoids
+   needing a file manager that can open `Android/data` for an imported library.
+2. Create a plain-text file named exactly like the ROM, replacing `.nds` with `.txt`:
+   `Pokemon SoulSilver.nds` uses `Pokemon SoulSilver.txt`. Avoid an extra `.txt`
+   extension added by your editor. Alternatively use the game's cartridge code as
+   listed above; game-code names depend on the ROM's language/version.
+3. Put a cheat name on its own line, followed by its verified Action Replay code
+   lines (two eight-digit hexadecimal words per line). Start the next cheat with
+   its name on a new line. Empty lines and lines beginning with `#` or `;` are ignored.
+4. Save the file in the chosen Cheats Folder and start the game again. Open
+   **Cheats** in the pause menu; codes from your text file appear above the database
+   folders and start disabled. Enable only the code you want.
+
+Use codes for the exact game, region and revision. The example above is a file-format
+example, not a code to reuse for every game. A ROM-named `.txt` or `.mch` takes priority
+over the game-code files. This guide covers DS Action Replay files; the GBA and 3DS
+players use separate cheat systems.
 
 ## The games
 
