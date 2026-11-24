@@ -1740,7 +1740,7 @@ struct Settings : OptionalFeatures
     // NINTENDO WFC (OptionalFeatures::wfc): the community server that answers nintendowifi.net.
     // AltWFC/WFZwei, whose event list has the most Mystery Gifts; any other by its address.
     std::string wfcServer = "172.104.88.237";
-    bool cpuBoost = true; // Switch only: the processor's boost mode (see SwitchPlatform)
+    bool cpuBoost = true; // Switch only: the processor at 1785 MHz while a game runs (SwitchPlatform::FastClock)
     bool jit = true;      // Switch, games that are not recompiled: melonDS's JIT (read at start-up)
     bool fastMem = true;  // ... and its fast memory (also read at start-up)
     bool cgearOff = true; // Black 2: answer its C-Gear question on starting (cgear_start=off|ask)
@@ -12000,7 +12000,14 @@ int main(int argc, char** argv)
             }
         }
 #ifdef __SWITCH__
-        SwitchPlatform::FastClock(!paused && fastRequested); // (#227: a faster processor while it is on)
+        // (#227: a faster processor while fast forward is on; with CPU BOOST (cpu_boost=1, the
+        // default) all the time a game runs, for HeartGold's cities and the like: a frame there took
+        // 22 ms at the standard 1020 MHz. Back to the standard speed in the pause menu.)
+        SwitchPlatform::FastClock(!paused && (fastRequested || cfg.cpuBoost));
+        {
+            static int clockCheck = 0;
+            if (!paused && cfg.cpuBoost && ++clockCheck >= 600) { clockCheck = 0; SwitchPlatform::FastClockCheck(); }
+        }
 #endif
         // Fast forward (4x) while the right trigger (ZR on the Switch) or Left Shift is held, or
         // locked on from the menu.

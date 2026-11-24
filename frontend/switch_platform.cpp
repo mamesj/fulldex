@@ -2042,12 +2042,14 @@ void ForceExit()
 
 extern "C" void SsrJitRelease();
 
+static bool g_fastNow = false, g_fastUsable = true;
+static u32 g_fastBefore = 0;
 void FastClock(bool on)
 {
     // (One clock session at a time, closed straight away, and only when fast forward starts or
     // stops: pcv stops the console when it runs out of sessions, see the test log's clocks.)
-    static bool now = false, usable = true;
-    static u32 before = 0;
+    bool& now = g_fastNow; bool& usable = g_fastUsable;
+    u32& before = g_fastBefore;
     if (on == now || !usable) return;
     now = on;
     if (!hosversionAtLeast(8, 0, 0) || R_FAILED(clkrstInitialize())) { usable = false; return; }
@@ -2061,14 +2063,33 @@ void FastClock(bool on)
             if (R_SUCCEEDED(clkrstGetClockRate(&s, &cur)) && cur && cur < fast && R_SUCCEEDED(clkrstSetClockRate(&s, fast)))
             {
                 before = cur;
-                fprintf(stderr, "[ff] processor %u -> 1785 MHz while fast forward is on\n", cur / 1000000);
+                fprintf(stderr, "[clock] processor %u -> 1785 MHz\n", cur / 1000000);
             }
         }
         else if (before)
         {
             clkrstSetClockRate(&s, before);
-            fprintf(stderr, "[ff] processor back to %u MHz\n", before / 1000000);
+            fprintf(stderr, "[clock] processor back to %u MHz\n", before / 1000000);
             before = 0;
+        }
+        clkrstCloseSession(&s);
+    }
+    clkrstExit();
+}
+
+void FastClockCheck()
+{
+    // (Every 10 seconds at most, one session closed straight away, as FastClock.)
+    if (!g_fastNow || !g_fastUsable || !hosversionAtLeast(8, 0, 0) || R_FAILED(clkrstInitialize())) return;
+    ClkrstSession s;
+    if (R_SUCCEEDED(clkrstOpenSession(&s, PcvModuleId_CpuBus, 3)))
+    {
+        const u32 fast = 1785000000;
+        u32 cur = 0;
+        if (R_SUCCEEDED(clkrstGetClockRate(&s, &cur)) && cur && cur < fast && R_SUCCEEDED(clkrstSetClockRate(&s, fast)))
+        {
+            if (!g_fastBefore) g_fastBefore = cur;
+            fprintf(stderr, "[clock] processor was %u MHz again: 1785 MHz\n", cur / 1000000);
         }
         clkrstCloseSession(&s);
     }

@@ -44,6 +44,8 @@ void MoveMainThread();
 // it had put back when it goes off. The Switch's standard 1020 MHz ran a DS game's frame in about
 // 16 ms, so fast forward only reached normal speed.
 void FastClock(bool on);
+// While FastClock is on: puts the 1785 MHz back if the system has changed it (docking does).
+void FastClockCheck();
 void Finish();
 
 // The system's software keyboard: the text typed, or false if closed without.
