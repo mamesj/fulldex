@@ -1719,6 +1719,9 @@ int PickGame(Folders& fo, std::vector<Launcher::Game>& games, int selected, bool
         if (Launcher::Glassy(canvas))
         {
             Launcher::GlassFocus& F = Launcher::Focus();
+            // (A page open (ROMs, Hub, Settings...): the tab bar under it isn't what A is on. A tab chosen before the page
+            // opened left onTabs set, so a tap on ROMs' Choose ROMs Folder opened that tab's menu.)
+            if (F.page >= 0 && F.side < 0) onTabs = false;
             if (onTabs && F.onSort && F.tool == 1 && !Launcher::TabHidden().empty()) { Launcher::OpenPlusMenu(); return; } // (+: new, or one hidden shown)
             if (onTabs && F.onSort && F.tool != 3)
             {
