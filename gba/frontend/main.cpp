@@ -742,6 +742,7 @@ struct App
     std::vector<GbaGameplay::CapSite> gpCap; // (LEVEL CAP: getexp's two level checks)
     int gpCapOn = 0;                         // (the cap written now; 0 none)
     int gpCapTick = 0;
+    bool gpCapBattleWas = false;
     std::vector<GbaGameplay::Write> gpHm; // (NO HMS NEEDED's writes)
     bool gpHmOn = false;
     bool gpTextOn = false, gpTmsOn = false, gpField = false;
@@ -2284,6 +2285,18 @@ struct App
     void LevelCapFrame()
     {
         if (gpCap.empty() || ++gpCapTick % 60) return;
+        // (Each battle's start and end logged with the lead's level and EXP: a Pokemon at the cap gains none.)
+        if (compConfig && compConfig->gMain)
+        {
+            const bool inBattle = (core->busRead8(core, compConfig->gMain + compConfig->inBattleOff) & 2) != 0;
+            if (inBattle != gpCapBattleWas)
+            {
+                ReadCompanion();
+                if (!comp.party.empty())
+                    fprintf(stderr, "[gba] level cap: battle %s, lead Lv %d EXP %u (cap %d)\n", inBattle ? "starts" : "ends", comp.party[0].level, comp.party[0].exp, gpCapOn);
+            }
+            gpCapBattleWas = inBattle;
+        }
         int want = 0;
         if (set.Get("level_cap") == "1" && GameplayOffered("level_cap"))
         {
@@ -4091,6 +4104,7 @@ struct App
     // COMPANION's pages: A on a link opens it; B goes back a page.
     void CompanionInput(const MenuIn& in)
     {
+        if (in.accept) fprintf(stderr, "[gba] companion: A on page %d, row %d\n", (int)pausePage, pause.selected);
         if (in.menu) { Resume(); return; }
         if (pausePage == P_GUIDE && in.accept && pause.selected >= 0 && pause.selected < (int)guideShown.size())
         {
