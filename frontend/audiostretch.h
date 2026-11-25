@@ -169,6 +169,12 @@ private:
 // is active leaves a full-speed stream unable to recover from a short or empty queue.
 inline double AudioQueueSlowdown(double frameSlowdown, int queuedSamples)
 {
-    constexpr double target = 4800.0; // 100 ms at 48 kHz
+    // (100 ms at 48 kHz; 50 ms on a phone, whose own output (Android's fast track, about 25 ms) adds less, and where
+    // the 100 ms on top of it made the sound late behind the picture.)
+#ifdef __ANDROID__
+    constexpr double target = 2400.0;
+#else
+    constexpr double target = 4800.0;
+#endif
     return frameSlowdown * (1.0 + 0.5 * (target - std::max(0, queuedSamples)) / target);
 }
