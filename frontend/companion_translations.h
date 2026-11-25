@@ -7,6 +7,10 @@ namespace UiLang {
 inline std::string CompanionTranslation(int language,const std::string& text) {
     if(language==1) {
         static const std::unordered_map<std::string,std::string> table={
+            {"EXP SHARE","REPARTIR EXP"},
+            {"SPLIT","DIVIDIDA"},
+            {"FULL EXP","EXP COMPLETA"},
+            {"THE WHOLE PARTY GETS EXP FROM A WIN, NOT ONLY THE POKEMON THAT FOUGHT. SPLIT SHARES IT OUT; FULL EXP GIVES EACH THE EXP ONE POKEMON ALONE WOULD GET. EGGS AND FAINTED POKEMON GET NONE.","TODO EL EQUIPO GANA EXP AL VENCER, NO SOLO LOS POKEMON QUE LUCHARON. DIVIDIDA LA REPARTE; EXP COMPLETA DA A CADA UNO LA EXP QUE GANARÍA SOLO. LOS HUEVOS Y LOS POKEMON DEBILITADOS NO RECIBEN NADA."},
             {"#{0} IN RECENT GAMES","N.º {0} DE LOS JUEGOS RECIENTES"},
             {"(EGG)","(HUEVO)"},
             {"(EMPTY)","(VACÍA)"},
@@ -1326,6 +1330,10 @@ inline std::string CompanionTranslation(int language,const std::string& text) {
     }
     if(language==2) {
         static const std::unordered_map<std::string,std::string> table={
+            {"EXP SHARE","CONDIVIDI ESP"},
+            {"SPLIT","DIVISA"},
+            {"FULL EXP","ESP PIENA"},
+            {"THE WHOLE PARTY GETS EXP FROM A WIN, NOT ONLY THE POKEMON THAT FOUGHT. SPLIT SHARES IT OUT; FULL EXP GIVES EACH THE EXP ONE POKEMON ALONE WOULD GET. EGGS AND FAINTED POKEMON GET NONE.","TUTTA LA SQUADRA RICEVE ESP DA UNA VITTORIA, NON SOLO I POKEMON CHE HANNO LOTTATO. DIVISA LA RIPARTISCE; ESP PIENA DÀ A OGNUNO L'ESP CHE AVREBBE DA SOLO. UOVA E POKEMON ESAUSTI NON RICEVONO NULLA."},
             {"#{0} IN RECENT GAMES","N. {0} TRA I GIOCHI RECENTI"},
             {"(EGG)","(UOVO)"},
             {"(EMPTY)","(VUOTA)"},
@@ -2645,6 +2653,10 @@ inline std::string CompanionTranslation(int language,const std::string& text) {
     }
     if(language==3) {
         static const std::unordered_map<std::string,std::string> table={
+            {"EXP SHARE","MULTI EXP"},
+            {"SPLIT","PARTAGÉE"},
+            {"FULL EXP","EXP ENTIÈRE"},
+            {"THE WHOLE PARTY GETS EXP FROM A WIN, NOT ONLY THE POKEMON THAT FOUGHT. SPLIT SHARES IT OUT; FULL EXP GIVES EACH THE EXP ONE POKEMON ALONE WOULD GET. EGGS AND FAINTED POKEMON GET NONE.","TOUTE L'ÉQUIPE GAGNE DE L'EXP À CHAQUE VICTOIRE, PAS SEULEMENT LES POKEMON QUI ONT COMBATTU. PARTAGÉE LA RÉPARTIT ; EXP ENTIÈRE DONNE À CHACUN L'EXP QU'IL AURAIT SEUL. LES OEUFS ET LES POKEMON K.O. N'EN REÇOIVENT PAS."},
             {"#{0} IN RECENT GAMES","N° {0} DES JEUX RÉCENTS"},
             {"(EGG)","(ŒUF)"},
             {"(EMPTY)","(VIDE)"},
@@ -3964,6 +3976,10 @@ inline std::string CompanionTranslation(int language,const std::string& text) {
     }
     if(language==4) {
         static const std::unordered_map<std::string,std::string> table={
+            {"EXP SHARE","EP-TEILER"},
+            {"SPLIT","GETEILT"},
+            {"FULL EXP","VOLLE EP"},
+            {"THE WHOLE PARTY GETS EXP FROM A WIN, NOT ONLY THE POKEMON THAT FOUGHT. SPLIT SHARES IT OUT; FULL EXP GIVES EACH THE EXP ONE POKEMON ALONE WOULD GET. EGGS AND FAINTED POKEMON GET NONE.","DAS GANZE TEAM ERHÄLT EP AUS EINEM SIEG, NICHT NUR DIE POKEMON, DIE GEKÄMPFT HABEN. GETEILT VERTEILT SIE; VOLLE EP GIBT JEDEM SO VIELE EP, WIE ER ALLEIN BEKÄME. EIER UND BESIEGTE POKEMON ERHALTEN KEINE."},
             {"#{0} IN RECENT GAMES","NR. {0} DER LETZTEN SPIELE"},
             {"(EGG)","(EI)"},
             {"(EMPTY)","(LEER)"},
@@ -5283,6 +5299,10 @@ inline std::string CompanionTranslation(int language,const std::string& text) {
     }
     if(language==5) {
         static const std::unordered_map<std::string,std::string> table={
+            {"EXP SHARE","COMPART. EXP"},
+            {"SPLIT","DIVIDIDA"},
+            {"FULL EXP","EXP TOTAL"},
+            {"THE WHOLE PARTY GETS EXP FROM A WIN, NOT ONLY THE POKEMON THAT FOUGHT. SPLIT SHARES IT OUT; FULL EXP GIVES EACH THE EXP ONE POKEMON ALONE WOULD GET. EGGS AND FAINTED POKEMON GET NONE.","TODA A EQUIPE GANHA EXP AO VENCER, NÃO SÓ OS POKEMON QUE LUTARAM. DIVIDIDA REPARTE; EXP TOTAL DÁ A CADA UM A EXP QUE GANHARIA SOZINHO. OVOS E POKEMON DESMAIADOS NÃO RECEBEM NADA."},
             {"#{0} IN RECENT GAMES","#{0} NOS JOGOS RECENTES"},
             {"(EGG)","(OVO)"},
             {"(EMPTY)","(VAZIA)"},

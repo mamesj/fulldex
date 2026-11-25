@@ -128,6 +128,61 @@ inline std::vector<Write> ReusableTms(const std::vector<uint8_t>& rom)
     return out;
 }
 
+// EXP SHARE (PokeDaisy's ExpShare.kt, GPL 3): the whole party gains EXP from a win. Gen 3's getexp (Cmd_getexp) pays
+// the Pokemon whose bit is set in gSentPokesToOpponent (a byte per foe flank, set as each is sent out), the EXP divided
+// by how many there are; nothing else reads those bits. SPLIT: every party Pokemon that isn't an egg or fainted counts
+// as having fought (written each frame). FULL: the same, and getexp's two divisions by that count made `nop`s, so each
+// gets what one alone would. Found by agbcc's build of Cmd_getexp (FireRed, LeafGreen, Emerald in every language and
+// the hacks on that code; Ruby and Sapphire's own build), only where a battle script table the code loads holds it
+// (CFRU's hacks run their own: none there). sentPokes 0: not this game.
+struct ExpShareSites { uint32_t sentPokes = 0; std::vector<Write> full; };
+inline ExpShareSites ExpShare(const std::vector<uint8_t>& rom)
+{
+    using namespace detail;
+    ExpShareSites out;
+    auto sig = [](const char* hex) { std::vector<int> v; for (size_t i = 0; hex[i] && hex[i + 1]; i += 2) v.push_back(hex[i] == '?' ? -1 : std::stoi(std::string(hex + i, 2), nullptr, 16)); return v; };
+    static const std::vector<int> GETEXP = sig("f0b54f464646c0b400260f480068503081460e4800684078????????0c4908700c4a022101400906490e891809788846");
+    static const std::vector<int> GETEXP_RS = sig("f0b557464e464546e0b40026??488246??4800684078??????????490870??4a022101400906490e891809788846");
+    auto at = [&](size_t o, const std::vector<int>& g) {
+        if (o + g.size() > rom.size()) return false;
+        for (size_t i = 0; i < g.size(); i++) if (g[i] >= 0 && rom[o + i] != g[i]) return false;
+        return true;
+    };
+    std::vector<size_t> hits;
+    for (size_t o = 0; o + 64 <= rom.size() && hits.size() < 2; o += 4)
+        if (rom[o] == 0xF0 && rom[o + 1] == 0xB5 && (at(o, GETEXP) || at(o, GETEXP_RS))) hits.push_back(o);
+    if (hits.size() != 1) return out;
+    const size_t c = hits[0];
+    // Only if the game runs it: entry 0x23 of a battle script command table some code loads.
+    const uint32_t fn = (uint32_t)(0x08000000 + c + 1);
+    std::vector<uint32_t> tables;
+    for (size_t o = 0x23 * 4; o + 4 <= rom.size(); o += 4)
+        if (U32(rom, o) == fn) tables.push_back((uint32_t)(0x08000000 + o - 0x23 * 4));
+    if (tables.empty()) return out;
+    bool loaded = false;
+    for (size_t o = 0; o + 4 <= rom.size() && !loaded; o += 4)
+        for (uint32_t t : tables) if (U32(rom, o) == t) { loaded = true; break; }
+    if (!loaded) return out;
+    enum { BODY = 0x300 };
+    if (c + BODY > rom.size()) return out;
+    const uint32_t sent = Pool(rom, c + (at(c, GETEXP_RS) ? 0x1E : 0x20));
+    if (sent < 0x02000000 || sent > 0x0203FFFF) return out;
+    // The division (yield * level / 7: the call after `movs r1, #7`), then its two calls after `adds r1, r5, #0`.
+    long div = -1;
+    for (size_t i = 0; i + 6 < BODY && div < 0; i += 2)
+        if (U16(rom, c + i) == 0x2107 && (U16(rom, c + i + 2) & 0xF800) == 0xF000) div = BlTarget(rom, c + i + 2);
+    if (div < 0) return out;
+    std::vector<size_t> sites;
+    for (size_t i = 0; i + 8 < BODY; i += 2)
+        if (rom[c + i + 1] == 0x1C && U16(rom, c + i + 2) == 0x1C29 && (U16(rom, c + i + 4) & 0xF800) == 0xF000 && BlTarget(rom, c + i + 4) == div)
+            sites.push_back(c + i + 4);
+    if (sites.size() != 2) return out;
+    for (size_t a : sites)
+        out.full.push_back({ (uint32_t)(0x08000000 + a), { rom[a], rom[a + 1], rom[a + 2], rom[a + 3] }, { 0xC0, 0x46, 0xC0, 0x46 } });
+    out.sentPokes = sent;
+    return out;
+}
+
 // WILD ENCOUNTERS. StandardWildEncounter's first lines load the switch from a literal pool, compare it with 1, then
 // call GetCurrentMapWildMonHeaderId and load 0xFFFF: FireRed's and Emerald's (Ruby and Sapphire's) shapes as agbcc
 // built them, and CFRU's hook (Unbound, Radical Red), which still reads FireRed's switch. The switch's EWRAM address,

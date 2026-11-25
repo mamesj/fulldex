@@ -239,6 +239,9 @@ const std::vector<Setting>& SettingsList()
           "HOW FAST THE GAME RUNS WHILE YOU RIDE A BIKE." },
         { "surf_speed", "SURF SPEED", { { "1", "NORMAL" }, { "2", "2X" }, { "3", "3X" }, { "4", "4X" } }, "1",
           "HOW FAST THE GAME RUNS WHILE YOU SURF OR DIVE." },
+        { "exp_share", "EXP SHARE", { { "0", "OFF" }, { "1", "SPLIT" }, { "2", "FULL EXP" } }, "0",
+          "THE WHOLE PARTY GETS EXP FROM A WIN, NOT ONLY THE POKEMON THAT FOUGHT. SPLIT SHARES IT OUT; FULL EXP GIVES EACH "
+          "THE EXP ONE POKEMON ALONE WOULD GET. EGGS AND FAINTED POKEMON GET NONE." },
         { "shiny_odds", "SHINY ODDS",
           { { "8192", "NORMAL" }, { "4096", "1 IN 4096" }, { "1024", "1 IN 1024" }, { "512", "1 IN 512" }, { "128", "1 IN 128" } }, "8192",
           "HOW OFTEN A WILD POKEMON TURNS UP SHINY. NORMAL IS THE GAME'S OWN 1 IN 8192. POKEMON ALREADY CAUGHT DON'T CHANGE, "
@@ -719,6 +722,8 @@ struct App
     // GAMEPLAY (gameplay.h): the ROM's writes for INSTANT TEXT and REUSABLE TMS, which of them are in, the game's wild
     // encounter switch, and whether pk_wide.c knows this game's field (RUN INDOORS, WILD ENCOUNTERS).
     std::vector<GbaGameplay::Write> gpText, gpTms;
+    GbaGameplay::ExpShareSites gpExp; // (EXP SHARE: gSentPokesToOpponent, FULL's writes)
+    bool gpExpFullOn = false;
     bool gpTextOn = false, gpTmsOn = false, gpField = false;
     uint32_t gpWild = 0;
     GbaGameplay::ShinyRoller shiny;
@@ -1174,8 +1179,9 @@ struct App
             const std::vector<uint8_t>& id = sold.empty() ? rom : sold;
             gpText = GbaGameplay::InstantText(rom);
             gpTms = GbaGameplay::ReusableTms(rom);
+            gpExp = GbaGameplay::ExpShare(rom);
             gpWild = GbaGameplay::WildSwitch(rom);
-            gpTextOn = gpTmsOn = false;
+            gpTextOn = gpTmsOn = gpExpFullOn = false;
             shiny.Reset();
             gpState = 0;
             for (int c = 0; c < 3; c++) { tintNow[c] = 256; tintSent[c] = 256; }
@@ -1201,7 +1207,7 @@ struct App
                 Games::MakeDir(data + sub);
                 ffMusic.Start(rom, have.freq, data + sub);
             }
-            fprintf(stderr, "[gba] gameplay: text %zu, tms %zu, wild %08x, field %d\n", gpText.size(), gpTms.size(), gpWild, (int)gpField);
+            fprintf(stderr, "[gba] gameplay: text %zu, tms %zu, exp %08x/%zu, wild %08x, field %d\n", gpText.size(), gpTms.size(), gpExp.sentPokes, gpExp.full.size(), gpWild, (int)gpField);
         }
         camera.Reset();
         camera.level = 0;
@@ -1657,6 +1663,7 @@ struct App
         core->setKeys(core, keys);
         if (gpField && !paused) gpState = pk_field_state(core, set.Get("run_indoors") == "1", WildKeep());
         if (!paused) ShinyFrame();
+        if (!paused) ExpShareFrame();
         core->runFrame(core);
         fly.FrameEnded();
         if (!paused) { FlyFrame(); TmFrame(); }
@@ -1871,7 +1878,7 @@ struct App
             static const char* const display[] = { "widescreen", "fullscreen", "scaling", "hd_filter", "lcd", "colour", "zoom", "zoom_text", "day_night", "follower", "nav_style", "repel_prompt", "show_fps" };
             static const char* const sound[] = { "volume", "ff_mute" };
             static const char* const controls[] = { "gba_start", "buttons", "fast_lock", "ff_speed", "fast_button", "auto_state", "auto_resume" };
-            static const char* const gameplay[] = { "instant_text", "reusable_tms", "run_indoors", "wild_encounters", "shiny_odds", "battle_speed", "text_speed", "bike_speed", "surf_speed", "fly_on", "flight_clouds" };
+            static const char* const gameplay[] = { "instant_text", "reusable_tms", "exp_share", "run_indoors", "wild_encounters", "shiny_odds", "battle_speed", "text_speed", "bike_speed", "surf_speed", "fly_on", "flight_clouds" };
             const char* const* keys = pausePage == P_DISPLAY ? display : pausePage == P_SOUND ? sound : pausePage == P_GAMEPLAY ? gameplay : controls;
             const int count = pausePage == P_DISPLAY ? sizeof(display) / sizeof(*display)
                             : pausePage == P_SOUND ? sizeof(sound) / sizeof(*sound)
@@ -2134,6 +2141,7 @@ struct App
     {
         if (!strcmp(key, "instant_text")) return !gpText.empty();
         if (!strcmp(key, "reusable_tms")) return !gpTms.empty();
+        if (!strcmp(key, "exp_share")) return gpExp.sentPokes != 0 && compConfig && !(compConfig->sha1 && (compConfig->layout || compConfig->speciesMask != 0xFFFF));
         if (!strcmp(key, "run_indoors")) return gpField && gameCode.size() == 4 && gameCode[0] == 'B'; // (Emerald and FireRed's engines)
         if (!strcmp(key, "wild_encounters")) return gpField && gpWild;
         if (!strcmp(key, "shiny_odds")) return EnemyParty() != 0;
@@ -2155,6 +2163,24 @@ struct App
         }
         const std::string f = gameCode.substr(0, 3);
         return f == "AXV" || f == "AXP" ? compConfig->party + 0x260 : f == "BPE" ? compConfig->party + 0x258 : f == "BPR" || f == "BPG" ? compConfig->party - 0x258 : 0;
+    }
+    // EXP SHARE's every frame: both flanks' bits in gSentPokesToOpponent set to the party slots that hold a Pokemon,
+    // not an egg, with HP left (each record's flags byte and HP are plain, not encrypted).
+    void ExpShareFrame()
+    {
+        if (!gpExp.sentPokes || !GameplayOffered("exp_share")) return;
+        const std::string mode = set.Get("exp_share");
+        if (mode != "1" && mode != "2") return;
+        uint8_t mask = 0;
+        for (int i = 0; i < 6; i++)
+        {
+            const uint32_t m = compConfig->party + 100 * (uint32_t)i;
+            const uint8_t f = (uint8_t)core->busRead8(core, m + 0x13);
+            if ((f & 2) && !(f & 4) && core->busRead16(core, m + 0x56) != 0) mask |= (uint8_t)(1 << i);
+        }
+        if (!mask) return;
+        for (uint32_t k = 0; k < 2; k++)
+            if ((uint8_t)core->busRead8(core, gpExp.sentPokes + k) != mask) core->busWrite8(core, gpExp.sentPokes + k, mask);
     }
     void ShinyFrame()
     {
@@ -3484,6 +3510,7 @@ struct App
         };
         put(gpText, set.Get("instant_text") == "1", gpTextOn);
         put(gpTms, set.Get("reusable_tms") == "1", gpTmsOn);
+        put(gpExp.full, set.Get("exp_share") == "2", gpExpFullOn);
     }
     void SettingsPageInput(const MenuIn& in)
     {
@@ -3542,7 +3569,7 @@ struct App
         }
         if (!strcmp(s.key, "volume")) SetVolume();
         if (!strcmp(s.key, "fast_lock")) fastToggle = set.Get("fast_lock") == "1";
-        if (!strcmp(s.key, "instant_text") || !strcmp(s.key, "reusable_tms")) ApplyGameplay();
+        if (!strcmp(s.key, "instant_text") || !strcmp(s.key, "reusable_tms") || !strcmp(s.key, "exp_share")) ApplyGameplay();
         pause.items[i].value = set.Shown(s);
     }
 #endif
@@ -4043,7 +4070,7 @@ struct App
             { "lcd", IC_GRID }, { "colour", IC_MONITOR }, { "zoom", IC_EXPAND }, { "zoom_text", IC_EXPAND }, { "repel_prompt", IC_INFO }, { "show_fps", IC_GAUGE }, { "volume", IC_SPEAKER }, { "ff_mute", IC_FAST },
             { "gba_start", IC_PAD }, { "buttons", IC_PAD }, { "ff_speed", IC_FAST }, { "fast_button", IC_FAST }, { "fast_lock", IC_FAST },
             { "auto_state", IC_SAVE }, { "auto_resume", IC_LOAD },
-            { "instant_text", IC_INFO }, { "reusable_tms", IC_CHIP }, { "run_indoors", IC_FAST }, { "wild_encounters", IC_GLOBE }, { "shiny_odds", IC_SPARKLE }, { "battle_speed", IC_FAST }, { "text_speed", IC_FAST }, { "bike_speed", IC_FAST }, { "surf_speed", IC_FAST }, { "day_night", IC_SPARKLE }, { "follower", IC_POKEBALL }, { "nav_style", IC_GRID } };
+            { "instant_text", IC_INFO }, { "reusable_tms", IC_CHIP }, { "exp_share", IC_POKEBALL }, { "run_indoors", IC_FAST }, { "wild_encounters", IC_GLOBE }, { "shiny_odds", IC_SPARKLE }, { "battle_speed", IC_FAST }, { "text_speed", IC_FAST }, { "bike_speed", IC_FAST }, { "surf_speed", IC_FAST }, { "day_night", IC_SPARKLE }, { "follower", IC_POKEBALL }, { "nav_style", IC_GRID } };
         icon = IC_GEAR;
         for (const auto& i : icons)
             if (!strcmp(i.key, key)) icon = i.icon;
