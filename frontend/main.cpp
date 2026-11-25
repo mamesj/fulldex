@@ -2641,6 +2641,7 @@ int main(int argc, char** argv)
     int refreshesPerFrame = 1;
     bool swapPaced = false; // (Linux, 120 Hz and up: the driver holds each picture refreshesPerFrame refreshes)
     int swapQuick = 0;      // (pictures in a row the driver handed back at once: it said it paces them, but does not)
+    int swapSlow = 0;       // (pictures in a row it held far longer than its refreshes: a variable refresh screen, #250)
     double refreshPeriod = 1001.0 / 60000.0;
     double screenPace = 0; // Android: seconds a picture when the frames keep the screen's rate (0: the DS's own)
     SDL_Renderer* renderer = nullptr;
@@ -10172,6 +10173,19 @@ int main(int argc, char** argv)
                 {
                     swapPaced = false;
                     fprintf(stderr, "[display] the driver took the swap interval but does not hold the pictures: FullDex paces them itself\n");
+                }
+                // (#250: on a variable refresh screen (G-Sync, FreeSync) a refresh lasts as long as the
+                // screen waits for a picture, so holding one for 4 of them at 240 Hz took about 100 ms:
+                // 9 pictures a second. Held over 1.6 times as long as its refreshes, 30 in a row: one
+                // refresh a picture and FullDex paces them itself, as when the swap interval is refused.)
+                const double held = refreshPeriod * refreshesPerFrame;
+                swapSlow = held > 0 && blocked > held * 1.6 ? swapSlow + 1 : 0;
+                if (swapSlow >= 30)
+                {
+                    swapPaced = false;
+                    SDL_GL_SetSwapInterval(1);
+                    fprintf(stderr, "[display] the driver holds each picture %.1f ms, not %.1f (a variable refresh screen?): FullDex paces them itself\n",
+                            blocked * 1000, held * 1000);
                 }
             }
             if (lastRefresh && blocked > 0.0005)
