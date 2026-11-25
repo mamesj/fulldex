@@ -1519,6 +1519,8 @@ static std::string NativeDsProgram(const Launcher::Game& g)
         { "CPUE", "sdmc:/switch/fulldex-native-platinum/fulldex-native-platinum.nro", { 0x6dc8045b90a8107bull, 0x43ded1ef0c4e2011ull, 0xc98477d767ebadb1ull } },
         // HeartGold (US code IPKE): the decompiled game on libntr (nat-hg-*.sh)
         { "IPKE", "sdmc:/switch/fulldex-native-heartgold/fulldex-native-heartgold.nro", { 0xa5f1e66c24f9bae2ull } },
+        // SoulSilver (US code IPGE): the decompiled game on libntr (nat-hg-*.sh)
+        { "IPGE", "sdmc:/switch/fulldex-native-soulsilver/fulldex-native-soulsilver.nro", { 0x91f66e58cc459dfaull } },
     };
     for (const Native& n : natives)
     {
