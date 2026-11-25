@@ -2239,7 +2239,7 @@ inline void Menu::DrawSettings(Canvas& c, const std::string& title, const std::s
     const int pad = K(20), innerW = pvW - 2 * pad;
     // (A Pokedex entry's card: its name over it, whichever of its rows is chosen.)
     const bool dexCard = it.preview == P_CDEXMON && it.choice >= 0 && it.choice < (int)companion.dex.size() && !companion.dex[it.choice].hidden;
-    const std::string name = it.kind == K_BACK ? std::string("BACK") : dexCard ? companion.dex[it.choice].name : it.label;
+    const std::string name = it.kind == K_BACK ? std::string("BACK") : dexCard ? companion.dex[it.choice].name : !it.previewName.empty() ? it.previewName : it.label;
     const std::string desc = it.kind == K_BACK ? std::string("Back to the page before.") : Sentence(it.desc);
     // (A long name, as GUIDE's questions: on two lines, the rest moved down.)
     const float pf = touchRows > 0 ? 1.22f : 1.0f; // (a phone: the preview's writing bigger)

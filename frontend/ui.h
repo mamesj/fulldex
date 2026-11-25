@@ -222,6 +222,7 @@ struct MenuInput
 struct MenuItem
 {
     std::string label;
+    std::string previewName; // (the preview's heading in place of the label: on a Pokemon's own page, its name)
     std::string value; // shown right-aligned; empty for plain actions
     bool info = false; // the value is only shown (no < > around it): nothing to change here
     int slider = -1;   // 0 to 10: also drawn as a bar of ten blocks, that many lit (VOLUME)

@@ -19,7 +19,7 @@ enum Style { TILES, PAGE, DIALOG };
 
 struct Item
 {
-    std::string label, value, sub, desc, tip;
+    std::string label, value, sub, desc, tip, cardName;
     int kind = PLAIN;
     int icon = -1;
     int slider = -1;       // 0 to 10: drawn as a bar too (VOLUME)

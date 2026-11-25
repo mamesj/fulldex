@@ -3075,7 +3075,15 @@ struct App
             it.kind = LINK;
             if (l == "WITHDRAW") { it.label = "Take into your party"; it.icon = IC_PEOPLE; }
             else if (l == "TAKE ITEM") { it.label = "Take its " + (partyPick >= 0 && partyPick < (int)comp.party.size() ? DexTitle(dex.ItemName(comp.party[partyPick].item)) : std::string("item")); it.icon = IC_LOAD; }
-            else if (l == "DEPOSIT") { it.label = "Put in " + BoxName(boxes.CurrentBox()); it.icon = IC_LOAD; if (boxList.empty()) boxList = boxes.Read(); it.label = "Put in " + BoxName(boxes.CurrentBox()); }
+            else if (l == "DEPOSIT")
+            {
+                // (Into the box the PC is on; a box whose name can't be read, by its number.)
+                if (boxList.empty()) boxList = boxes.Read();
+                const int cur = boxes.CurrentBox();
+                const std::string bn = BoxName(cur);
+                it.label = "Put in " + (!bn.empty() ? bn : "Box " + std::to_string(std::max(cur, 0) + 1));
+                it.icon = IC_LOAD;
+            }
             else if (l.rfind("SWAP ", 0) == 0)
             {
                 const int ps = std::atoi(l.c_str() + 5);
@@ -3092,7 +3100,8 @@ struct App
                 g.tall = true; // (a line under each: why)
             }
             else continue;
-            if (!g.mons.empty()) it.monCard = 0;
+            // (Its card beside each row, headed by its name rather than the row's.)
+            if (!g.mons.empty()) { it.monCard = 0; it.cardName = g.mons[0].name; }
             put(it, i);
         }
     }

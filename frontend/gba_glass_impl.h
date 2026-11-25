@@ -54,6 +54,7 @@ void Sync(const Page& p)
         b.sub = a.sub;
         b.desc = a.desc;
         b.tip = a.tip;
+        b.previewName = a.cardName;
         b.kind = a.kind == TOGGLE ? Menu::K_TOGGLE : a.kind == PICKER ? Menu::K_PICKER : a.kind == LINK ? Menu::K_LINK
                : a.kind == SECTION ? Menu::K_SECTION : a.kind == BACK ? Menu::K_BACK : a.kind == SLOT ? Menu::K_SLOT : Menu::K_PLAIN;
         b.thumb = a.thumb;
