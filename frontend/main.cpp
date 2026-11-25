@@ -2720,8 +2720,9 @@ int main(int argc, char** argv)
         // DS's SELECT and START are) needs a second swipe to leave the game.
         SDL_SetHint(SDL_HINT_IOS_HIDE_HOME_INDICATOR, "2");
         // The player's own music (Spotify, Apple Music) keeps playing with the game's sound mixed in,
-        // not stopped when the game starts (the Ambient audio session; the silent switch still
-        // silences the game, as before).
+        // not stopped when the game starts (the Ambient audio session). Once the sound device is
+        // open the session becomes Playback, still mixed, so the silent switch no longer mutes
+        // the game (#116; IosAudioPlaysWhenSilent).
         SDL_SetHint(SDL_HINT_AUDIO_CATEGORY, "ambient");
 #endif
 #ifdef __SWITCH__
@@ -2935,6 +2936,9 @@ int main(int argc, char** argv)
         want.samples = 1024;
         audio = SDL_OpenAudioDevice(nullptr, 0, &want, nullptr, 0);
         if (audio) SDL_PauseAudioDevice(audio, 0);
+#ifdef SSR_IOS
+        if (audio) IosAudioPlaysWhenSilent();
+#endif
 
         // For bug reports about controllers: what SDL sees, and what may hide a device from it
         // (Steam sets these variables for the games it starts; a container may lack udev).

@@ -470,7 +470,7 @@ elseif(APPLE)
         # The list upright, a game sideways (frontend/ios_orient.mm). UIKit is iOS only.
         target_sources(ssrecomp PRIVATE frontend/ios_orient.mm)
         set_source_files_properties(frontend/ios_orient.mm PROPERTIES LANGUAGE CXX COMPILE_FLAGS "-x objective-c++")
-        target_link_libraries(ssrecomp PRIVATE "-framework UIKit" "-framework GameController")
+        target_link_libraries(ssrecomp PRIVATE "-framework UIKit" "-framework GameController" "-framework AVFoundation")
     endif()
 elseif(SSR_SWITCH)
     # (devkitPro's libcurl, with its TLS library, from the portlibs.)

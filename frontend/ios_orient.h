@@ -22,3 +22,8 @@ void IosIgnoreControllerPresses();
 // search) asks SDL for text only then: SDL_StartTextInput also brings up iOS's keyboard, which
 // covered the list's own (the bottom half of an iPad's screen).
 bool IosHardwareKeyboard();
+// The game's sound plays with the Ring/Silent switch on silent, as a video or a music app's does
+// (#116), still mixed with the player's own music (Spotify, Apple Music), which keeps playing at
+// its own volume. SDL sets its own audio session each time it opens a sound device (the Ambient
+// one, from its hint, which the silent switch mutes), so call this after SDL_OpenAudioDevice.
+void IosAudioPlaysWhenSilent();

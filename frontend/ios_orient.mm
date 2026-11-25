@@ -5,6 +5,7 @@
 // and a game share one app.
 #import <UIKit/UIKit.h>
 #import <GameController/GameController.h>
+#import <AVFoundation/AVFoundation.h>
 #include <SDL.h>
 #include <cstdio>
 #include "ios_orient.h"
@@ -160,4 +161,13 @@ bool IosHardwareKeyboard()
 {
     if (@available(iOS 14.0, *)) return GCKeyboard.coalescedKeyboard != nil;
     return false;
+}
+
+void IosAudioPlaysWhenSilent()
+{
+    AVAudioSession* session = [AVAudioSession sharedInstance];
+    NSError* err = nil;
+    if (![session setCategory:AVAudioSessionCategoryPlayback mode:AVAudioSessionModeDefault
+                      options:AVAudioSessionCategoryOptionMixWithOthers error:&err])
+        fprintf(stderr, "[ios] audio session: %s\n", err ? err.localizedDescription.UTF8String : "refused");
 }
