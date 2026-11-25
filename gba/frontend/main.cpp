@@ -247,6 +247,8 @@ const std::vector<Setting>& SettingsList()
           "THE EXP ONE POKEMON ALONE WOULD GET. EGGS AND FAINTED POKEMON GET NONE." },
         { "shiny_alert", "SHINY ALERT", onOff, "1",
           "A MESSAGE WHEN A SHINY POKEMON COMES OUT AGAINST YOU IN A BATTLE, SO YOU DON'T MISS ITS SPARKLE." },
+        { "item_popups", "ITEM POPUPS", onOff, "1",
+          "A MESSAGE WHEN AN ITEM GOES INTO YOUR BAG, SO YOU SEE WHAT YOU PICKED UP OR WERE GIVEN." },
         { "shiny_odds", "SHINY ODDS",
           { { "8192", "NORMAL" }, { "4096", "1 IN 4096" }, { "1024", "1 IN 1024" }, { "512", "1 IN 512" }, { "128", "1 IN 128" } }, "8192",
           "HOW OFTEN A WILD POKEMON TURNS UP SHINY. NORMAL IS THE GAME'S OWN 1 IN 8192. POKEMON ALREADY CAUGHT DON'T CHANGE, "
@@ -1673,6 +1675,7 @@ struct App
         if (!paused) ShinyFrame();
         if (!paused) ExpShareFrame();
         if (!paused) ShinyAlertFrame();
+        if (!paused) ItemPopupFrame();
         core->runFrame(core);
         fly.FrameEnded();
         if (!paused) { FlyFrame(); TmFrame(); }
@@ -1887,7 +1890,7 @@ struct App
             static const char* const display[] = { "widescreen", "fullscreen", "scaling", "hd_filter", "lcd", "colour", "zoom", "zoom_text", "day_night", "follower", "nav_style", "repel_prompt", "show_fps" };
             static const char* const sound[] = { "volume", "ff_mute" };
             static const char* const controls[] = { "gba_start", "buttons", "fast_lock", "ff_speed", "fast_button", "auto_state", "auto_resume" };
-            static const char* const gameplay[] = { "instant_text", "reusable_tms", "no_hms", "exp_share", "shiny_alert", "run_indoors", "wild_encounters", "shiny_odds", "battle_speed", "text_speed", "bike_speed", "surf_speed", "fly_on", "flight_clouds" };
+            static const char* const gameplay[] = { "instant_text", "reusable_tms", "no_hms", "exp_share", "shiny_alert", "item_popups", "run_indoors", "wild_encounters", "shiny_odds", "battle_speed", "text_speed", "bike_speed", "surf_speed", "fly_on", "flight_clouds" };
             const char* const* keys = pausePage == P_DISPLAY ? display : pausePage == P_SOUND ? sound : pausePage == P_GAMEPLAY ? gameplay : controls;
             const int count = pausePage == P_DISPLAY ? sizeof(display) / sizeof(*display)
                             : pausePage == P_SOUND ? sizeof(sound) / sizeof(*sound)
@@ -2194,6 +2197,48 @@ struct App
     }
     // SHINY ALERT: once a battle, a message when the foe's first Pokemon is shiny (its personality and its trainer's ID,
     // both plain at the start of the record; read again while SHINY ODDS may still be changing it).
+    // ITEM POPUPS (after PokeDaisy's item toast): the bag's totals by item, twice a second; a gain is announced. A bag
+    // read empty, a stack over 999 or more than 6 items changed at once (a load, a box of items moved) is not a gain.
+    std::map<int, int> itemSeen;
+    bool itemSeenOk = false;
+    int itemPopupTick = 0;
+    void ItemPopupFrame()
+    {
+        if (!compConfig || !core || ++itemPopupTick % 30) return;
+        if (set.Get("item_popups") == "0") { itemSeenOk = false; return; }
+        const GbaCompanion::Snapshot s = GbaCompanion::Take(*compConfig, [&](uint32_t at, uint32_t n, uint8_t* out) {
+            const bool ram = (at >= 0x02000000u && at + n <= 0x02040000u) || (at >= 0x03000000u && at + n <= 0x03008000u) ||
+                             (at >= 0x08000000u && at + n <= 0x08000000u + dexRom.size());
+            if (!ram) return false;
+            for (uint32_t i = 0; i < n; i++) out[i] = (uint8_t)core->busRead8(core, at + i);
+            return true;
+        });
+        std::map<int, int> now;
+        bool big = false;
+        for (const auto& p : s.pockets)
+            for (const auto& it : p.second)
+                if (it.id > 0 && it.quantity > 0) { now[it.id] += it.quantity; if (it.quantity > 999) big = true; }
+        const bool ok = !now.empty() && !big;
+        if (ok && itemSeenOk)
+        {
+            std::map<int, int> all = now;
+            for (const auto& b : itemSeen) all[b.first] += 0;
+            int changed = 0;
+            std::string msg;
+            for (const auto& a : all)
+            {
+                const auto was = itemSeen.find(a.first);
+                const int before = was == itemSeen.end() ? 0 : was->second, after = now.count(a.first) ? now[a.first] : 0;
+                if (before == after) continue;
+                changed++;
+                if (after > before)
+                    msg += (msg.empty() ? "OBTAINED " : ", ") + ItemName(a.first) + (after - before > 1 ? " x" + std::to_string(after - before) : std::string());
+            }
+            if (changed <= 6 && !msg.empty()) Toast(msg, 3000);
+        }
+        itemSeen = now;
+        itemSeenOk = ok;
+    }
     uint32_t shinyAlertPid = 0; bool shinyAlerted = false;
     void ShinyAlertFrame()
     {
@@ -2630,6 +2675,7 @@ struct App
     std::string ItemName(int id) { const std::string n = dex.ItemName(id); return n.empty() ? "Item " + std::to_string(id) : DexTitle(n); }
     void ItemDone(GbaItems::Result r, const std::string& done)
     {
+        itemSeenOk = false; // (FullDex's own bag change: no ITEM POPUPS card for it.)
         Toast(r == GbaItems::USED || r == GbaItems::GIVEN || r == GbaItems::TAKEN ? done : std::string(GbaItems::Why(r)), 2500);
         ReadCompanion();
     }
@@ -4100,7 +4146,7 @@ struct App
             { "lcd", IC_GRID }, { "colour", IC_MONITOR }, { "zoom", IC_EXPAND }, { "zoom_text", IC_EXPAND }, { "repel_prompt", IC_INFO }, { "show_fps", IC_GAUGE }, { "volume", IC_SPEAKER }, { "ff_mute", IC_FAST },
             { "gba_start", IC_PAD }, { "buttons", IC_PAD }, { "ff_speed", IC_FAST }, { "fast_button", IC_FAST }, { "fast_lock", IC_FAST },
             { "auto_state", IC_SAVE }, { "auto_resume", IC_LOAD },
-            { "instant_text", IC_INFO }, { "reusable_tms", IC_CHIP }, { "no_hms", IC_CHIP }, { "exp_share", IC_POKEBALL }, { "shiny_alert", IC_SPARKLE }, { "run_indoors", IC_FAST }, { "wild_encounters", IC_GLOBE }, { "shiny_odds", IC_SPARKLE }, { "battle_speed", IC_FAST }, { "text_speed", IC_FAST }, { "bike_speed", IC_FAST }, { "surf_speed", IC_FAST }, { "day_night", IC_SPARKLE }, { "follower", IC_POKEBALL }, { "nav_style", IC_GRID } };
+            { "instant_text", IC_INFO }, { "reusable_tms", IC_CHIP }, { "no_hms", IC_CHIP }, { "exp_share", IC_POKEBALL }, { "shiny_alert", IC_SPARKLE }, { "item_popups", IC_INFO }, { "run_indoors", IC_FAST }, { "wild_encounters", IC_GLOBE }, { "shiny_odds", IC_SPARKLE }, { "battle_speed", IC_FAST }, { "text_speed", IC_FAST }, { "bike_speed", IC_FAST }, { "surf_speed", IC_FAST }, { "day_night", IC_SPARKLE }, { "follower", IC_POKEBALL }, { "nav_style", IC_GRID } };
         icon = IC_GEAR;
         for (const auto& i : icons)
             if (!strcmp(i.key, key)) icon = i.icon;
