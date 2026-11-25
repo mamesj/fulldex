@@ -4104,7 +4104,6 @@ struct App
     // COMPANION's pages: A on a link opens it; B goes back a page.
     void CompanionInput(const MenuIn& in)
     {
-        if (in.accept) fprintf(stderr, "[gba] companion: A on page %d, row %d\n", (int)pausePage, pause.selected);
         if (in.menu) { Resume(); return; }
         if (pausePage == P_GUIDE && in.accept && pause.selected >= 0 && pause.selected < (int)guideShown.size())
         {
@@ -4523,6 +4522,7 @@ struct App
                 it.value = g.mons[i].egg ? "EGG" : "LV " + std::to_string(g.mons[i].level);
                 it.sub = g.mons[i].egg ? "" : std::to_string(g.mons[i].hp) + " / " + std::to_string(g.mons[i].maxHp) + " HP";
                 it.info = true;
+                it.kind = LINK; // (A opens its page: a plain row takes no A, so only a tap did)
                 it.monCard = i;
                 put(it, i);
             }
