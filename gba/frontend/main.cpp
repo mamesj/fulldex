@@ -3890,7 +3890,7 @@ struct App
         if (set.Get("move_advice") == "0" || slot < 0 || slot >= (int)comp.party.size()) return;
         LoadDex();
         const GbaCompanion::Mon& m = comp.party[slot];
-        if (m.egg || !m.species || !dex.MoveBattle(1).ok) return;
+        if (m.egg || !m.species || !dex.MoveBattle(1).ok) { fprintf(stderr, "[gba] move advice: none (egg %d, species %d, move data %d)\n", (int)m.egg, m.species, (int)dex.MoveBattle(1).ok); return; }
         MoveAdvice::Advisor a;
         a.data = [this](int id) {
             const auto b = dex.MoveBattle(id);
@@ -3921,6 +3921,7 @@ struct App
                 }
         for (const auto& t : dex.Machines(m.species))
             if (tms.count(t.first) && !listed(t.second)) moves.push_back({ t.second, t.first });
+        fprintf(stderr, "[gba] move advice: %zu moves to look at (level %d, %zu known)\n", moves.size(), m.level, am.moves.size());
         for (const auto& mv : moves)
         {
             const MoveAdvice::Advice adv = a.Advise(am, mv.first);

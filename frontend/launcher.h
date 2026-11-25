@@ -42,6 +42,7 @@
 #include "optional_features.h"
 #include "cloud_saves.h"
 #include "hub_link.h"
+#include "icons_3ds.h" // (the Hub's Kalos and Alola icons, from Ultra Sun / Ultra Moon or Sun / Moon)
 #include "theme_pack.h"
 #include "launcher_text.h"
 #include "launcher_fonts.h"
@@ -2951,6 +2952,24 @@ inline bool MonIcon(int species, bool egg, std::vector<uint32_t>& out)
                 fclose(f);
                 fprintf(stderr, "[hub] Pokemon icons from %s: %zu\n", pick->rom.c_str(), m.monIcons.size());
             }
+    }
+    // (Kalos and Alola, #650 on, which no DS game has: a 3DS game's own box icons, the first of the player's 3DS
+    // games that has them (Ultra Sun / Ultra Moon, Sun / Moon).)
+    if (species >= 650 && !egg)
+    {
+        static Icons3ds::Set set3;
+        static bool tried3 = false;
+        if (!tried3)
+        {
+            tried3 = true;
+            for (const Game& g : RomList())
+                if (g.known && g.platform == N3DS && Icons3ds::Load(g.rom, set3))
+                {
+                    fprintf(stderr, "[hub] Kalos and Alola icons from %s: %zu\n", g.rom.c_str(), set3.icons.size());
+                    break;
+                }
+        }
+        if (Icons3ds::Icon(set3, species, out)) return true;
     }
     return I.meta.MonIcon(species, egg, out);
 }
