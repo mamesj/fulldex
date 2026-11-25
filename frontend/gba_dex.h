@@ -1311,6 +1311,18 @@ struct Data
         if (x.on) return x.movePpOff >= 0 && id > 0 && id < x.moves ? rom->data()[x.movesInfo + (size_t)id * x.moveStride + x.movePpOff] : 0;
         if (sh.own) return battleMoves != std::string::npos && id > 0 && id < 2048 && Range(rom->size(), battleMoves + id * sh.battleStride, 4) ? rom->data()[battleMoves + id * sh.battleStride + sh.battlePpOff] : 0;
         return battleMoves != std::string::npos && id > 0 && Range(rom->size(), battleMoves + id * 12, 12) ? rom->data()[battleMoves + id * 12 + 4] : 0; }
+    // A move's battle data, from the original games' gBattleMoves (12 bytes a move): its effect (Generation 3's
+    // EFFECT_ numbers), power, type, accuracy (0: never misses), the effect's chance and priority. Not known (ok
+    // false) for a game that keeps its moves its own way (an expansion hack), nor past the original 354 moves.
+    struct MoveBattleData { bool ok = false; int effect = 0, power = 0, type = -1, accuracy = 0, chance = 0, priority = 0; };
+    MoveBattleData MoveBattle(int id) const
+    {
+        MoveBattleData b;
+        if (x.on || sh.own || battleMoves == std::string::npos || id <= 0 || id > 354 || !Range(rom->size(), battleMoves + (size_t)id * 12, 12)) return b;
+        const uint8_t* p = rom->data() + battleMoves + (size_t)id * 12;
+        b.ok = true; b.effect = p[0]; b.power = p[1]; b.type = Type(p[2]); b.accuracy = p[3]; b.chance = p[5]; b.priority = (int8_t)p[7];
+        return b;
+    }
     // The wild Pokemon of one map: species, how, levels.
     struct Wild { int species = 0; std::string method; int low = 0, high = 0; };
     std::vector<Wild> WildAt(int group, int num) const

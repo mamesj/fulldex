@@ -39,6 +39,7 @@
 #include "gba_companion.h" // (COMPANION: the party, bag and place, read from the paused game)
 #include "gba_guides.h"    // (COMPANION's GUIDE)
 #include "companion_types.h"
+#include "move_advice.h" // (MOVE ADVICE, after PokeDaisy's)
 // Cheats (CHEATS in the pause menu): Fulldex's, from its frontend folder (on the include path when
 // built into it). All off until the player turns one on.
 #if __has_include("gba_cheats.h")
@@ -60,6 +61,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <map>
+#include <set>
 #include <memory>
 #include <string>
 #include <vector>
@@ -249,6 +251,10 @@ const std::vector<Setting>& SettingsList()
           "A MESSAGE WHEN A SHINY POKEMON COMES OUT AGAINST YOU IN A BATTLE, SO YOU DON'T MISS ITS SPARKLE." },
         { "item_popups", "ITEM POPUPS", onOff, "1",
           "A MESSAGE WHEN AN ITEM GOES INTO YOUR BAG, SO YOU SEE WHAT YOU PICKED UP OR WERE GIVEN." },
+        { "move_advice", "MOVE ADVICE", onOff, "1",
+          "ON A PARTY POKEMON'S PAGE: ITS NEXT MOVES AND THE TMS IN YOUR BAG IT CAN LEARN, EACH WITH WHETHER TO LEARN IT AND WHICH MOVE TO FORGET." },
+        { "egg_preview", "EGG PREVIEW", onOff, "1",
+          "AN EGG IN YOUR PARTY SHOWS WHAT WILL HATCH FROM IT: ITS NAME, PICTURE, TYPES, STATS AND MOVES." },
         { "shiny_odds", "SHINY ODDS",
           { { "8192", "NORMAL" }, { "4096", "1 IN 4096" }, { "1024", "1 IN 1024" }, { "512", "1 IN 512" }, { "128", "1 IN 128" } }, "8192",
           "HOW OFTEN A WILD POKEMON TURNS UP SHINY. NORMAL IS THE GAME'S OWN 1 IN 8192. POKEMON ALREADY CAUGHT DON'T CHANGE, "
@@ -1794,6 +1800,8 @@ struct App
             if (items.Supported() && partyPick >= 0 && partyPick < (int)comp.party.size() && comp.party[partyPick].item && !GbaItems::IsMail(comp.party[partyPick].item))
                 pause.items.push_back({ "TAKE ITEM", "", false });
             if (boxes.Supported()) pause.items.push_back({ "DEPOSIT", "", false });
+            BuildAdvice(partyPick);
+            for (size_t k = 0; k < adviceRows.size(); k++) pause.items.push_back({ "ADVICE " + std::to_string(k), "", true });
             pause.items.push_back({ "BACK", "" });
             return;
         }
@@ -1890,7 +1898,7 @@ struct App
             static const char* const display[] = { "widescreen", "fullscreen", "scaling", "hd_filter", "lcd", "colour", "zoom", "zoom_text", "day_night", "follower", "nav_style", "repel_prompt", "show_fps" };
             static const char* const sound[] = { "volume", "ff_mute" };
             static const char* const controls[] = { "gba_start", "buttons", "fast_lock", "ff_speed", "fast_button", "auto_state", "auto_resume" };
-            static const char* const gameplay[] = { "instant_text", "reusable_tms", "no_hms", "exp_share", "shiny_alert", "item_popups", "run_indoors", "wild_encounters", "shiny_odds", "battle_speed", "text_speed", "bike_speed", "surf_speed", "fly_on", "flight_clouds" };
+            static const char* const gameplay[] = { "instant_text", "reusable_tms", "no_hms", "exp_share", "shiny_alert", "item_popups", "move_advice", "egg_preview", "run_indoors", "wild_encounters", "shiny_odds", "battle_speed", "text_speed", "bike_speed", "surf_speed", "fly_on", "flight_clouds" };
             const char* const* keys = pausePage == P_DISPLAY ? display : pausePage == P_SOUND ? sound : pausePage == P_GAMEPLAY ? gameplay : controls;
             const int count = pausePage == P_DISPLAY ? sizeof(display) / sizeof(*display)
                             : pausePage == P_SOUND ? sizeof(sound) / sizeof(*sound)
@@ -2987,6 +2995,14 @@ struct App
                 it.label = "Swap with " + (ps < (int)comp.party.size() ? MonCardFor(ps).name : std::string("?"));
                 it.icon = IC_FAST;
             }
+            else if (l.rfind("ADVICE ", 0) == 0)
+            {
+                // (MOVE ADVICE: one of its next moves, or a TM in the bag, and whether to learn it.)
+                const size_t k = (size_t)std::atoi(l.c_str() + 7);
+                if (k >= adviceRows.size()) continue;
+                it.label = adviceRows[k].label; it.value = adviceRows[k].value; it.sub = adviceRows[k].sub;
+                it.kind = PLAIN; it.info = true; it.icon = IC_INFO;
+            }
             else continue;
             if (!g.mons.empty()) it.monCard = 0;
             put(it, i);
@@ -3815,6 +3831,61 @@ struct App
     std::vector<uint32_t> foeSeen;
     std::vector<int> battleRowTeam;              // (BATTLE INFO's rows: the foe's team slot of each, -2 unseen, -1 not a team row)
     std::vector<GbaDex::Picture> foeTeamPics;   // (personalities of the foe's team seen out this battle; the first one out first)
+    // MOVE ADVICE (after PokeDaisy's): a party Pokemon's next level-up moves (at most 4, its own level's too) and the
+    // TMs and HMs in the bag it can learn, each with the advice (move_advice.h). Only where the game keeps the
+    // original games' move data (MoveBattle).
+    struct AdviceRow { std::string label, value, sub; };
+    std::vector<AdviceRow> adviceRows;
+    void BuildAdvice(int slot)
+    {
+        adviceRows.clear();
+        if (set.Get("move_advice") == "0" || slot < 0 || slot >= (int)comp.party.size()) return;
+        LoadDex();
+        const GbaCompanion::Mon& m = comp.party[slot];
+        if (m.egg || !m.species || !dex.MoveBattle(1).ok) return;
+        MoveAdvice::Advisor a;
+        a.data = [this](int id) {
+            const auto b = dex.MoveBattle(id);
+            MoveAdvice::MoveData o;
+            o.ok = b.ok; o.effect = b.effect; o.power = b.power; o.type = b.type; o.accuracy = b.accuracy; o.chance = b.chance; o.priority = b.priority;
+            return o;
+        };
+        const GbaDex::Stats st = dex.Get(m.species);
+        MoveAdvice::Mon am;
+        am.types.push_back(st.type1);
+        if (st.type2 != st.type1) am.types.push_back(st.type2);
+        am.attack = m.stats[1]; am.spAttack = m.stats[4]; am.level = m.level;
+        for (int k = 0; k < 4; k++) if (m.moves[k]) am.moves.push_back(m.moves[k]);
+        std::vector<std::pair<int, std::string>> moves; // (the move, and where it comes from)
+        auto listed = [&](int mv) { return std::find(am.moves.begin(), am.moves.end(), mv) != am.moves.end() ||
+                                           std::any_of(moves.begin(), moves.end(), [&](const std::pair<int, std::string>& p) { return p.first == mv; }); };
+        int upcoming = 0;
+        for (const auto& l : dex.LevelMoves(m.species))
+            if (l.level >= m.level && l.move && !listed(l.move) && upcoming < 4) { moves.push_back({ l.move, "Lv " + std::to_string(l.level) }); upcoming++; }
+        std::set<std::string> tms;
+        for (const auto& p : comp.pockets)
+            for (const auto& it : p.second)
+                if (it.id >= 289 && it.id <= 346)
+                {
+                    char label[8];
+                    snprintf(label, sizeof label, it.id - 289 < 50 ? "TM%02d" : "HM%02d", it.id - 289 < 50 ? it.id - 288 : it.id - 338);
+                    tms.insert(label);
+                }
+        for (const auto& t : dex.Machines(m.species))
+            if (tms.count(t.first) && !listed(t.second)) moves.push_back({ t.second, t.first });
+        for (const auto& mv : moves)
+        {
+            const MoveAdvice::Advice adv = a.Advise(am, mv.first);
+            if (adv.verdict == MoveAdvice::UNKNOWN || adv.verdict == MoveAdvice::KNOWN) continue;
+            AdviceRow r;
+            r.label = DexTitle(dex.Move(mv.first)) + "  \xC2\xB7  " + mv.second;
+            r.value = adv.verdict == MoveAdvice::REPLACE ? UiLang::F("FORGET {0}", { DexTitle(dex.Move(adv.forget)) })
+                                                         : UiLang::Tr(adv.verdict == MoveAdvice::SKIP ? "SKIP" : "LEARN");
+            r.sub = adv.why;
+            adviceRows.push_back(r);
+            fprintf(stderr, "[gba] move advice: %s %s (%s)\n", r.label.c_str(), r.value.c_str(), r.sub.c_str());
+        }
+    }
     GbaGlass::MonCard MonCardFor(int i)
     {
         return MonCardOf(comp.party[i], i < (int)compPics.size() && compPics[i].Ready() ? &compPics[i] : nullptr);
@@ -3825,14 +3896,16 @@ struct App
         const GbaDex::Stats st = dex.Get(m.species);
         std::string nick = GbaDex::Text((const uint8_t*)m.nickname.data(), m.nickname.size());
         while (!nick.empty() && nick.back() == ' ') nick.pop_back();
-        c.name = m.egg ? std::string("Egg") : DexTitle(nick.empty() ? dex.Name(m.species) : nick);
+        // (EGG PREVIEW, after PokeDaisy's: an egg's card shows what will hatch, its stats and moves as the game keeps them.)
+        const bool preview = m.egg && m.species && set.Get("egg_preview") != "0";
+        c.name = preview ? UiLang::F("Egg: {0}", { DexTitle(dex.Name(m.species)) }) : m.egg ? std::string("Egg") : DexTitle(nick.empty() ? dex.Name(m.species) : nick);
         c.item = m.item ? DexTitle(dex.ItemName(m.item)) : std::string();
         static const char* const natures[25] = { "Hardy", "Lonely", "Brave", "Adamant", "Naughty", "Bold", "Docile", "Relaxed", "Impish", "Lax", "Timid", "Hasty", "Serious", "Jolly",
                                                  "Naive", "Modest", "Mild", "Quiet", "Bashful", "Rash", "Calm", "Gentle", "Sassy", "Careful", "Quirky" };
         c.nature = natures[m.personality % 25];
         const int ability = m.abilityBit && st.ability2 ? st.ability2 : st.ability1;
         if (ability && dex.Readable(dex.Ability(ability))) c.ability = DexTitle(dex.Ability(ability));
-        c.level = m.level; c.hp = m.hp; c.maxHp = m.maxHp; c.egg = m.egg;
+        c.level = m.level; c.hp = m.hp; c.maxHp = m.maxHp; c.egg = m.egg && !preview;
         // (Status as the DS cards take it: sleep turns in the low bits, then poison, burn, freeze,
         // paralysis, bad poison, as Generation 3 keeps it too.)
         c.status = (int)m.status;
@@ -3844,7 +3917,7 @@ struct App
             const int base = dex.MovePp(m.moves[k]), bonus = m.ppBonuses >> (k * 2) & 3;
             c.moves.push_back({ DexTitle(dex.Move(m.moves[k])), dex.MoveType(m.moves[k]), m.pp[k], base + base * bonus / 5 });
         }
-        if (pic && !m.egg) { c.icon = pic->pixels; c.iconW = pic->width; c.iconH = pic->height; }
+        if (pic && (!m.egg || preview)) { c.icon = pic->pixels; c.iconW = pic->width; c.iconH = pic->height; }
         return c;
     }
     std::vector<std::pair<std::string, std::string>> BagRows()
@@ -4147,7 +4220,7 @@ struct App
             { "lcd", IC_GRID }, { "colour", IC_MONITOR }, { "zoom", IC_EXPAND }, { "zoom_text", IC_EXPAND }, { "repel_prompt", IC_INFO }, { "show_fps", IC_GAUGE }, { "volume", IC_SPEAKER }, { "ff_mute", IC_FAST },
             { "gba_start", IC_PAD }, { "buttons", IC_PAD }, { "ff_speed", IC_FAST }, { "fast_button", IC_FAST }, { "fast_lock", IC_FAST },
             { "auto_state", IC_SAVE }, { "auto_resume", IC_LOAD },
-            { "instant_text", IC_INFO }, { "reusable_tms", IC_CHIP }, { "no_hms", IC_CHIP }, { "exp_share", IC_POKEBALL }, { "shiny_alert", IC_SPARKLE }, { "item_popups", IC_INFO }, { "run_indoors", IC_FAST }, { "wild_encounters", IC_GLOBE }, { "shiny_odds", IC_SPARKLE }, { "battle_speed", IC_FAST }, { "text_speed", IC_FAST }, { "bike_speed", IC_FAST }, { "surf_speed", IC_FAST }, { "day_night", IC_SPARKLE }, { "follower", IC_POKEBALL }, { "nav_style", IC_GRID } };
+            { "instant_text", IC_INFO }, { "reusable_tms", IC_CHIP }, { "no_hms", IC_CHIP }, { "exp_share", IC_POKEBALL }, { "shiny_alert", IC_SPARKLE }, { "item_popups", IC_INFO }, { "move_advice", IC_INFO }, { "egg_preview", IC_POKEBALL }, { "run_indoors", IC_FAST }, { "wild_encounters", IC_GLOBE }, { "shiny_odds", IC_SPARKLE }, { "battle_speed", IC_FAST }, { "text_speed", IC_FAST }, { "bike_speed", IC_FAST }, { "surf_speed", IC_FAST }, { "day_night", IC_SPARKLE }, { "follower", IC_POKEBALL }, { "nav_style", IC_GRID } };
         icon = IC_GEAR;
         for (const auto& i : icons)
             if (!strcmp(i.key, key)) icon = i.icon;
