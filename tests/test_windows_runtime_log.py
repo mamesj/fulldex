@@ -18,4 +18,13 @@ class WindowsRuntimeLogTests(unittest.TestCase):
                             str(ROOT / 'tests/test_windows_runtime_log.cpp'), '-o', str(exe)], check=True)
             # (Two minutes: it copies itself and starts the copies twice; a fresh program is scanned
             # before it runs, which took GitHub's Windows machines past 30 seconds. A hang still fails.)
-            subprocess.run([str(exe), str(root / 'fixture')], check=True, timeout=120)
+            result = subprocess.run([str(exe), str(root / 'fixture')], timeout=120)
+            # (What failed, and the log the 3DS runtime wrote, so a failure on GitHub says why.)
+            notes = ''
+            for found in sorted(root.rglob('failure.txt')):
+                notes += f'{found}: ' + found.read_text(errors='replace')
+            log = root / 'fixture' / 'runtime.log'
+            if log.exists():
+                text = log.read_text(errors='replace').replace('x' * 1024, '')
+                notes += 'runtime.log (the 128 KiB of x left out):\n' + text[-3000:]
+            self.assertEqual(result.returncode, 0, notes)
