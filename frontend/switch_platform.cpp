@@ -1468,6 +1468,82 @@ extern "C" void userAppExit(void)
     ExitTrace("libnx: closing the services");
 }
 
+
+// FullDex native DS (native-ds-launcher): a DS game with its own native program (made from the game's
+// decompilation, no game content in it), started as this one ends like the 3DS games, when the
+// player's ROM holds the code that program was made from (FNV-1a over ARM9, ARM7, the overlay tables
+// and every overlay). Anything else (a hack, another dump) is played here as before.
+static uint64_t NativeDsFingerprint(const std::string& rom)
+{
+    FILE* f = fopen(rom.c_str(), "rb");
+    if (!f) return 0;
+    uint64_t h = 0xcbf29ce484222325ull;
+    std::vector<uint8_t> buf;
+    auto part = [&](uint32_t off, uint32_t size) {
+        if (size > 64u * 1024 * 1024) return false;
+        buf.resize(size);
+        if (fseek(f, (long)off, SEEK_SET) != 0 || fread(buf.data(), 1, size, f) != size) return false;
+        for (uint8_t b : buf) { h ^= b; h *= 0x100000001b3ull; }
+        return true;
+    };
+    uint8_t hd[0x60];
+    bool ok = fread(hd, 1, sizeof hd, f) == sizeof hd;
+    auto u32 = [&](int o) { return (uint32_t)hd[o] | (uint32_t)hd[o + 1] << 8 | (uint32_t)hd[o + 2] << 16 | (uint32_t)hd[o + 3] << 24; };
+    ok = ok && part(u32(0x20), u32(0x2C)) && part(u32(0x30), u32(0x3C));
+    const uint32_t fat = ok ? u32(0x48) : 0;
+    for (int tab = 0x50; ok && tab <= 0x58; tab += 8)
+    {
+        const uint32_t o = u32(tab), s = u32(tab + 4);
+        if (!part(o, s)) { ok = false; break; }
+        std::vector<uint8_t> table(buf);
+        for (uint32_t i = 0; ok && i + 32 <= s; i += 32)
+        {
+            const uint32_t id = table[i + 0x18] | table[i + 0x19] << 8 | table[i + 0x1A] << 16 | (uint32_t)table[i + 0x1B] << 24;
+            uint8_t e[8];
+            ok = fseek(f, (long)(fat + id * 8), SEEK_SET) == 0 && fread(e, 1, 8, f) == 8;
+            if (!ok) break;
+            const uint32_t fs = e[0] | e[1] << 8 | e[2] << 16 | (uint32_t)e[3] << 24, fe = e[4] | e[5] << 8 | e[6] << 16 | (uint32_t)e[7] << 24;
+            ok = fe >= fs && part(fs, fe - fs);
+        }
+    }
+    fclose(f);
+    return ok ? h : 0;
+}
+// The native programs: where each is, and the code fingerprints it plays.
+static std::string NativeDsProgram(const Launcher::Game& g)
+{
+    struct Native { const char* code; const char* nro; uint64_t fp[2]; };
+    static const Native natives[] = {
+        // Platinum (US code CPUE): James's US dump (revision 0) and his "Europe"-named US dump (version 10)
+        { "CPUE", "sdmc:/switch/fulldex-native-platinum/fulldex-native-platinum.nro", { 0x6dc8045b90a8107bull, 0x43ded1ef0c4e2011ull } },
+    };
+    for (const Native& n : natives)
+    {
+        if (g.code != n.code) continue;
+        struct stat st;
+        if (stat(n.nro, &st) != 0) return "";
+        const uint64_t fp = NativeDsFingerprint(g.rom);
+        fprintf(stderr, "[native] %s: code fingerprint %016llx\n", g.rom.c_str(), (unsigned long long)fp);
+        for (uint64_t ok : n.fp)
+            if (fp && fp == ok) return n.nro;
+        return "";
+    }
+    return "";
+}
+static bool StartNativeDs(const Launcher::Game& g, const std::string& nro)
+{
+    if (!envHasNextLoad()) return true; // (no homebrew loader: played here)
+    const std::string args = "\"" + nro + "\" \"FULLDEX_ROM=" + g.rom + "\" \"FULLDEX_SAVE=" + SavePath(g) + "\"" +
+        (g_self.empty() ? std::string() : " \"FULLDEX_RETURN=" + g_self + "\"");
+    const Result rc = envSetNextLoad(nro.c_str(), args.c_str());
+    fprintf(stderr, "[native] %s: %s (0x%x)\n", g.name.c_str(), args.c_str(), (unsigned)rc);
+    if (R_FAILED(rc)) return true;
+    ExitTrace("native handoff: closing network");
+    Achievements::ShutdownNetwork();
+    ExitTrace("native handoff: returning to loader");
+    return false;
+}
+
 // Omega Ruby or Alpha Sapphire: its own program started as this one ends, told where this one is
 // (FULLDEX_RETURN), so that quitting the game from its menu brings the list back.
 static bool Start3ds(const Launcher::Game& g)
@@ -1682,6 +1758,7 @@ bool Start(int& argc, char**& argv)
                     fclose(f);
                 }
                 if (games[chosen].platform == Launcher::N3DS) return Start3ds(games[chosen]);
+                if (games[chosen].platform == Launcher::DS) { const std::string nat = NativeDsProgram(games[chosen]); if (!nat.empty() && !StartNativeDs(games[chosen], nat)) return false; }
                 if (!g_self.empty() && envHasNextLoad())
                 {
                     if (FILE* f = fopen(chosenMarker.c_str(), "wb")) fclose(f);
