@@ -13,7 +13,7 @@ namespace GbaGlass
 // (The numbers of Glass::Icon, glass.h; gba_glass_impl.h checks that they still agree.)
 enum { IC_PLAY = 0, IC_SAVE = 1, IC_LOAD = 2, IC_CHEATS = 3, IC_FAST = 4, IC_TROPHY = 5, IC_GEAR = 6, IC_POWER = 7,
        IC_MONITOR = 9, IC_RATIO = 12, IC_EXPAND = 14, IC_FULLSCREEN = 15, IC_GRID = 16, IC_PAD = 18, IC_GAUGE = 19,
-       IC_GLOBE = 11, IC_PEOPLE = 21, IC_SPARKLE = 22, IC_INFO = 23, IC_POKEBALL = 28, IC_CHIP = 29, IC_SPEAKER = 30, IC_REWIND = 31, IC_NOTE = 35 };
+       IC_GLOBE = 11, IC_PEOPLE = 21, IC_SPARKLE = 22, IC_INFO = 23, IC_POKEBALL = 28, IC_CHIP = 29, IC_SPEAKER = 30, IC_REWIND = 31, IC_NOTE = 35, IC_SEARCH = 37 };
 enum Kind { PLAIN, TOGGLE, PICKER, LINK, SECTION, BACK, SLOT };
 enum Style { TILES, PAGE, DIALOG };
 

@@ -780,6 +780,8 @@ struct App
     GbaDex::Data dex;
     bool dexTried = false;
     std::vector<int> dexRows;
+    // (POKEDEX SEARCH: what is typed on its SEARCH row; the list shows only the Pokemon it matches.)
+    std::string dexQuery = getenv("GBAW_TEST_DEXQUERY") ? getenv("GBAW_TEST_DEXQUERY") : "";
     int dexSpecies = 0, dexPicFor = -1;
     GbaDex::Picture dexPic, dexShiny;
     // COMPANION (gba_companion.h): this game's addresses (none: not a game it knows), what was read
@@ -818,6 +820,14 @@ struct App
     std::string raUser, raPass;
     std::vector<std::string> achDesc; // the achievements list's descriptions, beside its rows
 #endif
+    bool dexTyping = false; // (typing on the POKEDEX's SEARCH row)
+    bool TypingNow() const
+    {
+#ifdef GBAW_EMBEDDED
+        if (typing) return true;
+#endif
+        return dexTyping;
+    }
 #ifdef GBAW_CHEATS
     GbaCheats::Engine cheats;
     CheatBus cheatBus;
@@ -1755,6 +1765,11 @@ struct App
         {
             // (Every Pokemon the ROM has, in National Pokedex order.)
             dexRows.clear();
+            pause.items.push_back({ "SEARCH", dexQuery.empty() && !dexTyping ? "" : dexQuery + (dexTyping ? "_" : ""), true });
+            dexRows.push_back(0);
+            std::string q;
+            for (char c : dexQuery) q += (char)std::tolower((unsigned char)c);
+            const bool qNum = !q.empty() && std::all_of(q.begin(), q.end(), [](char c) { return c >= '0' && c <= '9'; });
             const int last = dex.count;
             std::vector<int> byDex(last + 2, 0);
             for (int sp = 1; sp <= last; sp++) { const int n = dex.Dex(sp); if (n > 0 && n < (int)byDex.size() && !byDex[n]) byDex[n] = sp; }
@@ -1763,6 +1778,17 @@ struct App
                 if (!byDex[n]) continue;
                 char label[64];
                 snprintf(label, sizeof label, "%03d  %s", n, DexTitle(dex.Name(byDex[n])).c_str());
+                if (!q.empty())
+                {
+                    // (A number matches the Pokemon whose number starts with it; anything else, part of the name.)
+                    if (qNum) { if (std::to_string(n).rfind(q, 0) != 0 && std::string(label, 3).rfind(q, 0) != 0) continue; }
+                    else
+                    {
+                        std::string name;
+                        for (char c : std::string(label + 5)) name += (char)std::tolower((unsigned char)c);
+                        if (name.find(q) == std::string::npos) continue;
+                    }
+                }
                 const bool caught = n < (int)comp.caught.size() && comp.caught[n], seen = n < (int)comp.seen.size() && comp.seen[n];
                 pause.items.push_back({ label, caught ? "CAUGHT" : seen ? "SEEN" : "", true });
                 dexRows.push_back(byDex[n]);
@@ -4197,10 +4223,25 @@ struct App
         }
         else if (item == "BACK") GoPage(P_ROOT, "COMPANION");
     }
+    void DexTypingOff()
+    {
+        if (!dexTyping) return;
+        dexTyping = false;
+        SDL_StopTextInput();
+        BuildPause();
+    }
+    void PopDexChar()
+    {
+        if (dexQuery.empty()) return;
+        dexQuery.pop_back();
+        while (!dexQuery.empty() && ((unsigned char)dexQuery.back() & 0xC0) == 0x80) dexQuery.pop_back();
+        BuildPause();
+        pause.selected = 0;
+    }
     // POKEDEX's pages: A on a row opens its entry; B goes back (the entry to the list, on its row).
     void DexInput(const MenuIn& in)
     {
-        if (in.menu) { Resume(); return; }
+        if (in.menu) { DexTypingOff(); Resume(); return; }
         if (pausePage == P_DEXENTRY)
         {
             if (in.back)
@@ -4211,8 +4252,32 @@ struct App
             }
             return;
         }
-        if (in.back) { GoPage(P_ROOT, "POKEDEX"); return; }
-        if (!in.accept || pause.selected < 0 || pause.selected >= (int)dexRows.size()) return;
+        if (dexTyping)
+        {
+            if (in.erase) { PopDexChar(); return; }
+            if (in.accept || in.back || in.up || in.down)
+            {
+                DexTypingOff();
+                pause.selected = in.accept && dexRows.size() > 1 ? 1 : 0;
+                return;
+            }
+        }
+        if (in.back)
+        {
+            // (B first clears a search, then goes back.)
+            if (!dexQuery.empty()) { dexQuery.clear(); BuildPause(); pause.selected = 0; return; }
+            GoPage(P_ROOT, "POKEDEX");
+            return;
+        }
+        if (in.accept && pause.selected == 0)
+        {
+            dexTyping = true;
+            SDL_StartTextInput();
+            BuildPause();
+            pause.selected = 0;
+            return;
+        }
+        if (!in.accept || pause.selected <= 0 || pause.selected >= (int)dexRows.size()) return;
         dexSpecies = dexRows[pause.selected];
         GoPage(P_DEXENTRY, "");
     }
@@ -4698,6 +4763,12 @@ struct App
                 it.value = pause.items[i].value;
                 it.info = entry;
                 it.kind = entry ? PLAIN : LINK;
+                if (!entry && i == 0)
+                {
+                    it.icon = IC_SEARCH;
+                    it.desc = "Type a Pok\xC3\xA9mon's name or number.";
+                    if (!it.value.empty() && !dexTyping) it.tip = "B clears the search.";
+                }
                 // (The entry's sections: rows whose label starts with "#" head one.)
                 if (entry && !l.empty() && l[0] == '#')
                 {
@@ -6001,14 +6072,16 @@ struct App
                 case SDL_SCANCODE_RETURN:
                 case SDL_SCANCODE_KP_ENTER:
                 case SDL_SCANCODE_X:
-                    if (!e.key.repeat) in.accept = true;
+                    if (!e.key.repeat && !(sc == SDL_SCANCODE_X && TypingNow())) in.accept = true;
                     break;
                 case SDL_SCANCODE_Z:
-                    if (!e.key.repeat) in.back = true;
+                    if (!e.key.repeat && !TypingNow()) in.back = true;
                     break;
                 case SDL_SCANCODE_BACKSPACE:
                     if (!e.key.repeat)
                     {
+                        if (dexTyping) in.erase = true;
+                        else
 #ifdef GBAW_EMBEDDED
                         if (typing) in.erase = true;
                         else
@@ -6024,10 +6097,10 @@ struct App
                     if (!e.key.repeat) (screen == LIST ? in.escape : in.menu) = true;
 #endif
                     break;
-                case SDL_SCANCODE_H: in.settings = true; break;
-                case SDL_SCANCODE_O: in.folder = true; break;
+                case SDL_SCANCODE_H: if (!TypingNow()) in.settings = true; break;
+                case SDL_SCANCODE_O: if (!TypingNow()) in.folder = true; break;
                 case SDL_SCANCODE_R:
-                    if (screen == LIST) Rescan();
+                    if (screen == LIST && !TypingNow()) Rescan();
                     break;
                 case SDL_SCANCODE_F11: ToggleFullscreen(); break;
                 case SDL_SCANCODE_C:
@@ -6038,6 +6111,16 @@ struct App
                 break;
             }
             case SDL_TEXTINPUT:
+#ifdef GBAW_EMBEDDED
+                if (dexTyping && pausePage == P_DEX)
+                {
+                    dexQuery += e.text.text;
+                    if (dexQuery.size() > 24) dexQuery.resize(24);
+                    BuildPause();
+                    pause.selected = 0;
+                    break;
+                }
+#endif
 #ifdef GBAW_EMBEDDED
                 if (typing)
                 {
