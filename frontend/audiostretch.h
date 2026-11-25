@@ -167,14 +167,38 @@ private:
 
 // Queue feedback must also be able to START stretching. Applying it only once stretching
 // is active leaves a full-speed stream unable to recover from a short or empty queue.
+// The sound kept waiting in the queue, in samples at 48 kHz: 100 ms; 50 ms on a phone, whose own output (Android's fast
+// track, about 25 ms) adds less.
+inline double AudioQueueTarget()
+{
+#ifdef __ANDROID__
+    return 2400.0;
+#else
+    return 4800.0;
+#endif
+}
+// A queue grown well past its target (the game run by a 60 Hz screen makes its sound a little faster than a DS, 59.83
+// frames a second, and the stretch above only slows): this frame's sound played 0.5% faster, by linear resampling
+// (too little to hear), until it is back. Without it the queue grew to its 250 ms cap and the sound came late.
+inline void AudioCatchUp(std::vector<int16_t>& s, int queuedSamples)
+{
+    const size_t n = s.size() / 2;
+    if (n < 64 || queuedSamples < AudioQueueTarget() * 1.5) return;
+    const size_t m = n - std::max<size_t>(1, n / 200);
+    std::vector<int16_t> o(m * 2);
+    for (size_t i = 0; i < m; i++)
+    {
+        const double at = (double)i * (n - 1) / (m - 1);
+        const size_t a = (size_t)at, b = std::min(a + 1, n - 1);
+        const double f = at - a;
+        for (int c = 0; c < 2; c++) o[i * 2 + c] = (int16_t)std::lround(s[a * 2 + c] * (1 - f) + s[b * 2 + c] * f);
+    }
+    s.swap(o);
+}
 inline double AudioQueueSlowdown(double frameSlowdown, int queuedSamples)
 {
     // (100 ms at 48 kHz; 50 ms on a phone, whose own output (Android's fast track, about 25 ms) adds less, and where
     // the 100 ms on top of it made the sound late behind the picture.)
-#ifdef __ANDROID__
-    constexpr double target = 2400.0;
-#else
-    constexpr double target = 4800.0;
-#endif
+    const double target = AudioQueueTarget();
     return frameSlowdown * (1.0 + 0.5 * (target - std::max(0, queuedSamples)) / target);
 }

@@ -14246,6 +14246,7 @@ int main(int argc, char** argv)
             const double slowdown = steadyMusic ? AudioQueueSlowdown(1.0, queued) : speed == 1 ? AudioQueueSlowdown(audioSlow, queued) : 1.0;
             audioOut.clear();
             audioStretch.Process(audioBuf.data(), got, slowdown, audioOut);
+            AudioCatchUp(audioOut, queued);
             // VOLUME: scaled here, after the game's own mixing (silence at OFF, still queued, so
             // the timing the queue gives stays the same).
             // (FAST FORWARD SOUND off: silent also through a direction's quarter second at normal
