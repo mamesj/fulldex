@@ -1759,7 +1759,13 @@ bool Start(int& argc, char**& argv)
                     fclose(f);
                 }
                 if (games[chosen].platform == Launcher::N3DS) return Start3ds(games[chosen]);
-                if (games[chosen].platform == Launcher::DS) { const std::string nat = NativeDsProgram(games[chosen]); if (!nat.empty() && !StartNativeDs(games[chosen], nat)) return false; }
+                if (games[chosen].platform == Launcher::DS)
+                {
+                    // (a hack is known for certain first, so that it never plays with its game's save)
+                    Launcher::ConfirmHack(games, (size_t)chosen, dir + "/saves", SavePathFor);
+                    const std::string nat = NativeDsProgram(games[chosen]);
+                    if (!nat.empty() && !StartNativeDs(games[chosen], nat)) return false;
+                }
                 if (!g_self.empty() && envHasNextLoad())
                 {
                     if (FILE* f = fopen(chosenMarker.c_str(), "wb")) fclose(f);
