@@ -1517,6 +1517,8 @@ static std::string NativeDsProgram(const Launcher::Game& g)
         // Platinum (US code CPUE): the clean game (revision 0, and the later printing), and ROM hacks whose
         // code changes the native program reads from the ROM itself: Renegade Platinum 1.3.0.
         { "CPUE", "sdmc:/switch/fulldex-native-platinum/fulldex-native-platinum.nro", { 0x6dc8045b90a8107bull, 0x43ded1ef0c4e2011ull, 0xc98477d767ebadb1ull } },
+        // HeartGold (US code IPKE): the decompiled game on libntr (nat-hg-*.sh)
+        { "IPKE", "sdmc:/switch/fulldex-native-heartgold/fulldex-native-heartgold.nro", { 0xa5f1e66c24f9bae2ull } },
     };
     for (const Native& n : natives)
     {
