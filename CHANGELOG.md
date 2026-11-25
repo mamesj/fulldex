@@ -26,6 +26,7 @@
 - **3DS games: kanji in Japanese** (#239, X, Y, Omega Ruby and Alpha Sapphire). Characters the game takes from the console's own font (every kanji, and some words on the language screen) showed as grey boxes or not at all: the font was put where the game's next block of memory covers part of it. Without a font dumped from a 3DS there is now a built-in one with every common kanji (Noto Sans JP), where before it had only English letters.
 - **Omega Ruby and Alpha Sapphire: the battle buttons stay still in a single battle** (#242). They moved up whenever your Pokémon's HP box showed and back down while the text box hid it. They still go up above the HP boxes in double, triple and rotation battles.
 - **Omega Ruby and Alpha Sapphire: the X menu's cursor no longer hops** while it moves between buttons on a phone (#243).
+- **X, Y, Ultra Sun and Ultra Moon: an Outlines option** (#262), as Omega Ruby and Alpha Sapphire have. In a 3DS game's settings, Outlines off takes away the black lines the game draws around people and buildings from the depth of the scene; the characters' own shading stays. On by default. (Found and checked in X's and Ultra Sun's fields; Y and Ultra Moon use the same passes.)
 - **3DS games: the Mega Evolution button shows in ordinary battles** (#199), not only in the Battle Maison.
 - **3DS games: building a game no longer stops at one part that fails to compile** (#204). That part is built again on its own, then without optimisation, and the rest goes on.
 
