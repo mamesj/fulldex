@@ -92,14 +92,18 @@ bool RomfsReady()
 // Whether this build plays a game: SoulSilver and HeartGold need the program's own tables, the
 // Black games and Platinum a function table (the player's own funcs.txt beside the game, or the
 // build's).
-static std::string NativeDsProgram(const Launcher::Game& g); // (below)
 bool Playable(const Launcher::Game& g)
 {
     if (g.platform == Launcher::GBA) return true; // (any GBA game plays, with widescreen or without)
     if (g.platform == Launcher::N3DS) return g.known && !g.comingSoon; // (its own program: n3ds.h)
     if (!g.known || !g.problem.empty()) return false;
     if (IsGame(g.code, "IPGE") || IsGame(g.code, "IPKE"))
-        return (rc_num_chunks > 0 && rc_portable_knows(g.code.c_str())) || !NativeDsProgram(g).empty(); // (or its native program)
+    {
+        if (rc_num_chunks > 0 && rc_portable_knows(g.code.c_str())) return true;
+        struct stat nst; // (or its native program is installed: NativeDsProgram checks the ROM when it starts)
+        return stat(IsGame(g.code, "IPKE") ? "sdmc:/switch/fulldex-native-heartgold/fulldex-native-heartgold.nro"
+                                           : "sdmc:/switch/fulldex-native-soulsilver/fulldex-native-soulsilver.nro", &nst) == 0;
+    }
     struct stat st;
     if (stat((g.folder + "/funcs.txt").c_str(), &st) == 0) return true;
     return RomfsReady() && stat(("romfs:/funcs/" + g.code + ".txt").c_str(), &st) == 0;
