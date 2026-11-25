@@ -111,6 +111,39 @@ void Sync(const Page& p)
 }
 }
 
+namespace
+{
+Menu::CompanionView::Mon LiveMon(const MonCard& d)
+{
+    Menu::CompanionView::Mon e;
+    e.name = d.name; e.item = d.item; e.level = d.level; e.hp = d.hp; e.maxHp = d.maxHp; e.status = d.status; e.egg = d.egg;
+    e.icon = d.icon; e.iconW = d.iconW; e.iconH = d.iconH; e.type1 = d.type1; e.type2 = d.type2; e.nature = d.nature; e.ability = d.ability;
+    for (int i = 0; i < 6; i++) { e.stats[i] = d.stats[i]; e.iv[i] = d.iv[i]; e.ev[i] = d.ev[i]; }
+    for (const auto& mv : d.moves) e.moves.push_back({ mv.name, mv.type, mv.pp, mv.maxPp });
+    return e;
+}
+}
+
+const uint32_t* LiveDraw(const Live& l, int w, int h, int tab, int (*tabRects)[4])
+{
+    static Canvas c;
+    Menu::CompanionView cv;
+    cv.battleMapped = true;
+    for (const MonCard& m : l.mons) cv.party.push_back(LiveMon(m));
+    for (const Live::Pocket& p : l.pockets) cv.pockets.push_back({ p.name, p.stacks, p.total });
+    cv.money = l.money;
+    cv.place = l.place; cv.map = l.map; cv.mapW = l.mapW; cv.mapH = l.mapH; cv.markerX = l.markerX; cv.markerY = l.markerY;
+    cv.seen = l.seen; cv.caught = l.caught; cv.dexTotal = l.dexTotal;
+    for (const MonCard& m : l.battle) cv.battle.push_back(LiveMon(m));
+    c.Resize(w, h);
+    c.x0d = 0; c.y0d = 0; c.x1d = w; c.y1d = h;
+    c.backdrop.clear(); // (dark glass, as the DS games' second screen with FROSTED GLASS off)
+    Glass::Backdrop(c);
+    CompanionWindow(c, cv, std::clamp(tab, 0, 5), tabRects, nullptr, true, !cv.battle.empty());
+    for (uint32_t& px : c.px) px |= 0xFF000000u;
+    return c.px.data();
+}
+
 std::string SlotWhen(const std::string& statePath) { return StateSlots::Friendly(statePath); }
 
 bool SaveSlotPicture(const std::string& statePath, const uint32_t* argb, int w, int h)

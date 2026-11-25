@@ -5943,7 +5943,17 @@ int main(int argc, char** argv)
     SDL_FingerID overlayFingerId=0;
     SDL_Texture* companionTexture=nullptr;
     int companionDiagnosticReady=-1,companionDiagnosticCount=-1;
-    auto liveCompanionWanted = [&]() {return cfg.liveCompanion||cfg.companionOverlay||cfg.partyHud||cfg.statusBar||nuzlocke.Enabled()||cfg.levelCapWarn||DsDisplayState::Mode(secondDisplay.State())==4;};
+    // TWO SCREENS, DS SPLIT (an AYN Thor's bottom screen): the touch screen there with a button under it
+    // that swaps it for the Companion Window and back, as PokeDaisy has it; the top screen stays on the
+    // first display. The picture: the touch screen three times over (SPLIT_W x SPLIT_H), the button's bar under it.
+    enum { SPLIT_W = 768, SPLIT_H = 576, SPLIT_BAR = 96 };
+    bool splitCompanion = getenv("SSR_TEST_SPLITCOMPANION") != nullptr, splitDown = false;
+    Canvas splitCanvas, splitBar;
+    std::vector<uint32_t> splitPx;
+    unsigned splitDrawnVersion = ~0u;
+    int splitDrawnTab = -1, splitBarFor = -1, splitTabRects[6][4] = {};
+    auto liveCompanionWanted = [&]() {return cfg.liveCompanion||cfg.companionOverlay||cfg.partyHud||cfg.statusBar||nuzlocke.Enabled()||cfg.levelCapWarn||DsDisplayState::Mode(secondDisplay.State())==4
+                                             ||(splitCompanion&&DsDisplayState::Mode(secondDisplay.State())==2);};
     // The live companion (COMPANION WINDOW, HUD, STATUS BAR): its picture from the latest read, the
     // window's tab (Battle while a battle runs, then back) and where it was drawn, for taps.
     Menu::CompanionView liveView; unsigned liveViewVersion = ~0u;
@@ -9736,6 +9746,48 @@ int main(int argc, char** argv)
                 secondSince = 0; secondDrawnVersion = liveViewVersion; secondDrawnTab = liveTab; secondDrawnGlass = cfg.liveGlass;
             }
         }
+        else if (DsDisplayState::Mode(secondDisplay.State()) == 2 && j.bot)
+        {
+            // (DS SPLIT: the touch screen or the Companion Window, the bar with the button to swap them under it.)
+            splitPx.resize((size_t)SPLIT_W * (SPLIT_H + SPLIT_BAR));
+            if (splitCompanion)
+            {
+                if (companionSnapshot.ready && liveViewVersion != companionVersion) { fillCompanionView(liveView); liveViewVersion = companionVersion; }
+                CompanionTabs::Battle(!liveView.battle.empty(), liveWasInBattle, liveTab, liveTabBeforeBattle);
+                if (splitDrawnVersion != liveViewVersion || splitDrawnTab != liveTab || splitCanvas.w != SPLIT_W)
+                {
+                    splitCanvas.Resize(SPLIT_W, SPLIT_H);
+                    splitCanvas.x0d = 0; splitCanvas.y0d = 0; splitCanvas.x1d = SPLIT_W; splitCanvas.y1d = SPLIT_H;
+                    splitCanvas.backdrop.clear();
+                    Glass::Backdrop(splitCanvas);
+                    CompanionWindow(splitCanvas, liveView, liveTab, splitTabRects, nullptr, true);
+                    splitDrawnVersion = liveViewVersion; splitDrawnTab = liveTab;
+                }
+                for (size_t i = 0; i < splitCanvas.px.size(); i++) splitPx[i] = splitCanvas.px[i] | 0xFF000000u;
+            }
+            else
+                for (int y = 0; y < SPLIT_H; y++)
+                {
+                    const uint32_t* s = j.bot + (size_t)(y / 3) * 256;
+                    uint32_t* d = &splitPx[(size_t)y * SPLIT_W];
+                    for (int x = 0; x < SPLIT_W; x++) d[x] = s[x / 3] | 0xFF000000u;
+                }
+            if (splitBarFor != (int)splitCompanion || splitBar.w != SPLIT_W)
+            {
+                // (The bar: one button, COMPANION under the touch screen, TOUCH SCREEN under the window.)
+                splitBarFor = splitCompanion;
+                splitBar.Resize(SPLIT_W, SPLIT_BAR);
+                splitBar.x0d = 0; splitBar.y0d = 0; splitBar.x1d = SPLIT_W; splitBar.y1d = SPLIT_BAR;
+                std::fill(splitBar.px.begin(), splitBar.px.end(), 0xFF0B1018u);
+                const std::string label = splitCompanion ? "TOUCH SCREEN" : "COMPANION";
+                const int ts = 24, bh = 62, bw = SettingsArt::W(label, ts, true) + 92, bx = (SPLIT_W - bw) / 2, by = (SPLIT_BAR - bh) / 2;
+                Glass::Round(splitBar, bx, by, bw, bh, bh * 0.5f, 0x1AFFFFFF, 0x40FFFFFF, 1.5f);
+                Glass::DrawIcon(splitBar, splitCompanion ? Glass::I_SCREENS : Glass::I_PEOPLE, bx + 38.0f, by + bh * 0.5f, 13.0f, Menu::GlassText);
+                SettingsArt::T(splitBar, bx + 66, by + bh / 2 + 9, label, ts, Menu::GlassText, true);
+            }
+            for (size_t i = 0; i < splitBar.px.size(); i++) splitPx[(size_t)SPLIT_W * SPLIT_H + i] = splitBar.px[i] | 0xFF000000u;
+            secondDisplay.Submit(splitPx.data(), SPLIT_W, SPLIT_H + SPLIT_BAR);
+        }
         else secondDisplay.Submit(DsDisplayState::Swapped(secondDisplay.State()) ? j.top : j.bot);
         // (The widened battle picture, from what was grabbed after the frame: made here, beside
         // the next frame's emulation.)
@@ -12188,6 +12240,21 @@ int main(int argc, char** argv)
                 {liveTab=i;liveTabBeforeBattle=-1;}
         }
         companionFingerDown=panelDown;
+        if(DsDisplayState::Mode(secondScreenState)==2&&(secondScreenState&DsDisplayState::Ready))
+        {
+            // (DS SPLIT: the button under the picture swaps the touch screen and the Companion Window; on the window, a tab tapped: that tab.)
+            const bool down=(secondScreenState&(1ULL<<24))!=0;
+            const int x=secondScreenState&4095,y=(secondScreenState>>12)&4095;
+            if(down&&!splitDown)
+            {
+                if(y>=SPLIT_H){splitCompanion=!splitCompanion;splitDrawnVersion=~0u;}
+                else if(splitCompanion)
+                    for(int i=0;i<6;i++)
+                        if(x>=splitTabRects[i][0]&&x<splitTabRects[i][0]+splitTabRects[i][2]&&y>=splitTabRects[i][1]&&y<splitTabRects[i][1]+splitTabRects[i][3])
+                        {liveTab=i;liveTabBeforeBattle=-1;}
+            }
+            splitDown=down;
+        }
         const bool fastDown = kbFast || ps.rt > 0.5f;
         if (fastButton.Update(cfg.fastButtonToggle, fastDown, fastInputFocused && !menu.open && !swallowMenuButtons, fastLock))
         {
@@ -13265,7 +13332,16 @@ int main(int argc, char** argv)
                 }
             }
             int secondX = 0, secondY = 0;
-            if (DsDisplayState::Touch(secondScreenState, secondX, secondY))
+            bool secondTouch = false;
+            if (DsDisplayState::Mode(secondScreenState) == 2)
+            {
+                // (DS SPLIT's picture: the touch screen three times over, the button's bar under it.)
+                const int x = secondScreenState & 4095, y = (secondScreenState >> 12) & 4095;
+                if ((secondScreenState & DsDisplayState::Ready) && (secondScreenState & (1ULL << 24)) && !splitCompanion && x < SPLIT_W && y < SPLIT_H)
+                { secondX = x / 3; secondY = y / 3; secondTouch = true; }
+            }
+            else secondTouch = DsDisplayState::Touch(secondScreenState, secondX, secondY);
+            if (secondTouch)
             {
                 touching = true;
                 touchX = secondX;

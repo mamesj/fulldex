@@ -33,6 +33,8 @@
 #ifdef GBAW_EMBEDDED
 #include "embed.h"
 #include "gba_glass.h" // (the pause menu as the DS games draw it; Fulldex's frontend folder)
+#include "android_second_screen.h" // (TWO SCREENS: the companion on a dual-screen handheld's second display)
+#include "companion_tabs.h"
 #include "auto_state.h"
 #include "state_calendar.h"
 #include "gba_dex.h"       // (POKEDEX: the game's own Pokedex data and pictures, read from its ROM)
@@ -821,6 +823,74 @@ struct App
     std::vector<std::string> achDesc; // the achievements list's descriptions, beside its rows
 #endif
     bool dexTyping = false; // (typing on the POKEDEX's SEARCH row)
+#ifdef GBAW_EMBEDDED
+    // TWO SCREENS (an AYN Thor's or another dual-screen handheld's bottom screen, SECOND SCREEN on in the
+    // DS games' settings or at setup): the companion there as you play, as PokeDaisy has it. Read and
+    // drawn again twice a second, or at once when a tab is tapped.
+    std::unique_ptr<AndroidSecondScreen> second;
+    int secondTab = 0, secondTabBefore = -1, secondTabRects[6][4] = {};
+    bool secondDown = false, secondWasBattle = false;
+    unsigned long long secondNext = 0;
+    std::string secondPlaceKey;
+    GbaGlass::Live secondLive;
+    void SecondFrame()
+    {
+        if (!core || screen != PLAY) { if (second) { second->Stop(); second.reset(); } return; }
+        if (!second) { second = std::make_unique<AndroidSecondScreen>(true); secondNext = 0; }
+        const uint64_t st = second->State();
+        if (DsDisplayState::Mode(st) == 0) { secondNext = 0; return; }
+        const bool accepting = (st & DsDisplayState::AcceptingFrames) != 0;
+        // (Until the display has shown a picture: one every frame.)
+        bool now = secondNext == 0 || gameFrames >= secondNext || (accepting && !(st & DsDisplayState::Ready));
+        const bool down = (st & DsDisplayState::Ready) && (st & (1ULL << 24));
+        if (down && !secondDown)
+        {
+            const int x = (int)(st & 4095), y = (int)((st >> 12) & 4095);
+            for (int i = 0; i < 6; i++)
+                if (x >= secondTabRects[i][0] && x < secondTabRects[i][0] + secondTabRects[i][2] && y >= secondTabRects[i][1] && y < secondTabRects[i][1] + secondTabRects[i][3])
+                { secondTab = i; secondTabBefore = -1; now = true; }
+        }
+        secondDown = down;
+        if (!now || !accepting) return;
+        secondNext = gameFrames + 30;
+        ReadCompanion();
+        GbaGlass::Live& l = secondLive;
+        l.mons.clear();
+        for (int i = 0; i < (int)comp.party.size(); i++) l.mons.push_back(MonCardFor(i));
+        l.pockets.clear();
+        for (const auto& p : comp.pockets)
+        {
+            GbaGlass::Live::Pocket pk;
+            pk.name = DexTitle(p.first);
+            pk.stacks = (int)p.second.size();
+            for (const auto& it : p.second) pk.total += it.quantity;
+            l.pockets.push_back(pk);
+        }
+        l.money = comp.money;
+        l.seen = l.caught = 0;
+        for (size_t n = 1; n < comp.seen.size(); n++) { l.seen += comp.seen[n] ? 1 : 0; l.caught += n < comp.caught.size() && comp.caught[n] ? 1 : 0; }
+        l.dexTotal = comp.seen.size() > 1 ? (int)comp.seen.size() - 1 : 0;
+        // (The map only when it is shown and you have moved to another place: it is made from the ROM.)
+        const std::string pkey = std::to_string(comp.mapGroup) + "." + std::to_string(comp.mapNum);
+        if (secondTab == 2 && pkey != secondPlaceKey)
+        {
+            secondPlaceKey = pkey;
+            GbaDex::Data::RegionPicture region = dex.Region(comp.mapGroup, comp.mapNum);
+            l.place = DexTitle(dex.PlaceOf(comp.mapGroup, comp.mapNum));
+            l.map.clear(); l.mapW = l.mapH = 0; l.markerX = l.markerY = -1;
+            if (region.ok) { l.map = std::move(region.px); l.mapW = region.w; l.mapH = region.h; l.markerX = region.markerX; l.markerY = region.markerY; }
+        }
+        l.battle.clear();
+        if (comp.inBattle && !comp.foeParty.empty())
+        {
+            l.battle.push_back(MonCardOf(comp.foeParty[0], nullptr));
+            if (!comp.party.empty()) l.battle.push_back(MonCardFor(0));
+        }
+        CompanionTabs::Battle(!l.battle.empty(), secondWasBattle, secondTab, secondTabBefore);
+        const int w = 960, h = 720;
+        second->Submit(GbaGlass::LiveDraw(l, w, h, secondTab, secondTabRects), w, h);
+    }
+#endif
     bool TypingNow() const
     {
 #ifdef GBAW_EMBEDDED
@@ -6623,6 +6693,9 @@ struct App
             }
 #endif
             Draw();
+#ifdef GBAW_EMBEDDED
+            SecondFrame();
+#endif
             if (testMode) ScriptShots();
             const Uint64 beforePresent = SDL_GetPerformanceCounter();
             SDL_RenderPresent(ren);

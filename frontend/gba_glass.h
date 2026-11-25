@@ -114,6 +114,25 @@ void CancelTouch();
 // same picture as the last call's.
 const uint32_t* Draw(const Page& page, int w, int h, bool& changed);
 
+// TWO SCREENS (an AYN Thor's or another dual-screen handheld's second display): the companion as the
+// game runs, the DS games' COMPANION WINDOW filling it (PokeDaisy's companion on the bottom screen).
+struct Live
+{
+    std::vector<MonCard> mons;                                         // PARTY
+    struct Pocket { std::string name; int stacks = 0, total = 0; };
+    std::vector<Pocket> pockets;                                       // BAG
+    long long money = -1;
+    std::string place;                                                 // MAP
+    std::vector<uint32_t> map;
+    int mapW = 0, mapH = 0;
+    float markerX = -1, markerY = -1;
+    int seen = 0, caught = 0, dexTotal = 0;                            // POKEDEX
+    std::vector<MonCard> battle;                                       // BATTLE: the foe, then yours
+};
+// The window drawn at w x h (ARGB) on tab (0 PARTY, 1 BAG, 2 MAP, 3 POKEDEX, 4 BATTLE, 5 GUIDE);
+// tabRects: where each tab was drawn, for taps.
+const uint32_t* LiveDraw(const Live& live, int w, int h, int tab, int (*tabRects)[4]);
+
 // FULLDEX NAV (fulldex_nav.h), the DS games' quick menu, over the running GBA game: the watch with its nine apps
 // (Fly, Party, Open PC, Repel, Encounters, Reset, Map, Pokedex, Bag, in that order), drawn as the DS games draw it.
 struct Nav
