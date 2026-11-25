@@ -255,6 +255,8 @@ const std::vector<Setting>& SettingsList()
           "ON A PARTY POKEMON'S PAGE: ITS NEXT MOVES AND THE TMS IN YOUR BAG IT CAN LEARN, EACH WITH WHETHER TO LEARN IT AND WHICH MOVE TO FORGET." },
         { "egg_preview", "EGG PREVIEW", onOff, "1",
           "AN EGG IN YOUR PARTY SHOWS WHAT WILL HATCH FROM IT: ITS NAME, PICTURE, TYPES, STATS AND MOVES." },
+        { "level_cap", "LEVEL CAP", onOff, "0",
+          "NO POKEMON GOES PAST THE TOP LEVEL OF THE NEXT GYM LEADER'S TEAM, AND WITH ALL EIGHT BADGES THE CHAMPION'S. THE ORIGINAL GAMES ONLY." },
         { "shiny_odds", "SHINY ODDS",
           { { "8192", "NORMAL" }, { "4096", "1 IN 4096" }, { "1024", "1 IN 1024" }, { "512", "1 IN 512" }, { "128", "1 IN 128" } }, "8192",
           "HOW OFTEN A WILD POKEMON TURNS UP SHINY. NORMAL IS THE GAME'S OWN 1 IN 8192. POKEMON ALREADY CAUGHT DON'T CHANGE, "
@@ -737,6 +739,9 @@ struct App
     std::vector<GbaGameplay::Write> gpText, gpTms;
     GbaGameplay::ExpShareSites gpExp; // (EXP SHARE: gSentPokesToOpponent, FULL's writes)
     bool gpExpFullOn = false;
+    std::vector<GbaGameplay::CapSite> gpCap; // (LEVEL CAP: getexp's two level checks)
+    int gpCapOn = 0;                         // (the cap written now; 0 none)
+    int gpCapTick = 0;
     std::vector<GbaGameplay::Write> gpHm; // (NO HMS NEEDED's writes)
     bool gpHmOn = false;
     bool gpTextOn = false, gpTmsOn = false, gpField = false;
@@ -1195,6 +1200,8 @@ struct App
             gpText = GbaGameplay::InstantText(rom);
             gpTms = GbaGameplay::ReusableTms(rom);
             gpExp = GbaGameplay::ExpShare(rom);
+            gpCap = GbaGameplay::LevelCapSites(rom, gpExp.getexp);
+            gpCapOn = 0;
             gpHm = GbaGameplay::HmFree(rom);
             gpWild = GbaGameplay::WildSwitch(rom);
             gpTextOn = gpTmsOn = gpExpFullOn = gpHmOn = false;
@@ -1224,6 +1231,7 @@ struct App
                 ffMusic.Start(rom, have.freq, data + sub);
             }
             fprintf(stderr, "[gba] gameplay: text %zu, tms %zu, exp %08x/%zu, hm %zu, wild %08x, field %d\n", gpText.size(), gpTms.size(), gpExp.sentPokes, gpExp.full.size(), gpHm.size(), gpWild, (int)gpField);
+            fprintf(stderr, "[gba] gameplay: level cap sites %zu\n", gpCap.size());
         }
         camera.Reset();
         camera.level = 0;
@@ -1682,6 +1690,7 @@ struct App
         if (!paused) ExpShareFrame();
         if (!paused) ShinyAlertFrame();
         if (!paused) ItemPopupFrame();
+        if (!paused) LevelCapFrame();
         core->runFrame(core);
         fly.FrameEnded();
         if (!paused) { FlyFrame(); TmFrame(); }
@@ -1898,7 +1907,7 @@ struct App
             static const char* const display[] = { "widescreen", "fullscreen", "scaling", "hd_filter", "lcd", "colour", "zoom", "zoom_text", "day_night", "follower", "nav_style", "repel_prompt", "show_fps" };
             static const char* const sound[] = { "volume", "ff_mute" };
             static const char* const controls[] = { "gba_start", "buttons", "fast_lock", "ff_speed", "fast_button", "auto_state", "auto_resume" };
-            static const char* const gameplay[] = { "instant_text", "reusable_tms", "no_hms", "exp_share", "shiny_alert", "item_popups", "move_advice", "egg_preview", "run_indoors", "wild_encounters", "shiny_odds", "battle_speed", "text_speed", "bike_speed", "surf_speed", "fly_on", "flight_clouds" };
+            static const char* const gameplay[] = { "instant_text", "reusable_tms", "no_hms", "exp_share", "shiny_alert", "item_popups", "move_advice", "egg_preview", "level_cap", "run_indoors", "wild_encounters", "shiny_odds", "battle_speed", "text_speed", "bike_speed", "surf_speed", "fly_on", "flight_clouds" };
             const char* const* keys = pausePage == P_DISPLAY ? display : pausePage == P_SOUND ? sound : pausePage == P_GAMEPLAY ? gameplay : controls;
             const int count = pausePage == P_DISPLAY ? sizeof(display) / sizeof(*display)
                             : pausePage == P_SOUND ? sizeof(sound) / sizeof(*sound)
@@ -2162,6 +2171,7 @@ struct App
         if (!strcmp(key, "instant_text")) return !gpText.empty();
         if (!strcmp(key, "reusable_tms")) return !gpTms.empty();
         if (!strcmp(key, "no_hms")) return !gpHm.empty();
+        if (!strcmp(key, "level_cap")) return !gpCap.empty() && CapLevels() != nullptr;
         if (!strcmp(key, "exp_share")) return gpExp.sentPokes != 0 && compConfig && !(compConfig->sha1 && (compConfig->layout || compConfig->speciesMask != 0xFFFF));
         if (!strcmp(key, "run_indoors")) return gpField && gameCode.size() == 4 && gameCode[0] == 'B'; // (Emerald and FireRed's engines)
         if (!strcmp(key, "wild_encounters")) return gpField && gpWild;
@@ -2247,6 +2257,44 @@ struct App
         }
         itemSeen = now;
         itemSeenOk = ok;
+    }
+    // LEVEL CAP: the top level of each gym leader's team in badge order, then the Champion's (with all eight badges);
+    // the original games' (FireRed and LeafGreen, Emerald, Ruby and Sapphire, any language), a known hack none.
+    const int* CapLevels() const
+    {
+        static const int frlg[9] = { 14, 21, 24, 29, 43, 43, 47, 50, 63 }, em[9] = { 15, 19, 24, 29, 31, 33, 42, 46, 58 },
+                         rs[9] = { 15, 18, 23, 28, 31, 34, 42, 43, 58 };
+        if (!compConfig || compConfig->sha1 || gameCode.size() != 4) return nullptr;
+        const std::string g = gameCode.substr(0, 3);
+        return g == "BPR" || g == "BPG" ? frlg : g == "BPE" ? em : g == "AXV" || g == "AXP" ? rs : nullptr;
+    }
+    // Badges in the save: FLAG_BADGE01_GET to 08 in SaveBlock1's flags (-1: not readable now).
+    int Badges() const
+    {
+        if (!compConfig || !core || gameCode.size() != 4) return -1;
+        const std::string g = gameCode.substr(0, 3);
+        const uint32_t flags = g == "BPE" ? 0x1270 : g == "AXV" || g == "AXP" ? 0x1220 : 0xEE0;
+        const int first = g == "BPE" ? 0x867 : g == "AXV" || g == "AXP" ? 0x807 : 0x820;
+        const uint32_t sb1 = compConfig->staticSaveBlocks ? compConfig->saveBlock1 : core->busRead32(core, compConfig->saveBlock1);
+        if (sb1 < 0x02000000 || sb1 > 0x0203F000) return -1;
+        int n = 0;
+        for (int f = first; f < first + 8; f++) n += core->busRead8(core, sb1 + flags + f / 8) >> (f % 8) & 1;
+        return n;
+    }
+    void LevelCapFrame()
+    {
+        if (gpCap.empty() || ++gpCapTick % 60) return;
+        int want = 0;
+        if (set.Get("level_cap") == "1" && GameplayOffered("level_cap"))
+        {
+            const int b = Badges();
+            if (b >= 0) want = CapLevels()[std::min(b, 8)];
+        }
+        if (want == gpCapOn) return;
+        for (const auto& w : want ? GbaGameplay::LevelCapWrites(gpCap, want) : GbaGameplay::LevelCapWrites(gpCap, 100))
+            for (size_t k = 0; k < w.value.size(); k++) core->rawWrite8(core, w.addr + (uint32_t)k, -1, want ? w.value[k] : w.orig[k]);
+        fprintf(stderr, "[gba] level cap: %d (badges %d)\n", want, Badges());
+        gpCapOn = want;
     }
     uint32_t shinyAlertPid = 0; bool shinyAlerted = false;
     void ShinyAlertFrame()
@@ -4064,7 +4112,7 @@ struct App
         {
             if (ItemsInput(in)) return;
         }
-        if (pausePage == P_BOXES || pausePage == P_BOXMON || pausePage == P_PARTYMON || (pausePage == P_PARTY && in.accept && (boxes.Supported() || items.Supported())))
+        if (pausePage == P_BOXES || pausePage == P_BOXMON || pausePage == P_PARTYMON || (pausePage == P_PARTY && in.accept && (boxes.Supported() || items.Supported() || set.Get("move_advice") != "0")))
         {
             if (BoxesInput(in)) return;
         }
@@ -4220,7 +4268,7 @@ struct App
             { "lcd", IC_GRID }, { "colour", IC_MONITOR }, { "zoom", IC_EXPAND }, { "zoom_text", IC_EXPAND }, { "repel_prompt", IC_INFO }, { "show_fps", IC_GAUGE }, { "volume", IC_SPEAKER }, { "ff_mute", IC_FAST },
             { "gba_start", IC_PAD }, { "buttons", IC_PAD }, { "ff_speed", IC_FAST }, { "fast_button", IC_FAST }, { "fast_lock", IC_FAST },
             { "auto_state", IC_SAVE }, { "auto_resume", IC_LOAD },
-            { "instant_text", IC_INFO }, { "reusable_tms", IC_CHIP }, { "no_hms", IC_CHIP }, { "exp_share", IC_POKEBALL }, { "shiny_alert", IC_SPARKLE }, { "item_popups", IC_INFO }, { "move_advice", IC_INFO }, { "egg_preview", IC_POKEBALL }, { "run_indoors", IC_FAST }, { "wild_encounters", IC_GLOBE }, { "shiny_odds", IC_SPARKLE }, { "battle_speed", IC_FAST }, { "text_speed", IC_FAST }, { "bike_speed", IC_FAST }, { "surf_speed", IC_FAST }, { "day_night", IC_SPARKLE }, { "follower", IC_POKEBALL }, { "nav_style", IC_GRID } };
+            { "instant_text", IC_INFO }, { "reusable_tms", IC_CHIP }, { "no_hms", IC_CHIP }, { "exp_share", IC_POKEBALL }, { "shiny_alert", IC_SPARKLE }, { "item_popups", IC_INFO }, { "move_advice", IC_INFO }, { "egg_preview", IC_POKEBALL }, { "level_cap", IC_CHIP }, { "run_indoors", IC_FAST }, { "wild_encounters", IC_GLOBE }, { "shiny_odds", IC_SPARKLE }, { "battle_speed", IC_FAST }, { "text_speed", IC_FAST }, { "bike_speed", IC_FAST }, { "surf_speed", IC_FAST }, { "day_night", IC_SPARKLE }, { "follower", IC_POKEBALL }, { "nav_style", IC_GRID } };
         icon = IC_GEAR;
         for (const auto& i : icons)
             if (!strcmp(i.key, key)) icon = i.icon;

@@ -196,7 +196,7 @@ inline std::vector<Write> HmFree(const std::vector<uint8_t>& rom)
 // gets what one alone would. Found by agbcc's build of Cmd_getexp (FireRed, LeafGreen, Emerald in every language and
 // the hacks on that code; Ruby and Sapphire's own build), only where a battle script table the code loads holds it
 // (CFRU's hacks run their own: none there). sentPokes 0: not this game.
-struct ExpShareSites { uint32_t sentPokes = 0; std::vector<Write> full; };
+struct ExpShareSites { uint32_t sentPokes = 0; std::vector<Write> full; size_t getexp = 0; };
 inline ExpShareSites ExpShare(const std::vector<uint8_t>& rom)
 {
     using namespace detail;
@@ -241,7 +241,45 @@ inline ExpShareSites ExpShare(const std::vector<uint8_t>& rom)
     for (size_t a : sites)
         out.full.push_back({ (uint32_t)(0x08000000 + a), { rom[a], rom[a + 1], rom[a + 2], rom[a + 3] }, { 0xC0, 0x46, 0xC0, 0x46 } });
     out.sentPokes = sent;
+    out.getexp = c;
     return out;
+}
+
+// LEVEL CAP (PokeDaisy's LevelCap.kt, GPL 3): no Pokemon goes past a level. getexp already stops a Pokemon at 100
+// twice (`movs r1, #MON_DATA_LEVEL; bl GetMonData; cmp r0, #100; b<eq|ne>`, both calling one GetMonData): before the
+// "gained N EXP" message (one at 100 gets nothing) and before each level's EXP (it stops there, the rest of the win
+// dropped). The cmp's 100 made the cap and beq / bne made bcs / bcc ("at the cap or past it"). Items that raise a
+// level and the day care aren't getexp: they still work. Found in getexp as EXP SHARE finds it.
+struct CapSite { uint32_t addr; std::vector<uint8_t> orig; bool skipsOnEqual; };
+inline std::vector<CapSite> LevelCapSites(const std::vector<uint8_t>& rom, size_t getexp)
+{
+    using namespace detail;
+    std::vector<CapSite> out;
+    if (!getexp || rom.size() < 16) return out;
+    std::vector<std::pair<size_t, long>> hits;
+    const size_t end = std::min(rom.size() - 10, getexp + 0x900);
+    for (size_t i = getexp; i < end; i += 2)
+        if (U16(rom, i) == 0x2138 && U16(rom, i + 6) == 0x2864 && (rom[i + 9] == 0xD0 || rom[i + 9] == 0xD1) &&
+            (U16(rom, i + 2) & 0xF800) == 0xF000 && (U16(rom, i + 4) & 0xF800) == 0xF800)
+            hits.push_back({ i + 6, BlTarget(rom, i + 2) });
+    if (hits.size() != 2 || hits[0].second != hits[1].second) return out;
+    for (const auto& h : hits)
+        out.push_back({ (uint32_t)(0x08000000 + h.first), { rom[h.first], rom[h.first + 1], rom[h.first + 2], rom[h.first + 3] }, rom[h.first + 3] == 0xD0 });
+    // (The second, before each level's EXP, always skips at 100; the first goes on past it.)
+    if (!out[1].skipsOnEqual) out.clear();
+    return out;
+}
+inline std::vector<Write> LevelCapWrites(const std::vector<CapSite>& sites, int level)
+{
+    std::vector<Write> w;
+    for (const auto& s : sites)
+    {
+        std::vector<uint8_t> v = s.orig;
+        v[0] = (uint8_t)level;
+        v[3] = s.skipsOnEqual ? 0xD2 : 0xD3; // (beq -> bcs: skip at the cap or past it; bne -> bcc: go on only under it)
+        w.push_back({ s.addr, s.orig, v });
+    }
+    return w;
 }
 
 // WILD ENCOUNTERS. StandardWildEncounter's first lines load the switch from a literal pool, compare it with 1, then
