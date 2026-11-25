@@ -101,6 +101,10 @@ extern "C" int pk_wide_take_fail;   // pk_wide.c, test log only
 #if defined(__ANDROID__) || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
 #define GBAW_PHONE 1
 #endif
+#if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+// FullDex's iOS app (frontend/ios_orient.mm): the sound plays with the silent switch on (#116).
+void IosAudioPlaysWhenSilent();
+#endif
 
 using namespace gbaw;
 
@@ -988,6 +992,10 @@ struct App
 #endif
         audio = SDL_OpenAudioDevice(nullptr, 0, &want, &have, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE);
         if (!audio) return;
+#if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+        // (SDL set its own audio session as it opened the device, one the silent switch mutes.)
+        IosAudioPlaysWhenSilent();
+#endif
         fprintf(stderr, "[gba] sound: %d Hz, %d samples a buffer\n", have.freq, (int)have.samples);
         mAudioBufferInit(&audioOut, 16384, 2);
         audioTmp.resize(16384 * 2);

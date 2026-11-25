@@ -55,7 +55,7 @@
 - **The Fairy type in GBA hacks** that have it: types, TYPE MATCHUPS and BATTLE INFO follow the newer chart (Fairy's matchups, and Steel no longer resisting Ghost and Dark).
 - **BATTLE INFO in HeartGold and SoulSilver (US and Australian carts), and the HG-Engine hacks built on them (Heartfelt Gold and the others):** the foe with its level, HP, types, ability and held item, how each of your moves does against it and your party's matchups, in the Companion Window's Battle tab too. It said "cannot read this game's battles yet". A Mega or regional form in battle shows as that form, and the engine's earlier versions (one-byte abilities) are read their own way.
 - **Item icons sit in the middle of their space** (BAG and an item's page). The DS games draw each item in the top left corner of its 32 x 32 picture, so the icons sat high and to the left of their row.
-- **iPhone and iPad: DS games have sound with the Ring/Silent switch on silent** (#116). The switch muted the game, as it mutes a phone's alerts; now the game plays like a video does, and the player's own music still plays alongside it. GBA games still follow the switch for now.
+- **iPhone and iPad: games have sound with the Ring/Silent switch on silent** (#116). The switch muted the game, as it mutes a phone's alerts; now the game plays like a video does, and the player's own music still plays alongside it. GBA games too.
 - **3DS games: the Mega Evolution button shows in ordinary battles** (#199), not only in the Battle Maison.
 - **3DS games: building a game no longer stops at one part that fails to compile** (#204). That part is built again on its own, then without optimisation, and the rest goes on.
 
