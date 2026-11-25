@@ -3897,10 +3897,19 @@ struct App
     // original games' move data (MoveBattle).
     struct AdviceRow { std::string label, value, sub; };
     std::vector<AdviceRow> adviceRows;
+    std::string adviceKey; // (what the rows were worked out for: the page is built again every frame)
     void BuildAdvice(int slot)
     {
+        if (set.Get("move_advice") == "0" || slot < 0 || slot >= (int)comp.party.size()) { adviceRows.clear(); adviceKey.clear(); return; }
+        {
+            const GbaCompanion::Mon& k = comp.party[slot];
+            std::string key = std::to_string(slot) + "|" + std::to_string(k.species) + "|" + std::to_string(k.level) + "|" + std::to_string((int)k.egg) + "|" + std::to_string(k.stats[1]) + "|" + std::to_string(k.stats[4]);
+            for (int j = 0; j < 4; j++) key += "|" + std::to_string(k.moves[j]);
+            for (const auto& p : comp.pockets) for (const auto& it : p.second) if (it.id >= 289 && it.id <= 346) key += "," + std::to_string(it.id);
+            if (key == adviceKey) return;
+            adviceKey = key;
+        }
         adviceRows.clear();
-        if (set.Get("move_advice") == "0" || slot < 0 || slot >= (int)comp.party.size()) return;
         LoadDex();
         const GbaCompanion::Mon& m = comp.party[slot];
         if (m.egg || !m.species || !dex.MoveBattle(1).ok) { fprintf(stderr, "[gba] move advice: none (egg %d, species %d, move data %d)\n", (int)m.egg, m.species, (int)dex.MoveBattle(1).ok); return; }
