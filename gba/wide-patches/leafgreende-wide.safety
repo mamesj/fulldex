@@ -86,4 +86,4 @@ same 03C6470 8 030B0080 gFogDiagonalSpriteSheet
 same 03C648C 18 AC04B916 sFogDiagonalSpriteTemplate
 same 03C64C4 18 5FE17023 sSandstormSpriteTemplate
 same 03C64DC 8 56EA1C6C sSandstormSpriteSheet
-free 0F00000 1C58
+free 0F00000 1C88
