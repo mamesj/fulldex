@@ -239,6 +239,9 @@ const std::vector<Setting>& SettingsList()
           "HOW FAST THE GAME RUNS WHILE YOU RIDE A BIKE." },
         { "surf_speed", "SURF SPEED", { { "1", "NORMAL" }, { "2", "2X" }, { "3", "3X" }, { "4", "4X" } }, "1",
           "HOW FAST THE GAME RUNS WHILE YOU SURF OR DIVE." },
+        { "no_hms", "NO HMS NEEDED", onOff, "0",
+          "CUT, SURF, STRENGTH, ROCK SMASH, WATERFALL AND DIVE WORK ONCE YOU HAVE THEIR BADGE, WITHOUT A POKEMON THAT KNOWS "
+          "THEM: THE FIRST POKEMON THAT ISN'T AN EGG DOES IT. ONE THAT KNOWS THE MOVE STILL GOES FIRST." },
         { "exp_share", "EXP SHARE", { { "0", "OFF" }, { "1", "SPLIT" }, { "2", "FULL EXP" } }, "0",
           "THE WHOLE PARTY GETS EXP FROM A WIN, NOT ONLY THE POKEMON THAT FOUGHT. SPLIT SHARES IT OUT; FULL EXP GIVES EACH "
           "THE EXP ONE POKEMON ALONE WOULD GET. EGGS AND FAINTED POKEMON GET NONE." },
@@ -724,6 +727,8 @@ struct App
     std::vector<GbaGameplay::Write> gpText, gpTms;
     GbaGameplay::ExpShareSites gpExp; // (EXP SHARE: gSentPokesToOpponent, FULL's writes)
     bool gpExpFullOn = false;
+    std::vector<GbaGameplay::Write> gpHm; // (NO HMS NEEDED's writes)
+    bool gpHmOn = false;
     bool gpTextOn = false, gpTmsOn = false, gpField = false;
     uint32_t gpWild = 0;
     GbaGameplay::ShinyRoller shiny;
@@ -1180,8 +1185,9 @@ struct App
             gpText = GbaGameplay::InstantText(rom);
             gpTms = GbaGameplay::ReusableTms(rom);
             gpExp = GbaGameplay::ExpShare(rom);
+            gpHm = GbaGameplay::HmFree(rom);
             gpWild = GbaGameplay::WildSwitch(rom);
-            gpTextOn = gpTmsOn = gpExpFullOn = false;
+            gpTextOn = gpTmsOn = gpExpFullOn = gpHmOn = false;
             shiny.Reset();
             gpState = 0;
             for (int c = 0; c < 3; c++) { tintNow[c] = 256; tintSent[c] = 256; }
@@ -1207,7 +1213,7 @@ struct App
                 Games::MakeDir(data + sub);
                 ffMusic.Start(rom, have.freq, data + sub);
             }
-            fprintf(stderr, "[gba] gameplay: text %zu, tms %zu, exp %08x/%zu, wild %08x, field %d\n", gpText.size(), gpTms.size(), gpExp.sentPokes, gpExp.full.size(), gpWild, (int)gpField);
+            fprintf(stderr, "[gba] gameplay: text %zu, tms %zu, exp %08x/%zu, hm %zu, wild %08x, field %d\n", gpText.size(), gpTms.size(), gpExp.sentPokes, gpExp.full.size(), gpHm.size(), gpWild, (int)gpField);
         }
         camera.Reset();
         camera.level = 0;
@@ -1878,7 +1884,7 @@ struct App
             static const char* const display[] = { "widescreen", "fullscreen", "scaling", "hd_filter", "lcd", "colour", "zoom", "zoom_text", "day_night", "follower", "nav_style", "repel_prompt", "show_fps" };
             static const char* const sound[] = { "volume", "ff_mute" };
             static const char* const controls[] = { "gba_start", "buttons", "fast_lock", "ff_speed", "fast_button", "auto_state", "auto_resume" };
-            static const char* const gameplay[] = { "instant_text", "reusable_tms", "exp_share", "run_indoors", "wild_encounters", "shiny_odds", "battle_speed", "text_speed", "bike_speed", "surf_speed", "fly_on", "flight_clouds" };
+            static const char* const gameplay[] = { "instant_text", "reusable_tms", "no_hms", "exp_share", "run_indoors", "wild_encounters", "shiny_odds", "battle_speed", "text_speed", "bike_speed", "surf_speed", "fly_on", "flight_clouds" };
             const char* const* keys = pausePage == P_DISPLAY ? display : pausePage == P_SOUND ? sound : pausePage == P_GAMEPLAY ? gameplay : controls;
             const int count = pausePage == P_DISPLAY ? sizeof(display) / sizeof(*display)
                             : pausePage == P_SOUND ? sizeof(sound) / sizeof(*sound)
@@ -2141,6 +2147,7 @@ struct App
     {
         if (!strcmp(key, "instant_text")) return !gpText.empty();
         if (!strcmp(key, "reusable_tms")) return !gpTms.empty();
+        if (!strcmp(key, "no_hms")) return !gpHm.empty();
         if (!strcmp(key, "exp_share")) return gpExp.sentPokes != 0 && compConfig && !(compConfig->sha1 && (compConfig->layout || compConfig->speciesMask != 0xFFFF));
         if (!strcmp(key, "run_indoors")) return gpField && gameCode.size() == 4 && gameCode[0] == 'B'; // (Emerald and FireRed's engines)
         if (!strcmp(key, "wild_encounters")) return gpField && gpWild;
@@ -3511,6 +3518,7 @@ struct App
         put(gpText, set.Get("instant_text") == "1", gpTextOn);
         put(gpTms, set.Get("reusable_tms") == "1", gpTmsOn);
         put(gpExp.full, set.Get("exp_share") == "2", gpExpFullOn);
+        put(gpHm, set.Get("no_hms") == "1", gpHmOn);
     }
     void SettingsPageInput(const MenuIn& in)
     {
@@ -3569,7 +3577,7 @@ struct App
         }
         if (!strcmp(s.key, "volume")) SetVolume();
         if (!strcmp(s.key, "fast_lock")) fastToggle = set.Get("fast_lock") == "1";
-        if (!strcmp(s.key, "instant_text") || !strcmp(s.key, "reusable_tms") || !strcmp(s.key, "exp_share")) ApplyGameplay();
+        if (!strcmp(s.key, "instant_text") || !strcmp(s.key, "reusable_tms") || !strcmp(s.key, "exp_share") || !strcmp(s.key, "no_hms")) ApplyGameplay();
         pause.items[i].value = set.Shown(s);
     }
 #endif
@@ -4070,7 +4078,7 @@ struct App
             { "lcd", IC_GRID }, { "colour", IC_MONITOR }, { "zoom", IC_EXPAND }, { "zoom_text", IC_EXPAND }, { "repel_prompt", IC_INFO }, { "show_fps", IC_GAUGE }, { "volume", IC_SPEAKER }, { "ff_mute", IC_FAST },
             { "gba_start", IC_PAD }, { "buttons", IC_PAD }, { "ff_speed", IC_FAST }, { "fast_button", IC_FAST }, { "fast_lock", IC_FAST },
             { "auto_state", IC_SAVE }, { "auto_resume", IC_LOAD },
-            { "instant_text", IC_INFO }, { "reusable_tms", IC_CHIP }, { "exp_share", IC_POKEBALL }, { "run_indoors", IC_FAST }, { "wild_encounters", IC_GLOBE }, { "shiny_odds", IC_SPARKLE }, { "battle_speed", IC_FAST }, { "text_speed", IC_FAST }, { "bike_speed", IC_FAST }, { "surf_speed", IC_FAST }, { "day_night", IC_SPARKLE }, { "follower", IC_POKEBALL }, { "nav_style", IC_GRID } };
+            { "instant_text", IC_INFO }, { "reusable_tms", IC_CHIP }, { "no_hms", IC_CHIP }, { "exp_share", IC_POKEBALL }, { "run_indoors", IC_FAST }, { "wild_encounters", IC_GLOBE }, { "shiny_odds", IC_SPARKLE }, { "battle_speed", IC_FAST }, { "text_speed", IC_FAST }, { "bike_speed", IC_FAST }, { "surf_speed", IC_FAST }, { "day_night", IC_SPARKLE }, { "follower", IC_POKEBALL }, { "nav_style", IC_GRID } };
         icon = IC_GEAR;
         for (const auto& i : icons)
             if (!strcmp(i.key, key)) icon = i.icon;

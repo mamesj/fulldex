@@ -7,6 +7,8 @@ namespace UiLang {
 inline std::string CompanionTranslation(int language,const std::string& text) {
     if(language==1) {
         static const std::unordered_map<std::string,std::string> table={
+            {"NO HMS NEEDED","SIN NECESIDAD DE MO"},
+            {"CUT, SURF, STRENGTH, ROCK SMASH, WATERFALL AND DIVE WORK ONCE YOU HAVE THEIR BADGE, WITHOUT A POKEMON THAT KNOWS THEM: THE FIRST POKEMON THAT ISN'T AN EGG DOES IT. ONE THAT KNOWS THE MOVE STILL GOES FIRST.","CORTE, SURF, FUERZA, GOLPE ROCA, CASCADA Y BUCEO FUNCIONAN CON SU MEDALLA, SIN UN POKEMON QUE LOS CONOZCA: LO HACE EL PRIMER POKEMON QUE NO SEA UN HUEVO. UNO QUE CONOZCA EL MOVIMIENTO SIGUE YENDO PRIMERO."},
             {"EXP SHARE","REPARTIR EXP"},
             {"SPLIT","DIVIDIDA"},
             {"FULL EXP","EXP COMPLETA"},
@@ -1330,6 +1332,8 @@ inline std::string CompanionTranslation(int language,const std::string& text) {
     }
     if(language==2) {
         static const std::unordered_map<std::string,std::string> table={
+            {"NO HMS NEEDED","MN NON NECESSARIE"},
+            {"CUT, SURF, STRENGTH, ROCK SMASH, WATERFALL AND DIVE WORK ONCE YOU HAVE THEIR BADGE, WITHOUT A POKEMON THAT KNOWS THEM: THE FIRST POKEMON THAT ISN'T AN EGG DOES IT. ONE THAT KNOWS THE MOVE STILL GOES FIRST.","TAGLIO, SURF, FORZA, SPACCAROCCIA, CASCATA E SUB FUNZIONANO CON LA LORO MEDAGLIA, SENZA UN POKEMON CHE LE CONOSCA: LE USA IL PRIMO POKEMON CHE NON SIA UN UOVO. UNO CHE CONOSCE LA MOSSA VA ANCORA PER PRIMO."},
             {"EXP SHARE","CONDIVIDI ESP"},
             {"SPLIT","DIVISA"},
             {"FULL EXP","ESP PIENA"},
@@ -2653,6 +2657,8 @@ inline std::string CompanionTranslation(int language,const std::string& text) {
     }
     if(language==3) {
         static const std::unordered_map<std::string,std::string> table={
+            {"NO HMS NEEDED","SANS CS"},
+            {"CUT, SURF, STRENGTH, ROCK SMASH, WATERFALL AND DIVE WORK ONCE YOU HAVE THEIR BADGE, WITHOUT A POKEMON THAT KNOWS THEM: THE FIRST POKEMON THAT ISN'T AN EGG DOES IT. ONE THAT KNOWS THE MOVE STILL GOES FIRST.","COUPE, SURF, FORCE, ÉCLATE-ROC, CASCADE ET PLONGÉE MARCHENT AVEC LEUR BADGE, SANS POKEMON QUI LES CONNAISSE : LE PREMIER POKEMON QUI N'EST PAS UN OEUF LE FAIT. UN QUI CONNAÎT LA CAPACITÉ PASSE TOUJOURS EN PREMIER."},
             {"EXP SHARE","MULTI EXP"},
             {"SPLIT","PARTAGÉE"},
             {"FULL EXP","EXP ENTIÈRE"},
@@ -3976,6 +3982,8 @@ inline std::string CompanionTranslation(int language,const std::string& text) {
     }
     if(language==4) {
         static const std::unordered_map<std::string,std::string> table={
+            {"NO HMS NEEDED","KEINE VM NÖTIG"},
+            {"CUT, SURF, STRENGTH, ROCK SMASH, WATERFALL AND DIVE WORK ONCE YOU HAVE THEIR BADGE, WITHOUT A POKEMON THAT KNOWS THEM: THE FIRST POKEMON THAT ISN'T AN EGG DOES IT. ONE THAT KNOWS THE MOVE STILL GOES FIRST.","ZERSCHNEIDER, SURFER, STÄRKE, ZERTRÜMMERER, KASKADE UND TAUCHER GEHEN MIT IHREM ORDEN, OHNE EIN POKEMON, DAS SIE KANN: DAS ERSTE POKEMON, DAS KEIN EI IST, MACHT ES. EINES, DAS DIE ATTACKE KANN, KOMMT WEITER ZUERST."},
             {"EXP SHARE","EP-TEILER"},
             {"SPLIT","GETEILT"},
             {"FULL EXP","VOLLE EP"},
@@ -5299,6 +5307,8 @@ inline std::string CompanionTranslation(int language,const std::string& text) {
     }
     if(language==5) {
         static const std::unordered_map<std::string,std::string> table={
+            {"NO HMS NEEDED","SEM MO NECESSÁRIAS"},
+            {"CUT, SURF, STRENGTH, ROCK SMASH, WATERFALL AND DIVE WORK ONCE YOU HAVE THEIR BADGE, WITHOUT A POKEMON THAT KNOWS THEM: THE FIRST POKEMON THAT ISN'T AN EGG DOES IT. ONE THAT KNOWS THE MOVE STILL GOES FIRST.","CORTAR, SURFAR, FORÇA, QUEBRA-PEDRA, CACHOEIRA E MERGULHO FUNCIONAM COM A INSÍGNIA, SEM UM POKEMON QUE OS CONHEÇA: O PRIMEIRO POKEMON QUE NÃO SEJA UM OVO FAZ. UM QUE CONHEÇA O GOLPE AINDA VAI PRIMEIRO."},
             {"EXP SHARE","COMPART. EXP"},
             {"SPLIT","DIVIDIDA"},
             {"FULL EXP","EXP TOTAL"},

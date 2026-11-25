@@ -128,6 +128,67 @@ inline std::vector<Write> ReusableTms(const std::vector<uint8_t>& rom)
     return out;
 }
 
+// NO HMS NEEDED (PokeDaisy's HmFree.kt, GPL 3): the field moves work without a Pokemon that knows them, once the game's
+// badge for them is in. Every field move script runs `checkpartymove MOVE_X` after its badge check; its command,
+// ScrCmd_checkpartymove, is rewritten in its own 124 bytes (PokeDaisy's scripts/hm_free.s): nobody knowing the move, it
+// answers the first Pokemon that isn't an egg. Surf's A press on water asks PartyHasMonWithSurf first: its `beq` past
+// "this one knows it" becomes a `nop`. Found by agbcc's build of both (Ruby, Sapphire, Emerald, FireRed, LeafGreen in
+// every language and the hacks on that code), all or nothing. Empty: not this game.
+inline std::vector<Write> HmFree(const std::vector<uint8_t>& rom)
+{
+    using namespace detail;
+    std::vector<Write> out;
+    auto sig = [](const char* hex) { std::vector<int> v; std::string h; for (const char* c = hex; *c; c++) if (*c != ' ') h += *c;
+        for (size_t i = 0; i + 1 < h.size(); i += 2) v.push_back(h[i] == '?' ? -1 : std::stoi(h.substr(i, 2), nullptr, 16)); return v; };
+    static const std::vector<int> CHECK = sig(
+        "f0b5 ????????0004070c0249062008800026 1ce0 ????????"
+        "201c2d21 ???????? 002811d1201c391c ???????? 0006000e012809d1024806800248058017e00000 ????????????????"
+        "701c0006060e052e0dd86420311c4143 0748 0c18201c0b210022 ???????? 0004050c002dd4d10020f0bc02bc08470000 ????????");
+    static const std::vector<int> SURF = sig(
+        "30b50820 ???????? 000600281ad100250be0201c3921 ???????? 0006002801d0012010e0681c0006050e052d0ad8"
+        "6420291c4143 0548 0c18201c0b21 ???????? 0028e6d1002030bc02bc0847 ????????");
+    auto find = [&](const std::vector<int>& g) {
+        std::vector<size_t> hits;
+        for (size_t o = 0; o + g.size() <= rom.size() && hits.size() < 2; o += 2)
+        {
+            if (rom[o] != g[0] || rom[o + 1] != g[1]) continue;
+            bool ok = true;
+            for (size_t i = 0; i < g.size() && ok; i++) ok = g[i] < 0 || rom[o + i] == g[i];
+            if (ok) hits.push_back(o);
+        }
+        return hits;
+    };
+    const std::vector<size_t> checks = find(CHECK), surfs = find(SURF);
+    if (checks.size() != 1 || surfs.size() != 1) return out;
+    const size_t c = checks[0], sf = surfs[0];
+    if (c % 4) return out;
+    auto isBl = [&](size_t o) { return (U16(rom, o) & 0xF800) == 0xF000 && (U16(rom, o + 2) & 0xF800) == 0xF800; };
+    if (!isBl(c + 0x02) || !isBl(c + 0x1C) || !isBl(c + 0x28) || !isBl(c + 0x62) || !isBl(sf + 0x16) || !isBl(sf + 0x3C)) return out;
+    const long readHalfword = BlTarget(rom, c + 0x02), getMonData = BlTarget(rom, c + 0x1C), knows = BlTarget(rom, c + 0x28);
+    if (BlTarget(rom, c + 0x62) != getMonData || BlTarget(rom, sf + 0x16) != knows || BlTarget(rom, sf + 0x3C) != getMonData) return out;
+    const uint32_t result = U32(rom, c + 0x14), var8004 = U32(rom, c + 0x44), party = U32(rom, c + 0x78);
+    if (U32(rom, c + 0x40) != result || result != var8004 + 0x10 || U32(rom, sf + 0x4C) != party) return out;
+    uint8_t code[124] = {
+        0xF0, 0xB5, 0xFF, 0xF7, 0xFE, 0xFF, 0x00, 0x04, 0x07, 0x0C, 0x06, 0x25, 0x00, 0x26, 0x19, 0x4C, 0x05, 0x2E, 0x17, 0xD8,
+        0x20, 0x1C, 0x0B, 0x21, 0xFF, 0xF7, 0xFE, 0xFF, 0x00, 0x28, 0x11, 0xD0, 0x20, 0x1C, 0x2D, 0x21, 0xFF, 0xF7, 0xFE, 0xFF,
+        0x00, 0x28, 0x08, 0xD1, 0x06, 0x2D, 0x00, 0xD1, 0x35, 0x1C, 0x20, 0x1C, 0x39, 0x1C, 0xFF, 0xF7, 0xFE, 0xFF, 0x00, 0x28,
+        0x08, 0xD1, 0x76, 0x1C, 0x64, 0x34, 0xE5, 0xE7, 0x91, 0x20, 0x40, 0x00, 0x87, 0x42, 0x02, 0xD1, 0x06, 0x25, 0x00, 0xE0,
+        0x35, 0x1C, 0x09, 0x49, 0x0D, 0x82, 0x06, 0x2D, 0x08, 0xD0, 0x64, 0x20, 0x68, 0x43, 0x05, 0x49, 0x40, 0x18, 0x0B, 0x21,
+        0xFF, 0xF7, 0xFE, 0xFF, 0x03, 0x49, 0x08, 0x80, 0x00, 0x20, 0xF0, 0xBC, 0x02, 0xBC, 0x08, 0x47, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00 };
+    Bl(code + 0x02, (long)c + 0x02, readHalfword);
+    for (long at : { 0x18L, 0x24L, 0x64L }) Bl(code + at, (long)c + at, getMonData);
+    Bl(code + 0x36, (long)c + 0x36, knows);
+    for (int k = 0; k < 4; k++) { code[0x74 + k] = (uint8_t)(party >> (8 * k)); code[0x78 + k] = (uint8_t)(var8004 >> (8 * k)); }
+    for (size_t i = 0; i < 124; i += 4)
+    {
+        if (!memcmp(&rom[c + i], code + i, 4)) continue;
+        out.push_back({ (uint32_t)(0x08000000 + c + i), { rom[c + i], rom[c + i + 1], rom[c + i + 2], rom[c + i + 3] }, { code[i], code[i + 1], code[i + 2], code[i + 3] } });
+    }
+    out.push_back({ (uint32_t)(0x08000000 + sf + 0x1E), { rom[sf + 0x1E], rom[sf + 0x1F] }, { 0xC0, 0x46 } });
+    return out;
+}
+
 // EXP SHARE (PokeDaisy's ExpShare.kt, GPL 3): the whole party gains EXP from a win. Gen 3's getexp (Cmd_getexp) pays
 // the Pokemon whose bit is set in gSentPokesToOpponent (a byte per foe flank, set as each is sent out), the EXP divided
 // by how many there are; nothing else reads those bits. SPLIT: every party Pokemon that isn't an egg or fainted counts
