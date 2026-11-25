@@ -7695,6 +7695,7 @@ int main(int argc, char** argv)
                 const int typeWanted = dexTypes[companionDexType];
                 add(M_CDEX_SEARCH, "SEARCH", companionDexQuery.empty() ? "EVERYTHING" : Cheats::Fit(companionDexQuery, 18), true);
                 menu.items.back().desc = "Find a Pok\xC3\xA9" "mon by its name or its number.";
+                menu.items.back().icon = Glass::I_SEARCH; menu.items.back().kind = Menu::K_LINK;
                 section("NATIONAL POKEDEX", Glass::I_INFO);
                 auto title = [](const std::string& t) { return CleanFont::Title(t); };
                 const int dexCount = companionMetadata.DexCount(companionProfile.maxSpecies);
