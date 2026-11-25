@@ -13639,7 +13639,7 @@ int main(int argc, char** argv)
                 // text chosen, so the page shows it.)
                 if(const char* t=getenv("SSR_TEST_ITEM"))companionItem=std::max(1,atoi(t));
                 if(const char* t=getenv("SSR_TEST_REF"))sscanf(t,"%d,%d",&companionReferenceKind,&companionReferenceId);
-                if(const char* t=getenv("SSR_TEST_QUERY"))companionQuery=t;}
+                if(const char* t=getenv("SSR_TEST_QUERY"))companionQuery=t;if(const char* t=getenv("SSR_TEST_DEXQUERY"))companionDexQuery=t;}
             if(testPageAt>=0&&++testPageFrames==(uint32_t)testPageAt&&testPage>=0&&testPage<PAGE_COUNT)
             {readCompanion(true);menu.open=true;goPage(testPage,-1);fprintf(stderr,"[test] page %d at frame %u\n",testPage,frame);testPageAt=-1;
                 if(const char* r=getenv("SSR_TEST_ROW"))
