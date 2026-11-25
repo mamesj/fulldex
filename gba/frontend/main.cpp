@@ -861,7 +861,7 @@ struct App
         for (const auto& p : comp.pockets)
         {
             GbaGlass::Live::Pocket pk;
-            pk.name = DexTitle(p.first);
+            pk.name = p.first; // (as the DS games' pockets: in capitals, the menus title them)
             pk.stacks = (int)p.second.size();
             for (const auto& it : p.second) pk.total += it.quantity;
             l.pockets.push_back(pk);
