@@ -1733,7 +1733,7 @@ int PickGame(Folders& fo, std::vector<Launcher::Game>& games, int selected, bool
                 F.dialog = 3; F.drow = 0; StartListKeyboard();
                 return;
             }
-            if (onTabs && !F.onSort && Launcher::AddRomsShown() && games.empty()) { Launcher::OpenSetup(5); return; }
+            if (onTabs && !F.onSort && Launcher::AddRomsShown() && std::none_of(games.begin(), games.end(), [](const Launcher::Game& g) { return !g.comingSoon; })) { Launcher::OpenSetup(5); return; }
             if (onTabs && !F.onSort) { Launcher::OpenTabMenu(tab); return; } // (a tab: move, hide; one of your own also rename, delete)
             if (onTabs && F.onSort)
             {
@@ -4714,7 +4714,7 @@ bool Start(int& argc, char**& argv)
         Launcher::Setup().w = std::max(ww, wh); Launcher::Setup().h = std::min(ww, wh);
     }
     if (const char* st = getenv("SSR_LIST_SETUP")) Launcher::OpenSetup(atoi(st));
-    else if (Launcher::ConfigValue(fo.cfg, "setup_done").empty() && games.empty()) Launcher::OpenSetup(0);
+    else if (Launcher::ConfigValue(fo.cfg, "setup_done").empty() && std::none_of(games.begin(), games.end(), [](const Launcher::Game& g) { return !g.comingSoon; })) Launcher::OpenSetup(0);
     for (;;)
     {
         chosen = directGame >= 0 ? directGame : PickGame(fo, games, chosen, fullscreen, winW, winH);

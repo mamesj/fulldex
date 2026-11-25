@@ -6339,7 +6339,7 @@ int main(int argc, char** argv)
         M_CSEARCH, M_SEARCH_LETTER, M_SEARCH_DELETE, M_SEARCH_SPACE, M_SEARCH_CLEAR, M_SEARCH_DONE,
         M_CDETAIL_TOGGLE, M_CINFO, M_BACKUPS, M_RESTORE_CONFIRM, M_LOAD_CONFIRM,
         M_MATCHUPS, M_TYPE1, M_TYPE2, M_SECOND_SCREEN, M_UISIZE,
-        M_COMPANION, M_CPARTY, M_CBAG, M_CDEX, M_CLOCATION, M_CMAP, M_CENCOUNTERS, M_REFERENCE, M_REFERENCE_KIND, M_REFERENCE_QUERY, M_CPOCKET, M_CDEX_FILTER, M_CDEX_TYPE, M_CBATTLE, M_CGUIDE, M_CGUIDE_REVEAL, M_CGUIDE_NEXT, M_CGUIDE_HERE, M_NUZLOCKE, M_RUN_ENABLED, M_RUN_RESET, M_RUN_RESET_CONFIRM, M_QUICK_ACTIONS, M_OPEN_PC, M_FLY, M_HUB_SAVE, M_HUB_LOAD, M_HUB_CHEATS, M_HUB_FAST, M_HUB_SETTINGS, M_HUB_QUIT,
+        M_COMPANION, M_CPARTY, M_CBAG, M_CDEX, M_CLOCATION, M_CMAP, M_CENCOUNTERS, M_REFERENCE, M_REFERENCE_KIND, M_REFERENCE_QUERY, M_CPOCKET, M_CDEX_FILTER, M_CDEX_TYPE, M_CDEX_SEARCH, M_CBATTLE, M_CGUIDE, M_CGUIDE_REVEAL, M_CGUIDE_NEXT, M_CGUIDE_HERE, M_NUZLOCKE, M_RUN_ENABLED, M_RUN_RESET, M_RUN_RESET_CONFIRM, M_QUICK_ACTIONS, M_OPEN_PC, M_FLY, M_HUB_SAVE, M_HUB_LOAD, M_HUB_CHEATS, M_HUB_FAST, M_HUB_SETTINGS, M_HUB_QUIT,
         M_QUIT_YES, M_RESET_YES, // (QUIT GAME / RESET GAME asked first: PAGE_QUIT_CONFIRM)
         M_SHORTCUTS, // (CONTROLS: Fulldex's own four shortcuts, opening KEYS AND BUTTONS at them)
         M_EXTRAS, M_EXTRA0=92000, M_EXTRA_END=92007, M_PLAYBACK=93000, M_FAST_SPEED, M_SMART_FAST, M_SLOW_MOTION, M_REWIND_MB, M_REWIND, M_TURBO_A, M_SCREEN_FILTER, M_COMPANION_OVERLAY, M_PARTY_HUD, M_STATUS_BAR, M_LIVE_GLASS, M_FAST_BUTTON, M_ZOOM, M_ZOOM_TEXT,
@@ -6404,7 +6404,10 @@ int main(int argc, char** argv)
     // 0 and up: that folder of the database, so its codes are listed on their own.
     int cheatWhere = -2; // -4: search results across all folders
     std::vector<char> cheatOpen; // CHEATS: which folders are open (1), as the list shows them
-    std::string cheatQuery,companionQuery;
+    std::string cheatQuery,companionQuery,companionDexQuery;
+    // (The search page, PAGE_RSEARCH: the reference's search or POKEDEX's; Back goes to the page it came from.)
+    std::string* rsearchQuery = &companionQuery;
+    int rsearchBack = PAGE_REFERENCE, rsearchBackItem = M_REFERENCE_QUERY;
     int companionReferenceKind=0,companionReferenceId=0;
     bool companionReferenceReturn=false;
     int searchLetter = 0, cheatDetail = -1;
@@ -7690,6 +7693,8 @@ int main(int argc, char** argv)
                            "Only the entries of one type.", "Entries you have not seen are left out while a type is chosen.");
                 }
                 const int typeWanted = dexTypes[companionDexType];
+                add(M_CDEX_SEARCH, "SEARCH", companionDexQuery.empty() ? "EVERYTHING" : Cheats::Fit(companionDexQuery, 18), true);
+                menu.items.back().desc = "Find a Pok\xC3\xA9" "mon by its name or its number.";
                 section("NATIONAL POKEDEX", Glass::I_INFO);
                 auto title = [](const std::string& t) { return CleanFont::Title(t); };
                 const int dexCount = companionMetadata.DexCount(companionProfile.maxSpecies);
@@ -7702,6 +7707,20 @@ int main(int argc, char** argv)
                     if (companionDexFilter == 2 && !caught) continue;
                     if (typeWanted >= 0 && ((!seen && !companionRevealed.count(id)) || (companionMetadata.Type(id, 0) != typeWanted && companionMetadata.Type(id, 1) != typeWanted))) continue;
                     Menu::CompanionView::DexEntry e = dexEntry(id);
+                    if (!companionDexQuery.empty())
+                    {
+                        std::string q, n;
+                        for (char ch : companionDexQuery) if (ch != ' ') q += (char)tolower((unsigned char)ch);
+                        bool digits = !q.empty();
+                        for (char ch : q) digits &= ch >= '0' && ch <= '9';
+                        if (digits) { if (atoi(q.c_str()) != number && std::to_string(number).find(q) != 0) continue; }
+                        else
+                        {
+                            if (e.hidden) continue;
+                            for (char ch : e.name) if (ch != ' ') n += (char)tolower((unsigned char)ch);
+                            if (n.find(q) == std::string::npos) continue;
+                        }
+                    }
                     cv.dex.push_back(e);
                     char label[64];
                     snprintf(label, sizeof label, "%03d  %s", number, e.hidden ? "???" : e.name.c_str());
@@ -8310,8 +8329,8 @@ int main(int argc, char** argv)
             // SEARCH: a keyboard (the Switch's own keyboard is not opened: it brought the console
             // down on some, with other homebrew running); a real keyboard types into it too.
             settingsPage(Glass::I_GLOBE);
-            keyboard(menuPage == PAGE_RSEARCH ? companionQuery : cheatQuery, false,
-                     menuPage == PAGE_RSEARCH ? "A Pok\xC3\xA9" "mon, move, item or place" : "Part of a code's name", false, "Search");
+            keyboard(menuPage == PAGE_RSEARCH ? *rsearchQuery : cheatQuery, false,
+                     menuPage == PAGE_RSEARCH ? (rsearchQuery == &companionDexQuery ? "A Pok\xC3\xA9" "mon's name or number" : "A Pok\xC3\xA9" "mon, move, item or place") : "Part of a code's name", false, "Search");
         }
         else if (menuPage == PAGE_CDETAIL && cheatDetail >= 0 && cheatDetail < (int)cheats.items.size())
         {
@@ -8607,7 +8626,7 @@ int main(int argc, char** argv)
             // (SEARCH: what is being looked for, in the header.)
             if (menuPage == PAGE_CSEARCH || menuPage == PAGE_RSEARCH)
             {
-                const std::string& q = menuPage == PAGE_RSEARCH ? companionQuery : cheatQuery;
+                const std::string& q = menuPage == PAGE_RSEARCH ? *rsearchQuery : cheatQuery;
                 menu.headerNote = "Find: " + (q.empty() ? std::string("everything") : q);
             }
         }
@@ -8684,7 +8703,7 @@ int main(int argc, char** argv)
         const int id = menuIds[hit];
         if (id < M_KEY0 || id > M_KEY_SYMBOLS) return false;
         const bool ra = menuPage == PAGE_RA && raTyping;
-        std::string& t = ra ? raTyped : menuPage == PAGE_RSEARCH ? companionQuery : cheatQuery;
+        std::string& t = ra ? raTyped : menuPage == PAGE_RSEARCH ? *rsearchQuery : cheatQuery;
         const size_t cap = ra ? 128 : 48;
         if (id == M_KEY_DONE)
         {
@@ -8692,7 +8711,7 @@ int main(int argc, char** argv)
             else
             {
                 SDL_StopTextInput();
-                if (menuPage == PAGE_RSEARCH) goPage(PAGE_REFERENCE, M_REFERENCE_QUERY);
+                if (menuPage == PAGE_RSEARCH) goPage(rsearchBack, rsearchBackItem);
                 else { cheatWhere = -4; goPage(PAGE_CHEATS, M_CSEARCH); }
             }
             return true;
@@ -10453,7 +10472,7 @@ int main(int argc, char** argv)
                 if (ev.type == SDL_QUIT) running = false;
                 else if (ev.type == SDL_TEXTINPUT && menu.open && (menuPage == PAGE_CSEARCH || menuPage == PAGE_RSEARCH))
                 {
-                    auto& query=menuPage==PAGE_RSEARCH?companionQuery:cheatQuery;
+                    auto& query=menuPage == PAGE_RSEARCH ? *rsearchQuery : cheatQuery;
                     for (const unsigned char c:std::string(ev.text.text))
                         if (query.size()<48 && (std::isalnum(c) || c==' ')) query+=(char)std::toupper(c);
                     buildMenu();
@@ -10633,9 +10652,9 @@ int main(int argc, char** argv)
                     const int act = cfg.controls.ActionOfKey(sc);
                     if (menu.open && (menuPage == PAGE_CSEARCH || menuPage == PAGE_RSEARCH) && (k == SDLK_BACKSPACE || k == SDLK_RETURN || k == SDLK_KP_ENTER))
                     {
-                        auto& query=menuPage==PAGE_RSEARCH?companionQuery:cheatQuery;
+                        auto& query=menuPage == PAGE_RSEARCH ? *rsearchQuery : cheatQuery;
                         if (k == SDLK_BACKSPACE) {if(!query.empty())query.pop_back();buildMenu();}
-                        else {SDL_StopTextInput();if(menuPage==PAGE_RSEARCH)goPage(PAGE_REFERENCE,M_REFERENCE_QUERY);else{cheatWhere=-4;goPage(PAGE_CHEATS,M_CSEARCH);}}
+                        else {SDL_StopTextInput();if(menuPage==PAGE_RSEARCH)goPage(rsearchBack, rsearchBackItem);else{cheatWhere=-4;goPage(PAGE_CHEATS,M_CSEARCH);}}
                     }
                     else if (menu.open && (menuPage == PAGE_CSEARCH || menuPage == PAGE_RSEARCH) && k >= 32 && k < 127) {}
                     else if (menu.open && raTyping)
@@ -11588,14 +11607,15 @@ int main(int argc, char** argv)
                 restoreChoice=id-M_BACKUP0;goPage(PAGE_RESTORE_CONFIRM,M_BACK);hit=-1;
             }
             if (id >= M_KEY0 && id <= M_KEY_SYMBOLS && dir == 0) { keyPress(hit); hit = -1; }
-            auto& activeQuery=menuPage==PAGE_RSEARCH?companionQuery:cheatQuery;
+            auto& activeQuery=menuPage == PAGE_RSEARCH ? *rsearchQuery : cheatQuery;
             switch (id)
             {
             case M_CSEARCH:
                 goPage(PAGE_CSEARCH,M_KEY0+16);SearchTyping("Search for a code");hit=-1;break;
-            case M_REFERENCE:companionReferenceReturn=false;goPage(PAGE_REFERENCE,M_REFERENCE_QUERY);hit=-1;break;
+            case M_REFERENCE:companionReferenceReturn=false;goPage(rsearchBack, rsearchBackItem);hit=-1;break;
             case M_REFERENCE_KIND:companionReferenceKind=(companionReferenceKind+(dir<0?4:1))%5;break;
-            case M_REFERENCE_QUERY:goPage(PAGE_RSEARCH,M_KEY0+16);SearchTyping("Search");hit=-1;break;
+            case M_REFERENCE_QUERY:rsearchQuery=&companionQuery;rsearchBack=PAGE_REFERENCE;rsearchBackItem=M_REFERENCE_QUERY;goPage(PAGE_RSEARCH,M_KEY0+16);SearchTyping("Search");hit=-1;break;
+            case M_CDEX_SEARCH:rsearchQuery=&companionDexQuery;rsearchBack=PAGE_CDEX;rsearchBackItem=M_CDEX_SEARCH;goPage(PAGE_RSEARCH,M_KEY0+16);SearchTyping("Search");hit=-1;break;
             case M_SEARCH_LETTER:
                 if(dir)searchLetter=(searchLetter+(dir<0 ? (int)searchLetters.size()-1 : 1))%(int)searchLetters.size();
                 else if(activeQuery.size()<48)activeQuery+=searchLetters[searchLetter];
@@ -11604,7 +11624,7 @@ int main(int argc, char** argv)
             case M_SEARCH_DELETE: if(!activeQuery.empty())activeQuery.pop_back();break;
             case M_SEARCH_CLEAR: activeQuery.clear();break;
             case M_SEARCH_DONE:
-                SDL_StopTextInput();if(menuPage==PAGE_RSEARCH)goPage(PAGE_REFERENCE,M_REFERENCE_QUERY);else{cheatWhere=-4;goPage(PAGE_CHEATS,M_CSEARCH);}hit=-1;break;
+                SDL_StopTextInput();if(menuPage==PAGE_RSEARCH)goPage(rsearchBack, rsearchBackItem);else{cheatWhere=-4;goPage(PAGE_CHEATS,M_CSEARCH);}hit=-1;break;
             case M_CINFO: goPage(PAGE_CINFO,-1);hit=-1;break;
             case M_CDETAIL_TOGGLE:
                 if(cheatDetail>=0 && cheatDetail<(int)cheats.items.size())
@@ -11842,7 +11862,7 @@ int main(int argc, char** argv)
                 if(menuPage==PAGE_CMAP){goPage(PAGE_CLOCATION,M_CMAP);hit=-1;break;}
                 if(menuPage==PAGE_CENCOUNTERS){goPage(PAGE_CLOCATION,M_CENCOUNTERS);hit=-1;break;}
                 if(menuPage==PAGE_FLY){goPage(flyBackPage,M_FLY);hit=-1;break;}
-                if(menuPage==PAGE_RSEARCH){SDL_StopTextInput();goPage(PAGE_REFERENCE,M_REFERENCE_QUERY);hit=-1;break;}
+                if(menuPage==PAGE_RSEARCH){SDL_StopTextInput();goPage(rsearchBack, rsearchBackItem);hit=-1;break;}
                 if(menuPage==PAGE_REFERENCE){goPage(PAGE_COMPANION,M_REFERENCE);hit=-1;break;}
                 if(menuPage==PAGE_RDETAIL || (companionReferenceReturn&&(menuPage==PAGE_CITEM||menuPage==PAGE_CDEXDETAIL))){companionReferenceReturn=false;goPage(PAGE_REFERENCE,M_RRESULT0+companionReferenceId);hit=-1;break;}
                 if(menuPage==PAGE_EXTRAS){goPage(PAGE_MAIN,M_EXTRAS);hit=-1;break;}
@@ -15354,6 +15374,7 @@ int main(int argc, char** argv)
             if (selId >= M_CFOLDER0 && selId - M_CFOLDER0 < (int)cheats.folders.size())
                 note = cheats.folders[selId - M_CFOLDER0].note;
             std::string title = pageTitle[menuPage];
+            if (menuPage == PAGE_RSEARCH && rsearchQuery == &companionDexQuery) title = "SEARCH POKEDEX";
             if (menuPage == PAGE_CHEATS && cheatWhere == -3) title = "ON NOW";
             else if (menuPage == PAGE_CHEATS && cheatWhere >= 0 && cheatWhere < (int)cheats.folders.size())
                 title = Cheats::Fit(cheats.folders[cheatWhere].name, 36);
@@ -15385,7 +15406,7 @@ int main(int argc, char** argv)
             }
             if(menuPage == PAGE_CSEARCH || menuPage == PAGE_RSEARCH)
             {
-                const auto& query=menuPage==PAGE_RSEARCH?companionQuery:cheatQuery;
+                const auto& query=menuPage == PAGE_RSEARCH ? *rsearchQuery : cheatQuery;
                 note=UiLang::Tr("FIND: ")+(query.empty() ? UiLang::Tr("ALL ENTRIES") : query);
                 hint="A: TYPE THE KEY   B: BACK";
             }
