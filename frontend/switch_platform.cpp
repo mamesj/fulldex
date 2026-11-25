@@ -1512,10 +1512,11 @@ static uint64_t NativeDsFingerprint(const std::string& rom)
 // The native programs: where each is, and the code fingerprints it plays.
 static std::string NativeDsProgram(const Launcher::Game& g)
 {
-    struct Native { const char* code; const char* nro; uint64_t fp[2]; };
+    struct Native { const char* code; const char* nro; uint64_t fp[3]; };
     static const Native natives[] = {
-        // Platinum (US code CPUE): James's US dump (revision 0) and his "Europe"-named US dump (version 10)
-        { "CPUE", "sdmc:/switch/fulldex-native-platinum/fulldex-native-platinum.nro", { 0x6dc8045b90a8107bull, 0x43ded1ef0c4e2011ull } },
+        // Platinum (US code CPUE): the clean game (revision 0, and the later printing), and ROM hacks whose
+        // code changes the native program reads from the ROM itself: Renegade Platinum 1.3.0.
+        { "CPUE", "sdmc:/switch/fulldex-native-platinum/fulldex-native-platinum.nro", { 0x6dc8045b90a8107bull, 0x43ded1ef0c4e2011ull, 0xc98477d767ebadb1ull } },
     };
     for (const Native& n : natives)
     {
