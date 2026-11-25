@@ -2381,18 +2381,6 @@ struct App
     void LevelCapFrame()
     {
         if (gpCap.empty() || ++gpCapTick % 60) return;
-        // (Each battle's start and end logged with the lead's level and EXP: a Pokemon at the cap gains none.)
-        if (compConfig && compConfig->gMain)
-        {
-            const bool inBattle = (core->busRead8(core, compConfig->gMain + compConfig->inBattleOff) & 2) != 0;
-            if (inBattle != gpCapBattleWas)
-            {
-                ReadCompanion();
-                if (!comp.party.empty())
-                    fprintf(stderr, "[gba] level cap: battle %s, lead Lv %d EXP %u (cap %d)\n", inBattle ? "starts" : "ends", comp.party[0].level, comp.party[0].exp, gpCapOn);
-            }
-            gpCapBattleWas = inBattle;
-        }
         int want = 0;
         if (set.Get("level_cap") == "1" && GameplayOffered("level_cap"))
         {

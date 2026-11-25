@@ -14327,12 +14327,6 @@ int main(int argc, char** argv)
             // them (the queue takes up the difference).
             const int queued = (int)SDL_GetQueuedAudioSize(audio) / 4;
             const uint64_t t = SDL_GetPerformanceCounter();
-            {
-                // (Once every 10 s at normal speed: the queue's lowest and highest, and how often it ran dry, a click.)
-                static int qMin = 1 << 30, qMax = 0, qDry = 0, qN = 0;
-                if (speed == 1) { qMin = std::min(qMin, queued); qMax = std::max(qMax, queued); if (queued == 0) qDry++; }
-                if (++qN >= 600) { if (qMax) fprintf(stderr, "[audio] queue %d-%d samples, %d times empty\n", qMin, qMax, qDry); qMin = 1 << 30; qMax = qDry = qN = 0; }
-            }
             if (audioTick)
             {
                 const double dt = (double)(t - audioTick) / perfFreq;
