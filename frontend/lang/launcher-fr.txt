@@ -761,3 +761,35 @@ COULDN'T CHECK ITS PREPARATION RESULT	IMPOSSIBLE DE VÉRIFIER LE RÉSULTAT DE LA
 COULDN'T READ ITS PREPARATION OUTPUT	IMPOSSIBLE DE LIRE LA SORTIE DE LA PRÉPARATION
 CANNOT READ THE SAVE IN THE SYNC FOLDER	IMPOSSIBLE DE LIRE LA SAUVEGARDE DANS LE DOSSIER DE SYNCHRONISATION
 CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION	LES SAUVEGARDES CLOUD SONT ENCORE OCCUPÉES : CE JEU NE SERA PAS SYNCHRONISÉ PENDANT CETTE SESSION
+# 1.7.1: first start setup and Add ROMs
+Welcome To FullDex	Bienvenue dans FullDex
+A few quick questions to set FullDex up for this device. Every answer can be changed later in Settings.	Quelques questions rapides pour configurer FullDex sur cet appareil. Chaque réponse peut être changée plus tard dans les Paramètres.
+Start	Commencer
+Skip For Now	Passer pour l'instant
+Your Screens	Vos écrans
+Does this device have a second screen, like the AYN Thor or the Ayaneo Flip DS?	Cet appareil a-t-il un second écran, comme l'AYN Thor ou l'Ayaneo Flip DS ?
+One Screen	Un écran
+Two Screens	Deux écrans
+The DS Screens	Les écrans de la DS
+How should a DS game's two screens be shown?	Comment afficher les deux écrans d'un jeu DS ?
+One Widescreen Picture (Recommended)	Une seule image large (recommandé)
+Side By Side	Côte à côte
+One Above The Other	L'un au-dessus de l'autre
+Your Screen	Votre écran
+DS games can fill your screen, or keep the DS's own shape with bars at the sides.	Les jeux DS peuvent remplir votre écran, ou garder la forme de la DS avec des bandes sur les côtés.
+Fill My Screen (Recommended)	Remplir mon écran (recommandé)
+Keep The DS Shape (4:3)	Garder la forme de la DS (4:3)
+How You Play	Comment vous jouez
+What will you mostly play with? With a controller, the right stick can move a cursor on the touch screen.	Avec quoi allez-vous surtout jouer ? Avec une manette, le stick droit peut déplacer un curseur sur l'écran tactile.
+Touch Screen	Écran tactile
+Controller	Manette
+Keyboard And Mouse	Clavier et souris
+Add Your Games	Ajoutez vos jeux
+Done	Terminé
+Add ROMs	Ajouter des ROMs
+Put your ROMs (.nds, .gba and .3ds files) in a folder on this device, then choose that folder. They show up here by themselves.	Mettez vos ROMs (fichiers .nds, .gba et .3ds) dans un dossier de cet appareil, puis choisissez ce dossier. Elles apparaissent ici toutes seules.
+Put your ROMs in the Files app: On My iPhone (or iPad) > Pokemon DS Widescreen > roms. They show up here by themselves.	Mettez vos ROMs dans l'app Fichiers : Sur mon iPhone (ou iPad) > Pokemon DS Widescreen > roms. Elles apparaissent ici toutes seules.
+Put your ROMs in the roms folder beside FullDex on your SD card. They show up here by themselves.	Mettez vos ROMs dans le dossier roms à côté de FullDex sur votre carte SD. Elles apparaissent ici toutes seules.
+Put your ROMs (.nds, .gba and .3ds files) in your ROMs folder, or choose another. They show up here by themselves.	Mettez vos ROMs (fichiers .nds, .gba et .3ds) dans votre dossier de ROMs, ou choisissez-en un autre. Elles apparaissent ici toutes seules.
+SET UP AGAIN	RECONFIGURER
+THE FIRST START'S QUESTIONS AGAIN: YOUR SCREENS, THE PICTURE'S SHAPE, HOW YOU PLAY AND WHERE YOUR ROMS GO.	LES QUESTIONS DU PREMIER LANCEMENT À NOUVEAU : VOS ÉCRANS, LA FORME DE L'IMAGE, COMMENT VOUS JOUEZ ET OÙ VONT VOS ROMS.

@@ -2539,6 +2539,87 @@ inline void OpenAddToTab(const std::string& rom)
     F.kbRom = rom;
 }
 // A on a tab: Move Left, Move Right, Hide Tab; a tab of the player's own also Rename and Delete.
+// FIRST START (and Settings > SET UP AGAIN): a few questions that set FullDex up for the device, one dialog each, then
+// where the ROMs go. Each answer is written to settings.cfg at once; setup_done=1 at the end (or on Skip).
+struct SetupEnv { std::string cfg, roms; int w = 0, h = 0; };
+inline SetupEnv& Setup() { static SetupEnv e; return e; }
+inline bool AddRomsShown(int set = -1) { static bool shown = false; if (set >= 0) shown = set != 0; return shown; }
+inline int (&AddRomsRect())[4] { static int r[4] = { 0, 0, 0, 0 }; return r; }
+inline bool AddRomsAt(int x, int y) { const int* r = AddRomsRect(); return AddRomsShown() && r[2] > 0 && x >= r[0] && x < r[0] + r[2] && y >= r[1] && y < r[1] + r[3]; }
+inline std::string AddRomsWhere()
+{
+#if defined(__ANDROID__)
+    return LauncherText::Tr("Put your ROMs (.nds, .gba and .3ds files) in a folder on this device, then choose that folder. They show up here by themselves.");
+#elif defined(SSR_IOS)
+    return LauncherText::Tr("Put your ROMs in the Files app: On My iPhone (or iPad) > Pokemon DS Widescreen > roms. They show up here by themselves.");
+#elif defined(__SWITCH__)
+    return LauncherText::Tr("Put your ROMs in the roms folder beside FullDex on your SD card. They show up here by themselves.");
+#else
+    const std::string r = Setup().roms;
+    return LauncherText::Tr("Put your ROMs (.nds, .gba and .3ds files) in your ROMs folder, or choose another. They show up here by themselves.") +
+           (r.empty() ? std::string() : "  " + r);
+#endif
+}
+inline void OpenSetup(int step)
+{
+    GlassFocus& F = Focus();
+#ifndef __ANDROID__
+    if (step == 1) step = 2; // (a second screen: Android's dual-screen phones and handhelds only)
+#endif
+    F.dialog = 30;
+    F.drow = 0;
+    switch (step)
+    {
+    case 0:
+        F.dTitle = "Welcome To FullDex";
+        F.dMsg = "A few quick questions to set FullDex up for this device. Every answer can be changed later in Settings.";
+        F.dItems = { "Start", "Skip For Now" }; F.dPaths = { "#go|1", "#done" };
+        break;
+    case 1:
+        F.dTitle = "Your Screens";
+        F.dMsg = "Does this device have a second screen, like the AYN Thor or the Ayaneo Flip DS?";
+        F.dItems = { "One Screen", "Two Screens" }; F.dPaths = { "#go|2", "#second|3" };
+        break;
+    case 2:
+        F.dTitle = "The DS Screens";
+        F.dMsg = "How should a DS game's two screens be shown?";
+        F.dItems = { "One Widescreen Picture (Recommended)", "Side By Side", "One Above The Other" };
+        F.dPaths = { "view=merged|3", "view=side|3", "view=vertical|3" };
+        break;
+    case 3:
+        F.dTitle = "Your Screen";
+        F.dMsg = LauncherText::Tr("DS games can fill your screen, or keep the DS's own shape with bars at the sides.") +
+                 (Setup().w > 0 ? "  (" + std::to_string(Setup().w) + " x " + std::to_string(Setup().h) + ")" : std::string());
+        F.dItems = { "Fill My Screen (Recommended)", "Keep The DS Shape (4:3)" }; F.dPaths = { "aspect=auto|4", "aspect=4:3|4" };
+        break;
+    case 4:
+        F.dTitle = "How You Play";
+        F.dMsg = "What will you mostly play with? With a controller, the right stick can move a cursor on the touch screen.";
+        F.dItems = { "Touch Screen", "Controller", "Keyboard And Mouse" }; F.dPaths = { "pad_touch=0|5", "pad_touch=1|5", "pad_touch=0|5" };
+        break;
+    default:
+        F.dTitle = "Add Your Games";
+        F.dMsg = AddRomsWhere();
+        if (CanChooseRomFolder()) { F.dItems = { "Choose ROMs Folder", "Done" }; F.dPaths = { "#roms", "#done" }; }
+        else { F.dItems = { "Done" }; F.dPaths = { "#done" }; }
+        break;
+    }
+}
+// A setup answer: 0 nothing more, 1 closed, 2 choose the ROMs folder (closed), 3 a second screen (DS split; then on).
+inline int SetupPick(const std::string& pick)
+{
+    const std::string cfg = Setup().cfg;
+    const size_t bar = pick.find('|');
+    const int next = bar == std::string::npos ? -1 : atoi(pick.c_str() + bar + 1);
+    if (pick == "#done" || pick == "#close" || pick.empty()) { SetConfigLine(cfg, "setup_done", "1"); Focus().dialog = 0; return 1; }
+    if (pick == "#roms") { SetConfigLine(cfg, "setup_done", "1"); Focus().dialog = 0; return 2; }
+    if (!pick.compare(0, 4, "#go|")) { OpenSetup(next); return 0; }
+    if (!pick.compare(0, 7, "#second")) { SetConfigLine(cfg, "view", "top"); OpenSetup(next); return 3; }
+    const size_t eq = pick.find('=');
+    if (eq != std::string::npos && eq < bar) SetConfigLine(cfg, pick.substr(0, eq), pick.substr(eq + 1, bar - eq - 1));
+    OpenSetup(next);
+    return 0;
+}
 inline void OpenTabMenu(int t)
 {
     GlassFocus& F = Focus();
@@ -7603,6 +7684,7 @@ inline void DrawGlass(Canvas& c, const std::vector<Game>& games, const View& v, 
     }
 
     // The cards (none chosen: the chosen one is drawn over them below).
+    AddRomsShown(0);
     for (const View::Head& h : v.heads)
         if (h.empty)
         {
@@ -7615,6 +7697,17 @@ inline void DrawGlass(Canvas& c, const std::vector<Game>& games, const View& v, 
                                    : tab == TAB_HOME ? "Add Games To Home From A Game's Menu (A On A Game)"
                                    : tab == TAB_HACKS ? "No Romhacks Yet" : "No " + std::string(TabLabel(tab)) + " Games Yet";
             GT(c, (TilesHome() ? grid.gx : sp.tabsX) + (grid.cols * grid.colStep - GW(none, 16 * u, true)) / 2, (grid.top + grid.bottom) * 0.5f, none, 16 * u, hint, true);
+            if (SearchText().empty() && (!any || (tab != TAB_HOME && tab < TABS)))
+            {
+                // (Add ROMs: where they go, and Choose ROMs Folder where there is one.)
+                const std::string b = LauncherText::Tr("Add ROMs");
+                const int bw = (int)(GW(b, 16 * u, true) + 48 * u), bh = (int)(44 * u);
+                const int bx = (TilesHome() ? grid.gx : sp.tabsX) + (grid.cols * grid.colStep - bw) / 2, by = (int)((grid.top + grid.bottom) * 0.5f + 28 * u);
+                Glass::Round(c, bx, by, bw, bh, bh * 0.5f, 0x40FFFFFFu);
+                GT(c, bx + (bw - GW(b, 16 * u, true)) / 2, by + bh * 0.5f, b, 16 * u, text, true);
+                AddRomsRect()[0] = bx; AddRomsRect()[1] = by; AddRomsRect()[2] = bw; AddRomsRect()[3] = bh;
+                AddRomsShown(1);
+            }
         }
     if (TilesHome()) { /* (the carousel: over the kept picture, below, as it moves) */ }
     else for (const View::Spot& s : v.spots)
@@ -8266,6 +8359,7 @@ inline std::vector<Setting> SettingsList()
 #if !defined(__SWITCH__) && !defined(SSR_IOS)
     l.push_back({ "!roms_folder", "ROMS FOLDER", { { "", "CHOOSE" } }, "",
                   "WHERE FULLDEX LOOKS FOR YOUR ROMS, AND IN THE FOLDERS INSIDE IT. CHOOSE TO PICK ANOTHER FOLDER. THE ROMS PAGE HAS THIS TOO." });
+    l.push_back({ "!setup", "SET UP AGAIN", { { "", "START" } }, "", "THE FIRST START'S QUESTIONS AGAIN: YOUR SCREENS, THE PICTURE'S SHAPE, HOW YOU PLAY AND WHERE YOUR ROMS GO." });
 #endif
 #if !defined(__ANDROID__) && !defined(__SWITCH__) && !defined(SSR_IOS)
     l.push_back({ "!saves_folder", "SAVES FOLDER", { { "", "BESIDE THE ROMS" } }, "",
@@ -8483,6 +8577,7 @@ inline int GroupOf(const Setting& s)
     if (s.key && !strcmp(s.key,"!favourite")) return 6;
     if (s.key && !strcmp(s.key, "!saves_folder")) return 6; // (GAME LIST)
     if (s.key && !strcmp(s.key, "!roms_folder")) return 6;
+    if (s.key && !strcmp(s.key, "!setup")) return 6;
     if (s.key && (!strcmp(s.key, "!folders") || !strcmp(s.key, "!states_folder") || !strcmp(s.key, "!cheats_folder") || !strcmp(s.key, "!settings_folder"))) return 6;
     if (!s.key) return !strcmp(s.name, "KEYS AND BUTTONS") ? 3 : !strcmp(s.name, "RELEASE NOTES") ? 8 : 7;
     if (!strncmp(s.key,"extra_",6)) return 9;

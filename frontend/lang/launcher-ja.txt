@@ -761,3 +761,35 @@ COULDN'T CHECK ITS PREPARATION RESULT	準備の結果を確認できませんで
 COULDN'T READ ITS PREPARATION OUTPUT	準備の出力を読み込めませんでした
 CANNOT READ THE SAVE IN THE SYNC FOLDER	同期フォルダのセーブを読み込めません
 CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION	クラウドセーブはまだ処理中です: このゲームは今回同期されません
+# 1.7.1: first start setup and Add ROMs
+Welcome To FullDex	FullDexへようこそ
+A few quick questions to set FullDex up for this device. Every answer can be changed later in Settings.	このデバイス向けにFullDexを設定するための簡単な質問です。答えはあとから設定でいつでも変えられます。
+Start	はじめる
+Skip For Now	今はスキップ
+Your Screens	画面
+Does this device have a second screen, like the AYN Thor or the Ayaneo Flip DS?	このデバイスにはAYN ThorやAyaneo Flip DSのような2つ目の画面がありますか？
+One Screen	画面は1つ
+Two Screens	画面は2つ
+The DS Screens	DSの画面
+How should a DS game's two screens be shown?	DSゲームの2つの画面をどう表示しますか？
+One Widescreen Picture (Recommended)	1枚のワイド画面（おすすめ）
+Side By Side	横に並べる
+One Above The Other	上下に並べる
+Your Screen	あなたの画面
+DS games can fill your screen, or keep the DS's own shape with bars at the sides.	DSゲームは画面いっぱいに表示するか、両側に帯を付けてDSの形のままにできます。
+Fill My Screen (Recommended)	画面いっぱい（おすすめ）
+Keep The DS Shape (4:3)	DSの形のまま（4:3）
+How You Play	遊び方
+What will you mostly play with? With a controller, the right stick can move a cursor on the touch screen.	主に何で遊びますか？コントローラーなら右スティックでタッチ画面のカーソルを動かせます。
+Touch Screen	タッチ画面
+Controller	コントローラー
+Keyboard And Mouse	キーボードとマウス
+Add Your Games	ゲームを追加
+Done	完了
+Add ROMs	ROMを追加
+Put your ROMs (.nds, .gba and .3ds files) in a folder on this device, then choose that folder. They show up here by themselves.	ROM（.nds・.gba・.3dsファイル）をこのデバイスのフォルダーに入れて、そのフォルダーを選んでください。ここに自動で表示されます。
+Put your ROMs in the Files app: On My iPhone (or iPad) > Pokemon DS Widescreen > roms. They show up here by themselves.	ROMをファイルアプリの「このiPhone内（またはiPad内）> Pokemon DS Widescreen > roms」に入れてください。ここに自動で表示されます。
+Put your ROMs in the roms folder beside FullDex on your SD card. They show up here by themselves.	ROMをSDカードのFullDexの横にあるromsフォルダーに入れてください。ここに自動で表示されます。
+Put your ROMs (.nds, .gba and .3ds files) in your ROMs folder, or choose another. They show up here by themselves.	ROM（.nds・.gba・.3dsファイル）をROMフォルダーに入れるか、別のフォルダーを選んでください。ここに自動で表示されます。
+SET UP AGAIN	もう一度設定
+THE FIRST START'S QUESTIONS AGAIN: YOUR SCREENS, THE PICTURE'S SHAPE, HOW YOU PLAY AND WHERE YOUR ROMS GO.	最初の起動時の質問をもう一度：画面、画像の形、遊び方、ROMの場所。

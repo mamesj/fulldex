@@ -1483,6 +1483,7 @@ int PickGame(Folders& fo, std::vector<Launcher::Game>& games, int selected, bool
         if(key && !strcmp(key,"list_sort"))reorderLibrary();
         if(key && !strcmp(key,"!favourite"))toggleFavourite();
         if (key && !strcmp(key, "!roms_folder") && Launcher::CanChooseRomFolder()) { pickRomFolder(); return; }
+        if (key && !strcmp(key, "!setup")) { if (guide) toggleGuide(); Launcher::Focus().page = -1; Launcher::Focus().side = -1; Launcher::OpenSetup(0); return; }
         if (key && !strcmp(key, "!ra_login"))
         {
             if (raState->busy) return;
@@ -1732,6 +1733,7 @@ int PickGame(Folders& fo, std::vector<Launcher::Game>& games, int selected, bool
                 F.dialog = 3; F.drow = 0; StartListKeyboard();
                 return;
             }
+            if (onTabs && !F.onSort && Launcher::AddRomsShown() && games.empty()) { Launcher::OpenSetup(5); return; }
             if (onTabs && !F.onSort) { Launcher::OpenTabMenu(tab); return; } // (a tab: move, hide; one of your own also rename, delete)
             if (onTabs && F.onSort)
             {
@@ -2307,6 +2309,18 @@ int PickGame(Folders& fo, std::vector<Launcher::Game>& games, int selected, bool
             }
             else Launcher::SavesPick(pick);
             savesRequest();
+            return;
+        }
+        if (F.dialog == 30)
+        {
+            // (FIRST START's questions.)
+            const std::string pick = F.drow >= 0 && F.drow < (int)F.dPaths.size() ? F.dPaths[F.drow] : std::string("#done");
+            const int r = Launcher::SetupPick(pick);
+            if (r == 2 && Launcher::CanChooseRomFolder()) pickRomFolder();
+#ifdef __ANDROID__
+            if (r == 3) JavaVoidStringArg("setSecondScreenModeText", "2");
+#endif
+            fprintf(stderr, "[launcher] setup: %s\n", pick.c_str());
             return;
         }
         if (F.dialog >= 5)
@@ -3107,6 +3121,7 @@ int PickGame(Folders& fo, std::vector<Launcher::Game>& games, int selected, bool
                         }
                         break;
                     }
+                    if (Launcher::AddRomsAt(mx, my)) { Launcher::OpenSetup(5); break; }
                     if (const int tl = Launcher::ToolAt(mx, my)) { Launcher::Focus().side = -1; onSettings = false; onTabs = true; Launcher::Focus().onSort = true; Launcher::Focus().tool = tl; choose(); break; }
                     if (Launcher::GameOptionsAt(canvas, mx, my)) { Launcher::Focus().side = -1; onSettings = onTabs = false; Launcher::Focus().banner = 2; choose(); break; }
                     if (Launcher::ContinueAt(canvas, mx, my))
@@ -4690,6 +4705,17 @@ bool Start(int& argc, char**& argv)
     if (directGame < 0) JavaVoid("checkUpdatesQuiet");
 #endif
     DiscordPresence::InLauncher();
+    // FIRST START: the setup questions, once (settings.cfg's setup_done), only for a library with no games yet; a
+    // test opens them with SSR_LIST_SETUP=<step>.
+    Launcher::Setup().cfg = fo.cfg; Launcher::Setup().roms = fo.roms;
+    {
+        int ww = 0, wh = 0;
+        SDL_GetWindowSizeInPixels(window, &ww, &wh);
+        if (SDL_DisplayMode dm; SDL_GetDesktopDisplayMode(0, &dm) == 0) { ww = dm.w; wh = dm.h; }
+        Launcher::Setup().w = std::max(ww, wh); Launcher::Setup().h = std::min(ww, wh);
+    }
+    if (const char* st = getenv("SSR_LIST_SETUP")) Launcher::OpenSetup(atoi(st));
+    else if (Launcher::ConfigValue(fo.cfg, "setup_done").empty() && games.empty()) Launcher::OpenSetup(0);
     for (;;)
     {
         chosen = directGame >= 0 ? directGame : PickGame(fo, games, chosen, fullscreen, winW, winH);

@@ -420,6 +420,10 @@ public class GameActivity extends SDLActivity {
         GameActivity activity = self;
         return activity == null || activity.secondScreen == null ? 0 : activity.secondScreen.state();
     }
+    // (FIRST START's "Two Screens": DS split, from the launcher, which passes strings.)
+    public static void setSecondScreenModeText(String mode) {
+        try { setSecondScreenMode(Integer.parseInt(mode)); } catch (NumberFormatException ignored) { }
+    }
     public static void setSecondScreenMode(int mode) {
         GameActivity activity = self;
         if (activity != null && activity.secondScreen != null) activity.secondScreen.setMode(mode);
