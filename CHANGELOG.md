@@ -27,6 +27,7 @@
 - **Omega Ruby and Alpha Sapphire: the battle buttons stay still in a single battle** (#242). They moved up whenever your Pokémon's HP box showed and back down while the text box hid it. They still go up above the HP boxes in double, triple and rotation battles.
 - **Omega Ruby and Alpha Sapphire: the X menu's cursor no longer hops** while it moves between buttons on a phone (#243).
 - **X, Y, Ultra Sun and Ultra Moon: an Outlines option** (#262), as Omega Ruby and Alpha Sapphire have. In a 3DS game's settings, Outlines off takes away the black lines the game draws around people and buildings from the depth of the scene; the characters' own shading stays. On by default. (Found and checked in X's and Ultra Sun's fields; Y and Ultra Moon use the same passes.)
+- **Android: the game list starts full screen** (#265, PR #267 by JediRhymeTrix), set before its first picture, so the Anbernic RG Rotate (720x720) no longer freezes or goes black at the start.
 - **3DS games: the Mega Evolution button shows in ordinary battles** (#199), not only in the Battle Maison.
 - **3DS games: building a game no longer stops at one part that fails to compile** (#204). That part is built again on its own, then without optimisation, and the rest goes on.
 
@@ -83,7 +84,6 @@
 
 ## FullDex 1.7 (20 November 2026)
 
-- **Android:** the game list starts fullscreen before drawing its first frame, avoiding a surface resize at startup on the Anbernic RG Rotate (#265).
 - **Pokémon X, Y, Ultra Sun and Ultra Moon (3DS beta).** FullDex lists a .3ds dump of any of them with your ROMs and plays it the same way as Omega Ruby and Alpha Sapphire: on a PC the game's code is built once from your dump (about 5 minutes), on a phone too. Each keeps its own save (pokemonx.sav, pokemony.sav, ultrasun.sav, ultramoon.sav) with your other saves.
 - **The 3DS games on your Switch, set up from FullDex on a Windows PC.** In a 3DS game's Game Options, Put On My Switch finds the Switch's SD card in the PC, builds the game from your own dump (5 to 10 minutes) and copies it to the card, with the shaders the Switch saved as missing. The Switch tools download once (about 90 MB). On the Switch, a dump that is not set up yet says how. Save To A Folder Instead works without a card.
 - **The 3DS games at full speed on phones, with the help of a PC.** Put On My Phone builds the game's code on a Windows PC in a few minutes. Put that file beside the dump on the phone and FullDex uses it on the first Play. A phone can still build it itself (about 25 minutes, plugged in), or play right away through the emulator.
