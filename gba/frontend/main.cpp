@@ -823,6 +823,7 @@ struct App
     std::vector<std::string> achDesc; // the achievements list's descriptions, beside its rows
 #endif
     bool dexTyping = false; // (typing on the POKEDEX's SEARCH row)
+    int swapInterval = 1; // (Linux at 120 Hz or more: the refreshes the driver holds each picture for, #173)
 #ifdef GBAW_EMBEDDED
     // TWO SCREENS (an AYN Thor's or another dual-screen handheld's bottom screen, SECOND SCREEN on in the
     // DS games' settings or at setup): the companion there as you play, as PokeDaisy has it. Read and
@@ -1053,8 +1054,11 @@ struct App
             const int hz = ren && !SDL_GetWindowDisplayMode(win, &dm) ? dm.refresh_rate : 0;
             const int n = (hz + 30) / 60;
             if (n > 1 && std::abs(hz - n * 60) <= 1 && !(getenv("SSR_SWAP_PACE") && getenv("SSR_SWAP_PACE")[0] == '0'))
-                fprintf(stderr, "[gba] %d Hz: swap interval %d: %s\n", hz, n,
-                        SDL_GL_SetSwapInterval(n) == 0 ? "the driver paces the pictures" : SDL_GetError());
+            {
+                const bool ok = SDL_GL_SetSwapInterval(n) == 0;
+                if (ok) swapInterval = n;
+                fprintf(stderr, "[gba] %d Hz: swap interval %d: %s\n", hz, n, ok ? "the driver paces the pictures" : SDL_GetError());
+            }
 #endif
         }
         if (!ren) return false;
@@ -6703,6 +6707,17 @@ struct App
                 const int m = (int)lround(rate / 60);
                 const bool even = m >= 1 && m <= 6 && std::fabs(rate - 60.0 * m) < 1.2 * m;
                 const bool twice = even && m == lastEven;
+                if (swapInterval > 1 && rate < 48)
+                {
+                    // (#250: a variable refresh screen (G-Sync, FreeSync) lasts a refresh as long as it waits
+                    // for a picture, so 4 of them at 240 Hz held each one about 30 ms or more: one refresh a
+                    // picture again, and the clock paces them.)
+                    SDL_GL_SetSwapInterval(1);
+                    swapInterval = 1;
+                    Note("pictures at %.1f a second with the swap interval: a variable refresh screen? one refresh a picture", rate);
+                    lockToVsync = false;
+                    due = 0;
+                }
                 lastEven = even ? m : 0;
                 if (twice && (!lockToVsync || m != perFrame))
                 {
