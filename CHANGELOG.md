@@ -47,7 +47,7 @@
 - DS and GBA state recovery refuses directories or special files at pending/recovery filenames, preserving those paths rather than moving or deleting them as interrupted state files.
 - **DS: sharp text follows changing crops and transparency.** The sharp 2D and text layer kept old pixels when only its cut or see-through rules changed, and a failed texture upload could leave a stale picture on screen; both are redrawn now, and a failed upload is tried again on the next frame.
 - **DS: no stale picture when sharp scaling fails.** If the sharp enlargement cannot be prepared, that frame shows the fresh picture unenhanced and tries again on the next one.
-- **DS: less work putting the widescreen picture together.** The soft side bars reuse their colour sums, the uploaded world is kept while the game has not changed it, and the coverage coordinates are worked out once per row and column. The picture is the same pixel for pixel.
+- **DS: less work putting the widescreen picture together.** The soft side bars reuse their colour sums, the uploaded world is kept while the game has not changed it, and the coverage coordinates are worked out once per row and column. The picture is the same pixel for pixel; on the Switch, putting it together in HeartGold's Goldenrod went from 7.6 to 5.8 ms a frame.
 - **DS performance diagnostics:** detailed logs no longer reset the wait counters that the per-frame timing file and LOWER RES WHEN BUSY read (a frame could show a wait of trillions of milliseconds). A repeatable six-setting comparison plan and report tool are in tools/.
 
 ### Saves and folders
