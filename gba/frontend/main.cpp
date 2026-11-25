@@ -3063,6 +3063,7 @@ struct App
                 if (k >= adviceRows.size()) continue;
                 it.label = adviceRows[k].label; it.value = adviceRows[k].value; it.sub = adviceRows[k].sub;
                 it.kind = PLAIN; it.info = true; it.icon = IC_INFO;
+                g.tall = true; // (a line under each: why)
             }
             else continue;
             if (!g.mons.empty()) it.monCard = 0;
