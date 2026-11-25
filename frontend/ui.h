@@ -222,7 +222,6 @@ struct MenuInput
 struct MenuItem
 {
     std::string label;
-    std::string previewName; // (the preview's heading in place of the label: on a Pokemon's own page, its name)
     std::string value; // shown right-aligned; empty for plain actions
     bool info = false; // the value is only shown (no < > around it): nothing to change here
     int slider = -1;   // 0 to 10: also drawn as a bar of ten blocks, that many lit (VOLUME)
@@ -242,6 +241,8 @@ struct MenuItem
     std::vector<uint32_t> thumb; int thumbW = 0, thumbH = 0; // (K_SLOT: the state's picture, ARGB)
     bool noArt = false; // (a row of a page about one Pokemon or item: its icon not drawn in the row again)
     int keyRow = -1, keyCol = 0, keySpan = 2; // (K_KEY: its row of the keyboard, where it starts and how wide, in half keys)
+
+    std::string previewName; // (the preview's heading in place of the label: on a Pokemon's own page, its name)
 };
 
 struct Menu
