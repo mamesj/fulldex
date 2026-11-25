@@ -245,6 +245,8 @@ const std::vector<Setting>& SettingsList()
         { "exp_share", "EXP SHARE", { { "0", "OFF" }, { "1", "SPLIT" }, { "2", "FULL EXP" } }, "0",
           "THE WHOLE PARTY GETS EXP FROM A WIN, NOT ONLY THE POKEMON THAT FOUGHT. SPLIT SHARES IT OUT; FULL EXP GIVES EACH "
           "THE EXP ONE POKEMON ALONE WOULD GET. EGGS AND FAINTED POKEMON GET NONE." },
+        { "shiny_alert", "SHINY ALERT", onOff, "1",
+          "A MESSAGE WHEN A SHINY POKEMON COMES OUT AGAINST YOU IN A BATTLE, SO YOU DON'T MISS ITS SPARKLE." },
         { "shiny_odds", "SHINY ODDS",
           { { "8192", "NORMAL" }, { "4096", "1 IN 4096" }, { "1024", "1 IN 1024" }, { "512", "1 IN 512" }, { "128", "1 IN 128" } }, "8192",
           "HOW OFTEN A WILD POKEMON TURNS UP SHINY. NORMAL IS THE GAME'S OWN 1 IN 8192. POKEMON ALREADY CAUGHT DON'T CHANGE, "
@@ -1670,6 +1672,7 @@ struct App
         if (gpField && !paused) gpState = pk_field_state(core, set.Get("run_indoors") == "1", WildKeep());
         if (!paused) ShinyFrame();
         if (!paused) ExpShareFrame();
+        if (!paused) ShinyAlertFrame();
         core->runFrame(core);
         fly.FrameEnded();
         if (!paused) { FlyFrame(); TmFrame(); }
@@ -1884,7 +1887,7 @@ struct App
             static const char* const display[] = { "widescreen", "fullscreen", "scaling", "hd_filter", "lcd", "colour", "zoom", "zoom_text", "day_night", "follower", "nav_style", "repel_prompt", "show_fps" };
             static const char* const sound[] = { "volume", "ff_mute" };
             static const char* const controls[] = { "gba_start", "buttons", "fast_lock", "ff_speed", "fast_button", "auto_state", "auto_resume" };
-            static const char* const gameplay[] = { "instant_text", "reusable_tms", "no_hms", "exp_share", "run_indoors", "wild_encounters", "shiny_odds", "battle_speed", "text_speed", "bike_speed", "surf_speed", "fly_on", "flight_clouds" };
+            static const char* const gameplay[] = { "instant_text", "reusable_tms", "no_hms", "exp_share", "shiny_alert", "run_indoors", "wild_encounters", "shiny_odds", "battle_speed", "text_speed", "bike_speed", "surf_speed", "fly_on", "flight_clouds" };
             const char* const* keys = pausePage == P_DISPLAY ? display : pausePage == P_SOUND ? sound : pausePage == P_GAMEPLAY ? gameplay : controls;
             const int count = pausePage == P_DISPLAY ? sizeof(display) / sizeof(*display)
                             : pausePage == P_SOUND ? sizeof(sound) / sizeof(*sound)
@@ -2151,7 +2154,7 @@ struct App
         if (!strcmp(key, "exp_share")) return gpExp.sentPokes != 0 && compConfig && !(compConfig->sha1 && (compConfig->layout || compConfig->speciesMask != 0xFFFF));
         if (!strcmp(key, "run_indoors")) return gpField && gameCode.size() == 4 && gameCode[0] == 'B'; // (Emerald and FireRed's engines)
         if (!strcmp(key, "wild_encounters")) return gpField && gpWild;
-        if (!strcmp(key, "shiny_odds")) return EnemyParty() != 0;
+        if (!strcmp(key, "shiny_odds") || !strcmp(key, "shiny_alert")) return EnemyParty() != 0;
         if (!strcmp(key, "day_night")) return pkWide && gpField;
         if (!strcmp(key, "fly_on") || !strcmp(key, "flight_clouds")) return flightRec != nullptr;
         if (!strcmp(key, "follower")) return pkWide && gpField && compConfig;
@@ -2188,6 +2191,25 @@ struct App
         if (!mask) return;
         for (uint32_t k = 0; k < 2; k++)
             if ((uint8_t)core->busRead8(core, gpExp.sentPokes + k) != mask) core->busWrite8(core, gpExp.sentPokes + k, mask);
+    }
+    // SHINY ALERT: once a battle, a message when the foe's first Pokemon is shiny (its personality and its trainer's ID,
+    // both plain at the start of the record; read again while SHINY ODDS may still be changing it).
+    uint32_t shinyAlertPid = 0; bool shinyAlerted = false;
+    void ShinyAlertFrame()
+    {
+        const uint32_t enemy = EnemyParty();
+        if (!enemy || set.Get("shiny_alert") == "0") return;
+        if (!(core->busRead8(core, compConfig->gMain + compConfig->inBattleOff) & 2)) { shinyAlerted = false; shinyAlertPid = 0; return; }
+        if (shinyAlerted) return;
+        const uint32_t pid = core->busRead32(core, enemy), ot = core->busRead32(core, enemy + 4);
+        if ((!pid && !ot) || pid == shinyAlertPid) return;
+        shinyAlertPid = pid;
+        if (((ot >> 16) ^ (ot & 0xFFFF) ^ (pid >> 16) ^ (pid & 0xFFFF)) < 8)
+        {
+            shinyAlerted = true;
+            Toast("A SHINY POKEMON!", 4000);
+            fprintf(stderr, "[gba] shiny alert: %08x\n", pid);
+        }
     }
     void ShinyFrame()
     {
@@ -4078,7 +4100,7 @@ struct App
             { "lcd", IC_GRID }, { "colour", IC_MONITOR }, { "zoom", IC_EXPAND }, { "zoom_text", IC_EXPAND }, { "repel_prompt", IC_INFO }, { "show_fps", IC_GAUGE }, { "volume", IC_SPEAKER }, { "ff_mute", IC_FAST },
             { "gba_start", IC_PAD }, { "buttons", IC_PAD }, { "ff_speed", IC_FAST }, { "fast_button", IC_FAST }, { "fast_lock", IC_FAST },
             { "auto_state", IC_SAVE }, { "auto_resume", IC_LOAD },
-            { "instant_text", IC_INFO }, { "reusable_tms", IC_CHIP }, { "no_hms", IC_CHIP }, { "exp_share", IC_POKEBALL }, { "run_indoors", IC_FAST }, { "wild_encounters", IC_GLOBE }, { "shiny_odds", IC_SPARKLE }, { "battle_speed", IC_FAST }, { "text_speed", IC_FAST }, { "bike_speed", IC_FAST }, { "surf_speed", IC_FAST }, { "day_night", IC_SPARKLE }, { "follower", IC_POKEBALL }, { "nav_style", IC_GRID } };
+            { "instant_text", IC_INFO }, { "reusable_tms", IC_CHIP }, { "no_hms", IC_CHIP }, { "exp_share", IC_POKEBALL }, { "shiny_alert", IC_SPARKLE }, { "run_indoors", IC_FAST }, { "wild_encounters", IC_GLOBE }, { "shiny_odds", IC_SPARKLE }, { "battle_speed", IC_FAST }, { "text_speed", IC_FAST }, { "bike_speed", IC_FAST }, { "surf_speed", IC_FAST }, { "day_night", IC_SPARKLE }, { "follower", IC_POKEBALL }, { "nav_style", IC_GRID } };
         icon = IC_GEAR;
         for (const auto& i : icons)
             if (!strcmp(i.key, key)) icon = i.icon;
