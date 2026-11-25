@@ -6258,7 +6258,12 @@ struct App
                     // (Fast forward switched on, by the Toggle button or the menu, stays on whatever
                     // is pressed, as in the DS games (#111, #156): the quarter second at normal speed is
                     // for fast forward held on its button, where a quick tap in a menu moved twice.)
-                    tapSlow = speed > 1 && dirs && !fastToggle && SDL_GetTicks() - tapSince < 250;
+                    // (Walking in the overworld with nothing open: the games don't repeat a direction
+                    // there, so fast forward stays on, as in the DS games (Discord: it dropped out for a
+                    // moment at every turn). Menus, text, battles and games it can't read keep the rule.)
+                    const bool freeWalk = gpField && (gpState & PK_FIELD_KNOWN) &&
+                        !(gpState & (PK_FIELD_LOCKED | PK_FIELD_BATTLE | PK_FIELD_TEXT | PK_FIELD_WINDOW)) && fly.OnField();
+                    tapSlow = speed > 1 && dirs && !fastToggle && !freeWalk && SDL_GetTicks() - tapSince < 250;
                     if (tapSlow) speed = 1;
                 }
                 for (int i = 0; i < run * speed; i++) RunFrame(true, speed > 1, i == run * speed - 1);
