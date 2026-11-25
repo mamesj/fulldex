@@ -1535,7 +1535,8 @@ static bool StartNativeDs(const Launcher::Game& g, const std::string& nro)
 {
     if (!envHasNextLoad()) return true; // (no homebrew loader: played here)
     const std::string args = "\"" + nro + "\" \"FULLDEX_ROM=" + g.rom + "\" \"FULLDEX_SAVE=" + SavePath(g) + "\"" +
-        (g_self.empty() ? std::string() : " \"FULLDEX_RETURN=" + g_self + "\"");
+        (g_self.empty() ? std::string() : " \"FULLDEX_RETURN=" + g_self + "\"") +
+        " \"FULLDEX_LANG=" + N3ds::MenuLanguage() + "\""; // (the pause menu in FullDex's language)
     const Result rc = envSetNextLoad(nro.c_str(), args.c_str());
     fprintf(stderr, "[native] %s: %s (0x%x)\n", g.name.c_str(), args.c_str(), (unsigned)rc);
     if (R_FAILED(rc)) return true;
