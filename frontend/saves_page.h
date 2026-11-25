@@ -86,7 +86,20 @@ inline SaveHealth SaveHealthOfData(const std::vector<unsigned char>& d, bool ds,
     h.state = 1; h.label = "Healthy"; h.why = "It is the size this game uses, with a game saved in it.";
     return h;
 }
-inline SaveHealth SaveHealthOf(const std::string& save, bool ds, size_t own = 0) { return SaveHealthOfData(SaveBackups::Read(save), ds, SvExists(save), own); }
+inline SaveHealth SaveHealthOf(const std::string& save, bool ds, size_t own = 0)
+{
+    SaveHealth h = SaveHealthOfData(SaveBackups::Read(save), ds, SvExists(save), own);
+    // (Blank, and no backup ever had a game in it: a new game not saved yet (a GBA game makes its
+    // blank save at once), not a lost one, so no "Problem" and no question before Play.)
+    if (h.state == 2 && h.why.rfind("It is blank", 0) == 0)
+    {
+        for (const SaveBackups::Entry& e : SaveBackups::List(save))
+            if (SaveHealthOfData(SaveBackups::Read(e.path), ds, true, own).state == 1) return h;
+        h = SaveHealth();
+        h.label = "No Save Yet";
+    }
+    return h;
+}
 inline const SaveHealth& SavesHealth()
 {
     SavesState& s = Saves();

@@ -3646,7 +3646,14 @@ int PickGame(Folders& fo, std::vector<Launcher::Game>& games, int selected, bool
             for (Launcher::Setting& it : page.items)
             {
                 if (it.key && !strcmp(it.key, "!ra_login") && !it.values.empty()) it.values[0].second = raAccountShown();
-                if (it.key && !strcmp(it.key, "!roms_folder") && !it.values.empty() && it.values[0].second == "CHOOSE" && !fo.roms.empty()) it.values[0].second = fo.roms;
+                if (it.key && !strcmp(it.key, "!roms_folder") && !it.values.empty() && it.values[0].second == "CHOOSE" && !fo.roms.empty())
+                {
+                    // (The folder's own name: a whole path ran over the row's name. The preview shows it all.)
+                    std::string p = fo.roms;
+                    while (p.size() > 1 && (p.back() == '/' || p.back() == '\\')) p.pop_back();
+                    const size_t cut = p.find_last_of("/\\");
+                    it.values[0].second = cut == std::string::npos ? p : p.substr(cut + 1);
+                }
                 if (it.key && !strcmp(it.key, "!folders") && !it.values.empty() && it.values[0].second == "TIDY") it.values[0].second = FoldersShown(fo);
                 if (it.key && (!strcmp(it.key, "!states_folder") || !strcmp(it.key, "!cheats_folder") || !strcmp(it.key, "!settings_folder")) && !it.values.empty() && it.values[0].second == "FULLDEX'S") it.values[0].second = OwnFolderShown(fo, it.key);
 #ifdef __ANDROID__
