@@ -237,6 +237,8 @@ inline Launcher::Game Make(const Title& t, const std::string& rom, const std::st
 // (beforePlay: a backup of the save the game is about to start with, as the DS games make.)
 // (X and Y: 0x65600 bytes; Omega Ruby and Alpha Sapphire: 0x76000; Ultra Sun and Ultra Moon: 0x6CC00.)
 inline bool SaveSizeOk(uintmax_t n) { return n == 0x65600 || n == 0x76000 || n == 0x6CC00; }
+// The size of this game's save (the Saves page checks an imported save against it).
+inline size_t SaveSize(const std::string& code) { return code == "EKJA" || code == "EK2A" ? 0x65600 : code == "A2AA" || code == "A2BA" ? 0x6CC00 : 0x76000; }
 inline std::string SaveName(const std::string& code)
 {
     return code == "EKJA" ? "pokemonx.sav" : code == "EK2A" ? "pokemony.sav" : code == "ECLA" ? "alphasapphire.sav" : code == "A2AA" ? "ultrasun.sav" : code == "A2BA" ? "ultramoon.sav" : "omegaruby.sav";

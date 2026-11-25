@@ -23,7 +23,7 @@ struct SavesState
     std::string rom, name, save, cloudKey; // the game's ROM and name, its save, that save as cloud saves name it
     bool ds = true;
     bool link = false;      // Black 2 or White 2: the Memory Link row
-    size_t want = 0;        // the save's size when not a DS or GBA game's (Omega Ruby / Alpha Sapphire: 472 KB)
+    size_t want = 0;        // the save's size when not a DS or GBA game's (a 3DS game's: X and Y 405 KB, Omega Ruby and Alpha Sapphire 472 KB, Ultra Sun and Ultra Moon 435 KB)
     std::string deleted;    // the slot deleted last (kept as <slot>.deleted until Undo Delete)
     std::string request;    // for the platform: "#folder:<dir>", "#play:<state>", "#replay" ("" nothing)
     std::string msg;        // what the last thing done here came to
@@ -182,7 +182,7 @@ inline void SavesFor(const Game& g, const std::string& save)
 {
     SavesState& s = Saves();
     if (s.rom != g.rom || s.save != save) { s.deleted.clear(); for (long long& t : s.thumbAt) t = -1; s.healthAt = -2; s.linkAt = -2; }
-    s.rom = g.rom; s.name = ShortName(g); s.save = save; s.cloudKey = HubSavePath(g); s.ds = g.platform == DS; s.want = g.platform == N3DS ? 0x76000 : 0;
+    s.rom = g.rom; s.name = ShortName(g); s.save = save; s.cloudKey = HubSavePath(g); s.ds = g.platform == DS; s.want = g.platform == N3DS ? N3ds::SaveSize(g.code) : 0;
     s.link = g.platform == DS && (g.code.rfind("IRE", 0) == 0 || g.code.rfind("IRD", 0) == 0);
 }
 // Manage Saves chosen in a game's menu: its page.
