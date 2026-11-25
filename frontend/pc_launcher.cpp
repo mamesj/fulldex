@@ -4710,7 +4710,6 @@ bool Start(int& argc, char**& argv)
     Launcher::Setup().cfg = fo.cfg; Launcher::Setup().roms = fo.roms;
     {
         int ww = 0, wh = 0;
-        SDL_GetWindowSizeInPixels(window, &ww, &wh);
         if (SDL_DisplayMode dm; SDL_GetDesktopDisplayMode(0, &dm) == 0) { ww = dm.w; wh = dm.h; }
         Launcher::Setup().w = std::max(ww, wh); Launcher::Setup().h = std::min(ww, wh);
     }
