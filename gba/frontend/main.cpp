@@ -2231,6 +2231,7 @@ struct App
                 const int before = was == itemSeen.end() ? 0 : was->second, after = now.count(a.first) ? now[a.first] : 0;
                 if (before == after) continue;
                 changed++;
+                if (after > before && msg.empty()) LoadDex(); // (the item names; ReadCompanion loads them too)
                 if (after > before)
                     msg += (msg.empty() ? "OBTAINED " : ", ") + ItemName(a.first) + (after - before > 1 ? " x" + std::to_string(after - before) : std::string());
             }
