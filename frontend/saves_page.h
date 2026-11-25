@@ -182,7 +182,7 @@ inline void SavesFor(const Game& g, const std::string& save)
 {
     SavesState& s = Saves();
     if (s.rom != g.rom || s.save != save) { s.deleted.clear(); for (long long& t : s.thumbAt) t = -1; s.healthAt = -2; s.linkAt = -2; }
-    s.rom = g.rom; s.name = ShortName(g); s.save = save; s.cloudKey = HubSavePath(g); s.ds = g.platform == DS; s.want = g.platform == N3DS ? N3ds::SaveSize(g.code) : 0;
+    s.rom = g.rom; s.name = ShortName(g); s.save = save; s.cloudKey = HubSavePath(g); s.ds = g.platform == DS; s.want = g.platform == N3DS ? (g.code == "EKJA" || g.code == "EK2A" ? 0x65600 : g.code == "A2AA" || g.code == "A2BA" ? 0x6CC00 : 0x76000) : 0;
     s.link = g.platform == DS && (g.code.rfind("IRE", 0) == 0 || g.code.rfind("IRD", 0) == 0);
 }
 // Manage Saves chosen in a game's menu: its page.
