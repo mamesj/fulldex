@@ -429,7 +429,7 @@ struct Pads
     std::vector<SDL_GameController*> list;
     // (Held directions on any controller, with auto-repeat for the menus.)
     int heldDir = -1;
-    Uint32 heldSince = 0, lastRepeat = 0;
+    Uint32 heldSince = 0, lastRepeat = 0, dirSeenAt = 0;
 
     void Open(int index)
     {
@@ -485,6 +485,10 @@ struct Pads
         const int d = Dirs();
         int dir = (d & 1) ? 0 : (d & 2) ? 1 : (d & 4) ? 2 : (d & 8) ? 3 : -1;
         const Uint32 now = SDL_GetTicks();
+        // (Let go for under 45 ms: still held. Some pads (an 8BitDo Lite 2 on an iPad, #202) drop the
+        // D-pad for a moment while it is held, and the menu moved twice for one press.)
+        if (dir >= 0) dirSeenAt = now;
+        else if (heldDir >= 0 && now - dirSeenAt < 45) dir = heldDir;
         bool fire = false;
         if (dir != heldDir)
         {
