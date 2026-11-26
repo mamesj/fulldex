@@ -875,5 +875,4 @@ open an issue and it will be taken out.
 
 ---
 
-Built with AI assistance. Building it yourself, or working on it with an AI agent: see
-[docs/DEVELOPING.md](docs/DEVELOPING.md) and [AGENTS.md](AGENTS.md).
+Built with AI assistance. Building it yourself: see [docs/DEVELOPING.md](docs/DEVELOPING.md).

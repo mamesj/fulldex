@@ -33,7 +33,7 @@ slowdown. Warm the device under load before each batch as well; compare warm
 versus sustained behavior separately. Repeat another session in reversed build
 order if heat or battery state could bias results.
 
-ON THE SWITCH - CLAUDE / HARDWARE OPERATOR
+ON THE SWITCH - HARDWARE OPERATOR
 Use an isolated private copy of the app's SD folder, not the normal playing
 folder. Preserve any existing test.txt and test-results. Copy the matching
 snapshot and optional input script beside the test copy of the program; confirm
