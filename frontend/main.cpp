@@ -8916,6 +8916,7 @@ int main(int argc, char** argv)
     PadState prevPad;
     MenuInput heldNav;          // navigation directions held last tick, for edge detection
     bool prevComboMenu = false;
+    bool softResetHeld = false; // (L, R and SELECT held: START is the games' soft reset, not the menu)
     bool ctrlStart = false, touchStart = false, prevCtrlStart = false; // see cfg.startMenu
     bool swallowMenuButtons = false; // keeps the buttons that closed the menu from reaching the game
     // FULLDEX NAV (fulldex_nav.h): the quick menu, opened with L3 or N; its encounter counter is kept
@@ -11170,10 +11171,13 @@ int main(int argc, char** argv)
 
         // Controller: the pause menu opens with Guide, or with Start and Select together.
         auto pressed = [&](int b) { return ps.btn[b] && !prevPad.btn[b]; };
-        bool comboMenu = ps.btn[PAD_START] && ps.btn[PAD_BACK];
+        // (Not with L and R held too: that is the games' own soft reset, L + R + START + SELECT, which
+        // opened this menu instead and so could not be done from a controller. Discord, 20 Nov.)
+        softResetHeld = ps.btn[PAD_LB] && ps.btn[PAD_RB] && ps.btn[PAD_BACK];
+        bool comboMenu = ps.btn[PAD_START] && ps.btn[PAD_BACK] && !softResetHeld;
         // (With START BUTTON on PAUSE MENU, a controller's START alone; the on-screen START of a
         // phone stays the DS's, beside its own MENU button.)
-        const bool startPress = cfg.startMenu && ctrlStart && !prevCtrlStart;
+        const bool startPress = cfg.startMenu && ctrlStart && !prevCtrlStart && !softResetHeld;
         if (pressed(PAD_GUIDE) || startPress || (!cfg.startMenu && comboMenu && !prevComboMenu)) toggleMenu = true;
         prevComboMenu = comboMenu;
         prevCtrlStart = ctrlStart;
@@ -12302,7 +12306,7 @@ int main(int argc, char** argv)
             if (loadEdge) loadQuick();
             if (resetEdge) { resetGame(); say("GAME RESET"); }
             PadState toGame = ps;
-            if (cfg.startMenu && ctrlStart) toGame.btn[PAD_START] = touchStart; // (START is the menu's)
+            if (cfg.startMenu && ctrlStart && !softResetHeld) toGame.btn[PAD_START] = touchStart; // (START is the menu's, but for the soft reset)
             if (fdNav.open) toGame = PadState(); // (FULLDEX NAV's buttons are its own)
             keys |= PadKeys(toGame, cfg.byLabel);
             // Only presses made while the command strip is up count; anything done in the bag or
