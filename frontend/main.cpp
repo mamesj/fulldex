@@ -2102,6 +2102,15 @@ static void ApplyWfcSetting(const Settings& s)
 
 int main(int argc, char** argv)
 {
+#if defined(__linux__) && !defined(__ANDROID__)
+    // (#250: Linux at 120 Hz or more holds each picture for 2 or 4 refreshes (the swap interval); on a
+    // variable refresh screen (G-Sync, FreeSync) a refresh lasts as long as the screen waits, about 100 ms
+    // a picture. FullDex's window keeps the screen's fixed rate: NVIDIA's and Mesa's switches for that,
+    // set before the first window unless they are set already. The pacing also falls back by itself.)
+    setenv("__GL_GSYNC_ALLOWED", "0", 0);
+    setenv("__GL_VRR_ALLOWED", "0", 0);
+    setenv("adaptive_sync", "false", 0);
+#endif
     Options opt;
 #ifdef __ANDROID__
     // Started from the app icon: the ROM is packed in the APK, the save and the settings
