@@ -8,6 +8,8 @@
 // The ROM changes are written to the loaded game only (mGBA's ROM patching), in small pieces, with the original bytes
 // kept to put back; the file on disk is never touched.
 #pragma once
+#include <chrono>
+#include <ctime>
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
@@ -403,7 +405,8 @@ public:
 private:
     uint64_t seen[2] = { ~0ull, ~0ull };
     std::vector<uint8_t> settling[2];
-    uint32_t rng = 0x9E3779B9u;
+    // (Seeded from the clock: from a fixed seed every launch drew the same rolls, the first always the same miss.)
+    uint32_t rng = (uint32_t)std::chrono::steady_clock::now().time_since_epoch().count() ^ (uint32_t)std::time(nullptr) ^ 0x9E3779B9u | 1u;
     uint32_t Next() { rng ^= rng << 13; rng ^= rng >> 17; rng ^= rng << 5; return rng; }
     static uint32_t Get32(const uint8_t* b, int o) { return b[o] | b[o + 1] << 8 | b[o + 2] << 16 | (uint32_t)b[o + 3] << 24; }
     static void Put32(uint8_t* b, int o, uint32_t v) { for (int i = 0; i < 4; i++) b[o + i] = (uint8_t)(v >> (8 * i)); }

@@ -1518,6 +1518,9 @@ struct App
         const bool ok = mCoreLoadStateNamed(core, vf, SAVESTATE_RTC);
         vf->close(vf);
         if (ok && ZoomOn()) { camera.Reset(); pk_wide_jump(core, frame240.data()); zoomShown = false; }
+        // (SHINY ODDS rolls again for a wild Pokemon the state already holds: a hunt by loading a state
+        // before an encounter got one roll only, as the same Pokemon came back each time.)
+        if (ok) shiny.Reset();
 #ifdef GBAW_CHEATS
         if (ok) cheats.Reset();
 #endif
@@ -1569,6 +1572,7 @@ struct App
         }
         before->close(before);
         autoStatePlayed = true;
+        shiny.Reset();
         camera.Reset();
         if (ZoomOn()) { pk_wide_jump(core, frame240.data()); zoomShown = false; }
 #ifdef GBAW_CHEATS
@@ -4400,6 +4404,7 @@ struct App
     void ResetGame()
     {
         core->reset(core);
+        shiny.Reset();
         pk_wide_reset();
         camera.Reset();
 #ifdef GBAW_CHEATS
@@ -5472,6 +5477,7 @@ struct App
         else if (item == "RESET GAME")
         {
             core->reset(core);
+            shiny.Reset();
             pk_wide_reset();
             camera.Reset();
 #ifdef GBAW_CHEATS
