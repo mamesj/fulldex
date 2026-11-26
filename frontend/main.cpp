@@ -6255,7 +6255,8 @@ int main(int argc, char** argv)
                 const auto team = bossAnswer(*b);
                 high = std::max(high, team.second);
                 if (!lines.empty()) lines += "\n";
-                lines += displayName(names[i]) + ": " + team.first;
+                { std::string nm = displayName(names[i]); bool start = true; for (char& c : nm) { c = start ? (char)std::toupper((unsigned char)c) : (char)std::tolower((unsigned char)c); start = c == ' '; }
+                  lines += nm + ": " + team.first; } // (Bertha, as the rematch line has it, not BERTHA)
             }
             if (lines.empty()) return {};
             g.any = true;
