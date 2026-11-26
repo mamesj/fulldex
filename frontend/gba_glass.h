@@ -14,7 +14,7 @@ namespace GbaGlass
 enum { IC_PLAY = 0, IC_SAVE = 1, IC_LOAD = 2, IC_CHEATS = 3, IC_FAST = 4, IC_TROPHY = 5, IC_GEAR = 6, IC_POWER = 7,
        IC_MONITOR = 9, IC_RATIO = 12, IC_EXPAND = 14, IC_FULLSCREEN = 15, IC_GRID = 16, IC_PAD = 18, IC_GAUGE = 19,
        IC_GLOBE = 11, IC_PEOPLE = 21, IC_SPARKLE = 22, IC_INFO = 23, IC_POKEBALL = 28, IC_CHIP = 29, IC_SPEAKER = 30, IC_REWIND = 31, IC_NOTE = 35, IC_SEARCH = 37 };
-enum Kind { PLAIN, TOGGLE, PICKER, LINK, SECTION, BACK, SLOT };
+enum Kind { PLAIN, TOGGLE, PICKER, LINK, SECTION, BACK, SLOT, KEY };
 enum Style { TILES, PAGE, DIALOG };
 
 struct Item
@@ -33,6 +33,7 @@ struct Item
     int thumbW = 0, thumbH = 0;
     int dexCard = -1; // (POKEDEX: the row's card, Page::dex, beside it)
     int monCard = -1; // (COMPANION's PARTY: the row's Pokemon, Page::mons, beside it)
+    int keyRow = -1, keyCol = 0, keySpan = 2; // (KEY: its row of the keyboard, where it starts and how wide, in half keys)
     bool placeCard = false; // (COMPANION's LOCATION: Page::place and its map beside it)
 };
 
@@ -70,6 +71,8 @@ struct Page
     int icon = -1;     // the page's (PAGE) or the question's (DIALOG)
     bool tall = false; // PAGE: a few tall rows, a line under each name (SETTINGS)
     bool slotGrid = false; // PAGE: its SLOT items as a grid of cards (SAVE and LOAD)
+    bool keyGrid = false;  // PAGE: its KEY items as the DS games' keyboard, keyText typed above them (keyPrompt while empty)
+    std::string keyText, keyPrompt;
     std::string title, hint, note, headerNote;
     std::vector<Item> items; // PAGE: the first is its BACK. DIALOG: the action first, CANCEL last.
     std::vector<DexCard> dex; // (POKEDEX: the cards the rows show, Item::dexCard)

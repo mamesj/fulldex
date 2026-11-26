@@ -402,6 +402,7 @@ struct MenuIn
 {
     bool up = false, down = false, left = false, right = false, accept = false, back = false;
     bool menu = false, settings = false, folder = false, escape = false, erase = false;
+    bool submit = false; // (Enter on a keyboard while typing: done, not the key the highlight is on)
 };
 
 // A controller button as printed on it: SDL_CONTROLLER_BUTTON_A is the button labelled A. On a PC
@@ -775,7 +776,7 @@ struct App
     // RetroAchievements, from the program this is built into (embed.h). None in the standalone game.
     const GbaWide::AchievementsHost* ra = nullptr;
     bool raReady = false;
-    enum PausePage { P_ROOT, P_RA, P_LIST, P_LOGIN, P_CHEATS, P_DISPLAY, P_SOUND, P_CONTROLS, P_SETTINGS, P_QUIT, P_RESET, P_SAVE, P_LOAD, P_DEX, P_DEXENTRY, P_COMP, P_PARTY, P_BAG, P_PLACE, P_BATTLE, P_GUIDE, P_GAMEPLAY, P_FLY, P_FLYMON, P_BOXES, P_BOXMON, P_PARTYMON, P_ITEM, P_ITEMMON, P_ITEMMOVE } pausePage = P_ROOT;
+    enum PausePage { P_ROOT, P_RA, P_LIST, P_LOGIN, P_CHEATS, P_DISPLAY, P_SOUND, P_CONTROLS, P_SETTINGS, P_QUIT, P_RESET, P_SAVE, P_LOAD, P_DEX, P_DEXENTRY, P_COMP, P_PARTY, P_BAG, P_PLACE, P_BATTLE, P_GUIDE, P_GAMEPLAY, P_FLY, P_FLYMON, P_BOXES, P_BOXMON, P_PARTYMON, P_ITEM, P_ITEMMON, P_ITEMMOVE, P_DEXKEYS } pausePage = P_ROOT;
     // POKEDEX (gba_dex.h): the ROM as it was before the widescreen patch, read when first opened;
     // the species of each of its list's rows, the one whose page is open, and that one's pictures.
     std::vector<uint8_t> dexRom;
@@ -1838,11 +1839,19 @@ struct App
             pause.items.push_back({ "CANCEL", "" });
             return;
         }
+        if (pausePage == P_DEXKEYS)
+        {
+            // (POKEDEX's SEARCH: the DS games' keyboard, as their SEARCH has it: figures and capitals,
+            // then SPACE, DELETE and SEARCH.)
+            for (const char* row : DexKeyRows()) for (const char* k = row; *k; k++) pause.items.push_back({ std::string(1, *k), "" });
+            for (const char* l : { "Space", "Delete", "Search" }) pause.items.push_back({ l, "" });
+            return;
+        }
         if (pausePage == P_DEX)
         {
             // (Every Pokemon the ROM has, in National Pokedex order.)
             dexRows.clear();
-            pause.items.push_back({ "SEARCH", dexQuery.empty() && !dexTyping ? "" : dexQuery + (dexTyping ? "_" : ""), true });
+            pause.items.push_back({ "SEARCH", dexQuery, true });
             dexRows.push_back(0);
             std::string q;
             for (char c : dexQuery) q += (char)std::tolower((unsigned char)c);
@@ -4310,12 +4319,37 @@ struct App
         dexQuery.pop_back();
         while (!dexQuery.empty() && ((unsigned char)dexQuery.back() & 0xC0) == 0x80) dexQuery.pop_back();
         BuildPause();
-        pause.selected = 0;
+    }
+    static const std::vector<const char*>& DexKeyRows()
+    {
+        static const std::vector<const char*> rows = { "1234567890", "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM" };
+        return rows;
+    }
+    // POKEDEX's SEARCH keyboard: a key typed, SPACE, DELETE, or SEARCH (the list, on its first match).
+    // A keyboard's own keys type too; Enter on it is SEARCH, Backspace DELETE.
+    void DexKeysInput(const MenuIn& in)
+    {
+        auto done = [&]() {
+            DexTypingOff();
+            pausePage = P_DEX;
+            BuildPause();
+            pause.selected = dexRows.size() > 1 ? 1 : 0;
+        };
+        if (in.erase) { PopDexChar(); return; }
+        if (in.submit) { done(); return; }
+        if (in.back) { DexTypingOff(); pausePage = P_DEX; BuildPause(); pause.selected = 0; return; }
+        if (!in.accept || pause.selected < 0 || pause.selected >= (int)pause.items.size()) return;
+        const std::string l = pause.items[pause.selected].label;
+        if (l == "Search") { done(); return; }
+        if (l == "Delete") { PopDexChar(); return; }
+        if (dexQuery.size() < 24) dexQuery += l == "Space" ? std::string(" ") : l;
+        BuildPause();
     }
     // POKEDEX's pages: A on a row opens its entry; B goes back (the entry to the list, on its row).
     void DexInput(const MenuIn& in)
     {
         if (in.menu) { DexTypingOff(); Resume(); return; }
+        if (pausePage == P_DEXKEYS) { DexKeysInput(in); return; }
         if (pausePage == P_DEXENTRY)
         {
             if (in.back)
@@ -4326,16 +4360,6 @@ struct App
             }
             return;
         }
-        if (dexTyping)
-        {
-            if (in.erase) { PopDexChar(); return; }
-            if (in.accept || in.back || in.up || in.down)
-            {
-                DexTypingOff();
-                pause.selected = in.accept && dexRows.size() > 1 ? 1 : 0;
-                return;
-            }
-        }
         if (in.back)
         {
             // (B first clears a search, then goes back.)
@@ -4345,8 +4369,13 @@ struct App
         }
         if (in.accept && pause.selected == 0)
         {
+            // (SEARCH: the keyboard page, on its first key; a keyboard's own keys type there too. Not
+            // Android's own keyboard, which would cover it.)
             dexTyping = true;
+#if !defined(__ANDROID__)
             SDL_StartTextInput();
+#endif
+            pausePage = P_DEXKEYS;
             BuildPause();
             pause.selected = 0;
             return;
@@ -4815,6 +4844,35 @@ struct App
                 put(it, i);
             }
         }
+        else if (pausePage == P_DEXKEYS)
+        {
+            page("SEARCH POKEDEX", IC_SEARCH);
+            g.keyGrid = true;
+            g.keyText = dexQuery;
+            g.keyPrompt = "A Pok\xC3\xA9" "mon's name or number";
+            int i = 0;
+            for (int r = 0; r < (int)DexKeyRows().size(); r++)
+            {
+                const int m = (int)strlen(DexKeyRows()[r]);
+                for (int c = 0; c < m && i < n; c++, i++)
+                {
+                    Item it;
+                    it.label = pause.items[i].label;
+                    it.kind = KEY;
+                    it.keyRow = r; it.keyCol = 10 - m + c * 2; it.keySpan = 2;
+                    put(it, i);
+                }
+            }
+            const int cols[3][2] = { { 0, 8 }, { 8, 6 }, { 14, 6 } };
+            for (int k = 0; k < 3 && i < n; k++, i++)
+            {
+                Item it;
+                it.label = pause.items[i].label;
+                it.kind = KEY;
+                it.keyRow = 4; it.keyCol = cols[k][0]; it.keySpan = cols[k][1];
+                put(it, i);
+            }
+        }
         else if (pausePage == P_DEX || pausePage == P_DEXENTRY)
         {
             // (A settings page: the rows, and the chosen Pokemon's card beside them, as the DS
@@ -5216,7 +5274,7 @@ struct App
             HubPageInput(in);
             return;
         }
-        if (pausePage == P_DEX || pausePage == P_DEXENTRY)
+        if (pausePage == P_DEX || pausePage == P_DEXENTRY || pausePage == P_DEXKEYS)
         {
             DexInput(in);
             return;
@@ -6146,7 +6204,9 @@ struct App
                 case SDL_SCANCODE_RETURN:
                 case SDL_SCANCODE_KP_ENTER:
                 case SDL_SCANCODE_X:
-                    if (!e.key.repeat && !(sc == SDL_SCANCODE_X && TypingNow())) in.accept = true;
+                    if (e.key.repeat || (sc == SDL_SCANCODE_X && TypingNow())) break;
+                    if (dexTyping && sc != SDL_SCANCODE_X) in.submit = true; // (the keyboard's Enter: SEARCH)
+                    else in.accept = true;
                     break;
                 case SDL_SCANCODE_Z:
                     if (!e.key.repeat && !TypingNow()) in.back = true;
@@ -6186,12 +6246,11 @@ struct App
             }
             case SDL_TEXTINPUT:
 #ifdef GBAW_EMBEDDED
-                if (dexTyping && pausePage == P_DEX)
+                if (dexTyping && pausePage == P_DEXKEYS)
                 {
-                    dexQuery += e.text.text;
-                    if (dexQuery.size() > 24) dexQuery.resize(24);
+                    // (Capitals, as the keyboard's keys type.)
+                    for (const char* t = e.text.text; *t; t++) if (dexQuery.size() < 24) dexQuery += (char)std::toupper((unsigned char)*t);
                     BuildPause();
-                    pause.selected = 0;
                     break;
                 }
 #endif

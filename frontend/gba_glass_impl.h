@@ -42,6 +42,10 @@ void Sync(const Page& p)
     m.dialogIcon = p.style == DIALOG ? p.icon : -1;
     m.tallRows = p.style == PAGE && p.tall;
     m.slotGrid = p.style == PAGE && p.slotGrid;
+    m.keyGrid = p.style == PAGE && p.keyGrid;
+    m.keyText = p.keyText;
+    m.keyPrompt = p.keyPrompt;
+    m.keySecret = false;
     m.headerNote = p.headerNote;
     m.touchRows = p.touchRows;
     m.items.resize(p.items.size());
@@ -56,7 +60,8 @@ void Sync(const Page& p)
         b.tip = a.tip;
         b.previewName = a.cardName;
         b.kind = a.kind == TOGGLE ? Menu::K_TOGGLE : a.kind == PICKER ? Menu::K_PICKER : a.kind == LINK ? Menu::K_LINK
-               : a.kind == SECTION ? Menu::K_SECTION : a.kind == BACK ? Menu::K_BACK : a.kind == SLOT ? Menu::K_SLOT : Menu::K_PLAIN;
+               : a.kind == SECTION ? Menu::K_SECTION : a.kind == BACK ? Menu::K_BACK : a.kind == SLOT ? Menu::K_SLOT : a.kind == KEY ? Menu::K_KEY : Menu::K_PLAIN;
+        b.keyRow = a.keyRow; b.keyCol = a.keyCol; b.keySpan = a.keySpan;
         b.thumb = a.thumb;
         b.thumbW = a.thumbW;
         b.thumbH = a.thumbH;
@@ -288,7 +293,7 @@ const uint32_t* Draw(const Page& page, int w, int h, bool& changed)
     }
     std::string key = std::to_string(w) + "x" + std::to_string(h) + "|" + std::to_string(page.style) + "|" + std::to_string(page.icon) + "|" +
         std::to_string(page.tall) + "|" + page.title + "|" + page.hint + "|" + page.note + "|" + page.headerNote + "|" +
-        std::to_string(s.menu.selected) + "|" + std::to_string(s.menu.scrollPx) + "|" + std::to_string(UiLang::lang) + "|" + std::to_string(page.touchRows);
+        std::to_string(s.menu.selected) + "|" + std::to_string(s.menu.scrollPx) + "|" + std::to_string(UiLang::lang) + "|" + std::to_string(page.touchRows) + "|k" + page.keyText;
     for (const Item& it : page.items)
         key += "|" + it.label + "=" + it.value + "," + std::to_string(it.kind) + "," + std::to_string(it.choice) + "," + std::to_string(it.slider) + "," +
                std::to_string(it.disabled) + "," + it.sub + "," + it.desc + "," + std::to_string(it.thumb.size()) + "," +

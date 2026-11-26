@@ -7675,9 +7675,13 @@ inline void DrawGlass(Canvas& c, const std::vector<Game>& games, const View& v, 
 
     if (Focus().page < 0)
     {
+    // (No games at all, and no search: the page is one card saying where they go, not "Your Games, 0 Games"
+    // over an empty grid.)
+    bool anyGame = !SearchText().empty();
+    for (const Game& g : games) anyGame |= !g.comingSoon;
     // "Your Games" and how many.
-    if (!PanelOn() && !TilesOn() && !PhoneLook()) GT(c, sp.tabsX, sp.headY + 14 * u, SearchText().empty() ? std::string("Your Games") : "Results For \"" + SearchText() + "\"", 24 * u, text, true);
-    if (!PanelOn() && !TilesOn() && !PhoneLook())
+    if (anyGame && !PanelOn() && !TilesOn() && !PhoneLook()) GT(c, sp.tabsX, sp.headY + 14 * u, SearchText().empty() ? std::string("Your Games") : "Results For \"" + SearchText() + "\"", 24 * u, text, true);
+    if (anyGame && !PanelOn() && !TilesOn() && !PhoneLook())
     {
         const std::string n = std::to_string(v.spots.size()) + (v.spots.size() == 1 ? " Game" : " Games");
         GT(c, sp.bannerX + sp.bannerW - GW(n, 16 * u, true), sp.headY + 14 * u, n, 16 * u, hint, true);
@@ -7691,6 +7695,49 @@ inline void DrawGlass(Canvas& c, const std::vector<Game>& games, const View& v, 
             // (No games at all: where they go, whichever tab is open.)
             bool any = false;
             for (const Game& g : games) any |= !g.comingSoon;
+            if (!any && SearchText().empty())
+            {
+                // (The card: the ROMs page's icon, Add Your Games, where to put them, and Add ROMs, in the
+                // middle of the space the games would fill.)
+                const int ax = TilesHome() ? grid.gx : sp.tabsX, aw = grid.cols * grid.colStep;
+                const int top = std::min(sp.bannerY, sp.headY), bottom = grid.bottom;
+                const int cw = std::min(aw, (int)(600 * u)), pad = (int)(28 * u), is = (int)(72 * u);
+                std::vector<std::string> lines;
+                {
+                    std::string line, word;
+                    const int avail = cw - 2 * pad;
+                    const std::string msg = AddRomsWhere();
+                    auto flush = [&]() {
+                        if (word.empty()) return;
+                        const std::string t = line.empty() ? word : line + " " + word;
+                        if (!line.empty() && GW(t, 16 * u, false) > avail) { lines.push_back(line); line = word; } else line = t;
+                        word.clear();
+                    };
+                    for (char ch : msg) { if (ch == ' ') flush(); else word += ch; }
+                    flush();
+                    if (!line.empty()) lines.push_back(line);
+                }
+                const int bh = (int)(48 * u), lineH = (int)(24 * u);
+                const int ch = pad + is + (int)(22 * u) + (int)(30 * u) + (int)(14 * u) + (int)lines.size() * lineH + (int)(22 * u) + bh + pad;
+                const int cx = ax + (aw - cw) / 2, cy = top + std::max(0, (bottom - top - ch) / 2);
+                Menu::FrostBox(c, solid, cx, cy, cw, ch, 22 * u);
+                int y = cy + pad;
+                Glass::Round(c, cx + (cw - is) / 2, y, is, is, is * 0.5f, 0x1AFFFFFFu, 0x30FFFFFFu, std::max(1.0f, u));
+                Glass::DrawIcon(c, Glass::I_CHIP, cx + cw * 0.5f, y + is * 0.5f, 15 * u, text);
+                y += is + (int)(22 * u);
+                const std::string head = "Add Your Games";
+                GT(c, cx + (cw - GW(head, 24 * u, true)) / 2, y + 12 * u, head, 24 * u, text, true);
+                y += (int)(30 * u) + (int)(14 * u);
+                for (const std::string& l : lines) { GT(c, cx + (cw - GW(l, 16 * u, false)) / 2, y + 8 * u, l, 16 * u, hint, false); y += lineH; }
+                y += (int)(22 * u);
+                const std::string b = LauncherText::Tr("Add ROMs");
+                const int bw = std::max((int)(200 * u), (int)(GW(b, 17 * u, true) + 56 * u)), bx = cx + (cw - bw) / 2;
+                Glass::Round(c, bx, y, bw, bh, bh * 0.5f, 0xFFFFFFFFu);
+                GT(c, bx + (bw - GW(b, 17 * u, true)) / 2, y + bh * 0.5f, b, 17 * u, 0xFF101722u, true);
+                AddRomsRect()[0] = bx; AddRomsRect()[1] = y; AddRomsRect()[2] = bw; AddRomsRect()[3] = bh;
+                AddRomsShown(1);
+                continue;
+            }
             const std::string none = !SearchText().empty() ? "No Games Match \"" + SearchText() + "\""
                                    : !any ? std::string("No Games Yet: Add Your ROMs On The ROMs Page")
                                    : tab >= TABS ? std::string("Add Games To This Tab From A Game's Menu (A On A Game)")
