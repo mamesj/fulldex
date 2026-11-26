@@ -1819,7 +1819,7 @@ int PickGame(Folders& fo, std::vector<Launcher::Game>& games, int selected, bool
                 else note = std::string(Launcher::SideName(F.side)) + ": COMING SOON";
                 return;
             }
-            if (F.banner == 2)
+            if (F.banner == 2 && F.popup < 0)
             {
                 // (Game Options: the selected game's menu, keeping the Game Options focus. The
                 // pointer, the grid selection, and the keyboard/gamepad all land here.)
