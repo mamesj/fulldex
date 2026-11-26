@@ -32,6 +32,7 @@
 #endif
 #include "achievements.h"
 #include "exclusives.h"
+#include "hm_anywhere.h"
 #include "game_music.h"
 #include "now_playing.h"
 #include "save_backups.h"
@@ -1777,6 +1778,7 @@ struct Settings : OptionalFeatures
     // OTHER VERSION POKEMON (exclusives.h): SoulSilver and HeartGold's wild Pokemon of both
     // versions. Off to start.
     bool bothVersions = false;
+    bool hmAnywhere = false; // HMS WITHOUT TEACHING (hm_anywhere.h)
 
     void Load(const std::string& path)
     {
@@ -1865,6 +1867,7 @@ struct Settings : OptionalFeatures
             else if (k == "ds3d_gpu") ds3dGpu = v != "0";
             else if (k == "ra") ra.on = v == "1";
             else if (k == "both_versions") bothVersions = v == "1";
+            else if (k == "hm_anywhere") hmAnywhere = v == "1";
             else if (k == "ra_user") ra.user = v;
             else if (k == "ra_token") ra.token = v;
             else if (k == "battle_buttons") battleButtons = v == "corner" ? 0 : v == "panel" ? 2 : v == "classic" ? 3 : v == "sunmoon" ? 4 : 1;
@@ -1950,6 +1953,7 @@ struct Settings : OptionalFeatures
         f << "nav_style=" << (navStyle == 1 ? "classic" : navStyle == 2 ? "simple" : navStyle == 3 ? "wheel" : navStyle == 4 ? "off" : "modern") << "\n";
         controls.Save(f);
         f << "both_versions=" << (bothVersions ? 1 : 0) << "\n";
+        f << "hm_anywhere=" << (hmAnywhere ? 1 : 0) << "\n";
         f << "ra=" << (ra.on ? 1 : 0) << "\n";
         if (!ra.user.empty()) f << "ra_user=" << ra.user << "\n";
         if (!ra.token.empty()) f << "ra_token=" << ra.token << "\n";
@@ -2380,6 +2384,9 @@ int main(int argc, char** argv)
     static GameMusic gameMusic;
     gameMusic.Attach(*nds);
     static VersionExclusives exclusives;
+    // HMS WITHOUT TEACHING (hm_anywhere.h): the gen 4 games' party move check. Not for a ROM hack (its code may differ).
+    static HmAnywhere hmAnywhere;
+    hmAnywhere.Init(opt.romHack ? std::string() : gameCode);
     if (soulSilverRom && !opt.lockstep && !opt.romHack && rc_num_chunks) exclusives.Init(opt.rom, gameCode, *nds);
     // (Attached once the layouts' functions are known, below.)
     if (!opt.traceFuncsAt.empty() && !funcWatchOn)
@@ -2553,6 +2560,8 @@ int main(int argc, char** argv)
         fprintf(stderr, "[auto-state] %s\n", autoStateNote.c_str());
     }
     exclusives.on = cfg.bothVersions && exclusives.Supported();
+    hmAnywhere.on = cfg.hmAnywhere;
+    if (hmAnywhere.on && hmAnywhere.Supported()) Achievements::SetCheats(true); // (as a cheat: achievements not followed)
 #ifdef __SWITCH__
     // (No CPU BOOST any more: the system kept taking its boost mode away and the game dropped
     // frames. sys-clk sets the clocks; see README. A boost a saved setting asks for is ignored.)
@@ -6375,7 +6384,7 @@ int main(int argc, char** argv)
         M_WIDELINES, M_AUTODETAIL, M_WIDEGPU, M_GPU3D, M_SHOWFPS, M_BUTTONS, M_PADTOUCH, M_EMULATION,
         M_CONTROLS, M_TOUCHLAYOUT, M_STARTBTN, M_FAST, M_FFLOWRES, M_SAVESTATE, M_LOADSTATE, M_RESET, M_QUIT, M_DIAGNOSTICS,
         M_DISPLAY, M_LANGUAGE, M_SOUND, M_GRAPHICS, M_CONTROLMENU, M_BACK, M_CHEATS, M_NOTHING,
-        M_VOLUME, M_MUSIC, M_EFFECTS, M_MUSICQUIET, M_SONGNAMES, M_FFMUTE, M_ASPECT, M_RA, M_RA_ON, M_RA_ACCOUNT, M_RA_GAME, M_RA_LOGIN, M_RA_TYPED, M_RA_CANCEL, M_RA_BANNER, M_BOTHVER,
+        M_VOLUME, M_MUSIC, M_EFFECTS, M_MUSICQUIET, M_SONGNAMES, M_FFMUTE, M_ASPECT, M_RA, M_RA_ON, M_RA_ACCOUNT, M_RA_GAME, M_RA_LOGIN, M_RA_TYPED, M_RA_CANCEL, M_RA_BANNER, M_BOTHVER, M_HMANYWHERE,
         M_RA_LIST, M_ACH_POINTS, M_ACH_STATUS, M_ACH_RARITY,
         M_CSEARCH, M_SEARCH_LETTER, M_SEARCH_DELETE, M_SEARCH_SPACE, M_SEARCH_CLEAR, M_SEARCH_DONE,
         M_CDETAIL_TOGGLE, M_CINFO, M_BACKUPS, M_RESTORE_CONFIRM, M_LOAD_CONFIRM,
@@ -8322,6 +8331,10 @@ int main(int argc, char** argv)
                        "Wild Pokémon of both versions appear, so ones only found in the other version can be caught here.",
                        "Turn it off to play this version as it came.");
             }
+            if (hmAnywhere.Supported())
+                toggle(M_HMANYWHERE, "HMS WITHOUT TEACHING", Glass::I_POKEBALL, Menu::P_NONE, hmAnywhere.on,
+                       "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.",
+                       "You still need the badge the game asks for.");
             if (cheatWhere == -4)
             {
                 section(UiLang::F("RESULTS: {0}", { Cheats::Fit(cheatQuery, 24) }).c_str(), Glass::I_GLOBE);
@@ -9665,6 +9678,7 @@ int main(int argc, char** argv)
             if (freeFlight.ownGame) pk_nds_call_frame(nds.get(), freeFlight.game); // (Diamond / Pearl: Free Flight's landing job)
             Achievements::DoFrame(); // (on this thread: it reads the game's memory)
             exclusives.DoFrame();
+            hmAnywhere.DoFrame(*nds);
             const int avail = nds->SPU.GetOutputSize();
             if (avail > 0)
             {
@@ -11768,6 +11782,11 @@ int main(int argc, char** argv)
                 hit=-1;break;
             case M_LOAD_CONFIRM:
                 loadFromSlot=-1;loadQuickNow();menu.open=false;swallowMenuButtons=true;hit=-1;break;
+            case M_HMANYWHERE:
+                hmAnywhere.on = cfg.hmAnywhere = !hmAnywhere.on;
+                cfg.Save(opt.config);
+                Achievements::SetCheats(cheats.On() > 0 || exclusives.on || hmAnywhere.on);
+                break;
             case M_BOTHVER:
                 // (Achievements are not followed while it is on, as with a cheat: the other
                 // version's Pokemon are for the other version's players.)

@@ -1431,7 +1431,10 @@
       "SEARCH POKEDEX": "BUSCAR EN LA POKÉDEX",
       "A Pokémon's name or number": "Nombre o número de un Pokémon",
       "Find a Pokémon by its name or its number.": "Busca un Pokémon por su nombre o su número.",
-      "OBTAINED ": "OBTENIDO: "
+      "OBTAINED ": "OBTENIDO: ",
+      "HMS WITHOUT TEACHING": "MO SIN ENSEÑAR",
+      "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "Corte, Surf, Fuerza, Golpe Roca y los demás movimientos de campo funcionan sin un Pokémon que los sepa. El primer Pokémon de tu equipo usa el movimiento.",
+      "You still need the badge the game asks for.": "Sigues necesitando la medalla que pide el juego."
     },
     "it": {
       " (NEXT START)": " (AL RIAVVIO)",
@@ -2854,7 +2857,10 @@
       "SEARCH POKEDEX": "CERCA NEL POKÉDEX",
       "A Pokémon's name or number": "Nome o numero di un Pokémon",
       "Find a Pokémon by its name or its number.": "Trova un Pokémon dal nome o dal numero.",
-      "OBTAINED ": "OTTENUTO: "
+      "OBTAINED ": "OTTENUTO: ",
+      "HMS WITHOUT TEACHING": "MN SENZA INSEGNARE",
+      "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "Taglio, Surf, Forza, Spaccaroccia e le altre mosse da campo funzionano senza un Pokémon che le conosca. Le usa il primo Pokémon della squadra.",
+      "You still need the badge the game asks for.": "Serve comunque la medaglia che chiede il gioco."
     },
     "fr": {
       " (NEXT START)": " (PROCHAIN DÉBUT)",
@@ -4277,7 +4283,10 @@
       "SEARCH POKEDEX": "CHERCHER DANS LE POKÉDEX",
       "A Pokémon's name or number": "Nom ou numéro d'un Pokémon",
       "Find a Pokémon by its name or its number.": "Trouvez un Pokémon par son nom ou son numéro.",
-      "OBTAINED ": "OBTENU : "
+      "OBTAINED ": "OBTENU : ",
+      "HMS WITHOUT TEACHING": "CS SANS LES APPRENDRE",
+      "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "Coupe, Surf, Force, Éclate-Roc et les autres capacités de terrain marchent sans Pokémon qui les connaisse. Le premier Pokémon de l'équipe utilise la capacité.",
+      "You still need the badge the game asks for.": "Il faut toujours le badge que demande le jeu."
     },
     "de": {
       " (NEXT START)": " (NÄCHSTER START)",
@@ -5700,7 +5709,10 @@
       "SEARCH POKEDEX": "POKÉDEX DURCHSUCHEN",
       "A Pokémon's name or number": "Name oder Nummer eines Pokémon",
       "Find a Pokémon by its name or its number.": "Finde ein Pokémon über seinen Namen oder seine Nummer.",
-      "OBTAINED ": "ERHALTEN: "
+      "OBTAINED ": "ERHALTEN: ",
+      "HMS WITHOUT TEACHING": "VM OHNE ERLERNEN",
+      "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "Zerschneider, Surfer, Stärke, Zertrümmerer und die anderen Feldattacken gehen ohne ein Pokémon, das sie kann. Das erste Pokémon im Team setzt die Attacke ein.",
+      "You still need the badge the game asks for.": "Den Orden, den das Spiel verlangt, brauchst du weiterhin."
     },
     "ja": {
       " (NEXT START)": " (次のスタート)",
@@ -7123,7 +7135,10 @@
       "SEARCH POKEDEX": "ずかんをさがす",
       "A Pokémon's name or number": "ポケモンの名前か番号",
       "Find a Pokémon by its name or its number.": "名前か番号でポケモンをさがします。",
-      "OBTAINED ": "入手: "
+      "OBTAINED ": "入手: ",
+      "HMS WITHOUT TEACHING": "ひでんわざを覚えずに使う",
+      "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "いあいぎり、なみのり、かいりき、いわくだきなどのフィールドわざを、覚えているポケモンがいなくても使えます。手持ちの先頭のポケモンが使います。",
+      "You still need the badge the game asks for.": "ゲームが求めるジムバッジは引き続き必要です。"
     },
     "ko": {
       " (NEXT START)": " (다음 시작)",
@@ -8546,7 +8561,10 @@
       "SEARCH POKEDEX": "도감 검색",
       "A Pokémon's name or number": "포켓몬 이름이나 번호",
       "Find a Pokémon by its name or its number.": "이름이나 번호로 포켓몬을 찾아요.",
-      "OBTAINED ": "획득: "
+      "OBTAINED ": "획득: ",
+      "HMS WITHOUT TEACHING": "비전머신 없이 사용",
+      "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "풀베기, 파도타기, 괴력, 바위깨기 등 필드 기술을 배운 포켓몬이 없어도 쓸 수 있습니다. 파티의 첫 번째 포켓몬이 기술을 사용합니다.",
+      "You still need the badge the game asks for.": "게임이 요구하는 배지는 여전히 필요합니다."
     },
     "pt": {
       " (NEXT START)": " (PRÓXIMA INICIALIZAÇÃO)",
@@ -9969,7 +9987,10 @@
       "SEARCH POKEDEX": "BUSCAR NA POKÉDEX",
       "A Pokémon's name or number": "Nome ou número de um Pokémon",
       "Find a Pokémon by its name or its number.": "Encontre um Pokémon pelo nome ou pelo número.",
-      "OBTAINED ": "OBTIDO: "
+      "OBTAINED ": "OBTIDO: ",
+      "HMS WITHOUT TEACHING": "MO SEM ENSINAR",
+      "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "Corte, Surfar, Força, Esmagar Rocha e os outros golpes de campo funcionam sem um Pokémon que os saiba. O primeiro Pokémon da equipe usa o golpe.",
+      "You still need the badge the game asks for.": "Você ainda precisa da insígnia que o jogo pede."
     }
   }
 }
