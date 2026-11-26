@@ -13661,14 +13661,15 @@ int main(int argc, char** argv)
                 }
             }
             // (BLOWING INTO THE MICROPHONE: while a game listens, as the Underground's fire trap does, L and R held
-            // together blow into it. The first time it listens, a note says so.)
+            // together blow into it. Each time it listens, a note says so.)
             {
-                static bool told = false;
                 static int openFor = 0;
                 const bool lr = (keys & (1u << KEY_L)) && (keys & (1u << KEY_R));
                 FulldexMic::blow = FulldexMic::open && lr;
                 openFor = FulldexMic::open ? openFor + 1 : 0;
-                if (openFor == 90 && !told) { told = true; say("HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE"); }
+                // (Every time a game starts listening, once it has listened a moment: not for the quick checks some
+                // games make as they start. Shown again every few seconds until it stops listening.)
+                if (openFor >= 90 && (openFor - 90) % 600 == 0 && !lr) say("HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE");
             }
             nds->SetKeyMask(~keys & 0xFFF);
             if (touching) nds->TouchScreen((u16)touchX, (u16)touchY);
