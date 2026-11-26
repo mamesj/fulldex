@@ -11393,6 +11393,19 @@ int main(int argc, char** argv)
             const Uint8* ks = SDL_GetKeyboardState(nullptr);
             if (ks) { heldNow.up |= ks[SDL_SCANCODE_UP] != 0; heldNow.down |= ks[SDL_SCANCODE_DOWN] != 0; }
         }
+        {
+            // (A direction let go for under 45 ms is still held: some pads (an 8BitDo Lite 2 on an
+            // iPad, #202) drop the D-pad for a moment while it is held, and the menu moved twice.)
+            static Uint32 seenAt[4] = {};
+            const Uint32 nowTicks = SDL_GetTicks();
+            bool* now4[4] = { &heldNow.up, &heldNow.down, &heldNow.left, &heldNow.right };
+            const bool was4[4] = { heldNav.up, heldNav.down, heldNav.left, heldNav.right };
+            for (int i = 0; i < 4; i++)
+            {
+                if (*now4[i]) seenAt[i] = nowTicks;
+                else if (was4[i] && nowTicks - seenAt[i] < 45) *now4[i] = true;
+            }
+        }
         if (menu.open)
         {
             nav.up |= heldNow.up && !heldNav.up;

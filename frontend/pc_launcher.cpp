@@ -3475,6 +3475,14 @@ int PickGame(Folders& fo, std::vector<Launcher::Game>& games, int selected, bool
             else if ((h & SDL_HAT_UP) || ay < -16000) dir = 3;
             else if ((h & SDL_HAT_DOWN) || ay > 16000) dir = 4;
         }
+        // (A direction let go for under 45 ms is still held: some pads (an 8BitDo Lite 2 on an iPad,
+        // #202) drop the D-pad for a moment while it is held, and the list moved twice for one press.)
+        {
+            static Uint32 dirSeenAt = 0;
+            const Uint32 nowTicks = SDL_GetTicks();
+            if (dir) dirSeenAt = nowTicks;
+            else if (heldDir && nowTicks - dirSeenAt < 45) dir = heldDir;
+        }
         held = dir && dir == heldDir ? held + 1 : dir ? 1 : 0;
         heldDir = dir;
         if ((held == 1 || (held > 8 && held % 3 == 0)) && !hadModalMenu && !modalMenuOpen() &&
