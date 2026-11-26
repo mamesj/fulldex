@@ -6181,10 +6181,29 @@ int main(int argc, char** argv)
             else if (m.species >= 498 && m.species <= 500) starter = 2;
             else if (m.species >= 501 && m.species <= 503) starter = 3;
         }
+        // (After the Elite Four's first teams, their rematch once you are Champion, from the game's own trainers: #220.)
+        auto rematchLine = [&](std::initializer_list<const char*> names) -> std::string {
+            int high = 0; std::string parts;
+            for (const char* name : names)
+            {
+                const auto team = companionMetadata.KeyTeamRematch(name);
+                if (team.empty()) continue;
+                int lo = 0, hi = 0;
+                for (const auto& m : team) if (m.level > 0) { lo = lo ? std::min(lo, (int)m.level) : m.level; hi = std::max(hi, (int)m.level); }
+                if (!hi) continue;
+                high = std::max(high, hi);
+                std::string n = name; for (char& c : n) if (c == '_') c = ' ';
+                parts += (parts.empty() ? "" : ", ") + n + " Lv " + std::to_string(lo) + (hi != lo ? "-" + std::to_string(hi) : "");
+            }
+            if (parts.empty()) return "";
+            return "\n" + GuideText::Fmt(GuideText::Tr("Rematch once you are Champion (highest Lv {0}): {1}."), { std::to_string(high), parts });
+        };
         if (gameCode == "IRBO")
         {
             const Companion::BlackBossInfo b = Companion::BlackNextBoss(companionSnapshot.badges, best, starter);
-            GuideBoss g; g.title = b.title; g.hint = b.hint; g.answer = b.answer; g.any = b.any; return g;
+            GuideBoss g; g.title = b.title; g.hint = b.hint; g.answer = b.answer; g.any = b.any;
+            if (g.any && companionSnapshot.badges >= 8) g.answer += rematchLine({ "SHAUNTAL", "GRIMSLEY", "MARSHAL", "CAITLIN" });
+            return g;
         }
         const bool hg = gameCode == "IPKE" || gameCode == "IPGE";
         if (!hg && gameCode != "CPUE") return {};
@@ -6248,7 +6267,7 @@ int main(int argc, char** argv)
             {
                 static const char* const e4[] = {"WILL","KOGA","BRUNO","KAREN","LANCE"};
                 GuideBoss g = e4Card(e4, 5);
-                if (g.any) g.answer += "\n" + GuideText::Tr("After LANCE: the KANTO GYMS (BROCK first).");
+                if (g.any) g.answer += "\n" + GuideText::Tr("After LANCE: the KANTO GYMS (BROCK first).") + rematchLine({ "WILL", "KOGA", "BRUNO", "KAREN", "LANCE" });
                 return g;
             }
             if (badges < 16) return makeBoss(kanto[badges - 8], kwhere[badges - 8]);
@@ -6258,7 +6277,9 @@ int main(int argc, char** argv)
         static const char* const swhere[] = {"OREBURGH CITY GYM","ETERNA CITY GYM","HEARTHOME CITY GYM","VEILSTONE CITY GYM","PASTORIA CITY GYM","CANALAVE CITY GYM","SNOWPOINT CITY GYM","SUNYSHORE CITY GYM"};
         if (badges < 8) return makeBoss(sinnoh[badges], swhere[badges]);
         static const char* const ptE4[] = {"AARON","BERTHA","FLINT","LUCIAN","CYNTHIA"};
-        return e4Card(ptE4, 5);
+        GuideBoss g = e4Card(ptE4, 5);
+        if (g.any) g.answer += rematchLine({ "AARON", "BERTHA", "FLINT", "LUCIAN", "CYNTHIA" });
+        return g;
     };
     levelCap = [&]() -> int {
         static const int test = getenv("SSR_TEST_LEVELCAP") ? atoi(getenv("SSR_TEST_LEVELCAP")) : 0;

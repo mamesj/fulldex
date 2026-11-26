@@ -800,6 +800,36 @@ struct Metadata
         }
         return {};
     }
+    // (The same trainer's later team, a rematch (the Elite Four once you are Champion): of the key trainers of
+    // that name, the team with the highest level, if it is above the first one's; none otherwise.)
+    std::vector<TrainerMon> KeyTeamRematch(const std::string& who)const
+    {
+        auto words=[](const std::string& t)
+        {
+            std::vector<std::string> out;std::string w;
+            for(char ch:t+" ")
+            {
+                if(ch==' '||ch=='_'){if(!w.empty())out.push_back(w);w.clear();}
+                else if(std::isalnum((unsigned char)ch))w+=(char)std::toupper((unsigned char)ch);
+            }
+            return out;
+        };
+        const auto want=words(who);
+        if(want.empty())return {};
+        auto top=[](const std::vector<TrainerMon>& t){int h=0;for(const auto& m:t)h=std::max(h,m.level);return h;};
+        std::vector<TrainerMon> first,best;
+        for(int id:keyTrainers)
+        {
+            const auto have=words(Name(trainerNames,id,"TRAINER"));
+            if(!(have.size()>want.size()&&std::equal(want.begin(),want.end(),have.end()-(std::ptrdiff_t)want.size())))continue;
+            auto team=TrainerTeam(id);
+            if(team.empty())continue;
+            if(first.empty())first=team;
+            if(top(team)>top(best))best=team;
+        }
+        if(first.empty()||top(best)<=top(first))return {};
+        return best;
+    }
     static bool ReferenceMatches(std::string name,const std::string& query)
     {
         for(char& c:name)c=(char)std::toupper((unsigned char)c);

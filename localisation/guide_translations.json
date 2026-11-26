@@ -455,7 +455,8 @@
       "the one whose type beats your starter": "el que tiene ventaja contra tu inicial",
       "The leader is the one whose type beats your first POKeMON: CHILI (FIRE) against SNIVY, CRESS (WATER) against TEPIG, CILAN (GRASS) against OSHAWOTT. ": "El líder es el que tiene ventaja de tipo contra tu primer POKeMON: CHILI (FIRE) contra SNIVY, CRESS (WATER) contra TEPIG, CILAN (GRASS) contra OSHAWOTT. ",
       "Reward: TRIO BADGE and TM83 WORK UP.": "Premio: TRIO BADGE y TM83 WORK UP.",
-      "Any order. SHAUNTAL (GHOST), ace {0}; GRIMSLEY (DARK), ace {1}; MARSHAL (FIGHTING), ace {2}; CAITLIN (PSYCHIC), ace {3}. Their full teams are in GYMS.": "En cualquier orden. SHAUNTAL (GHOST), as {0}; GRIMSLEY (DARK), as {1}; MARSHAL (FIGHTING), as {2}; CAITLIN (PSYCHIC), as {3}. Sus equipos completos están en GIMNASIOS."
+      "Any order. SHAUNTAL (GHOST), ace {0}; GRIMSLEY (DARK), ace {1}; MARSHAL (FIGHTING), ace {2}; CAITLIN (PSYCHIC), ace {3}. Their full teams are in GYMS.": "En cualquier orden. SHAUNTAL (GHOST), as {0}; GRIMSLEY (DARK), as {1}; MARSHAL (FIGHTING), as {2}; CAITLIN (PSYCHIC), as {3}. Sus equipos completos están en GIMNASIOS.",
+      "Rematch once you are Champion (highest Lv {0}): {1}.": "Revancha cuando seas Campeón (nivel más alto {0}): {1}."
     },
     "it": {
       "Where do I start?": "Da dove comincio?",
@@ -902,7 +903,8 @@
       "the one whose type beats your starter": "quello col tipo forte contro il tuo starter",
       "The leader is the one whose type beats your first POKeMON: CHILI (FIRE) against SNIVY, CRESS (WATER) against TEPIG, CILAN (GRASS) against OSHAWOTT. ": "Il capopalestra è quello col tipo forte contro il tuo primo POKeMON: CHILI (FIRE) contro SNIVY, CRESS (WATER) contro TEPIG, CILAN (GRASS) contro OSHAWOTT. ",
       "Reward: TRIO BADGE and TM83 WORK UP.": "Premio: TRIO BADGE e TM83 WORK UP.",
-      "Any order. SHAUNTAL (GHOST), ace {0}; GRIMSLEY (DARK), ace {1}; MARSHAL (FIGHTING), ace {2}; CAITLIN (PSYCHIC), ace {3}. Their full teams are in GYMS.": "In qualsiasi ordine. SHAUNTAL (GHOST), asso {0}; GRIMSLEY (DARK), asso {1}; MARSHAL (FIGHTING), asso {2}; CAITLIN (PSYCHIC), asso {3}. Le squadre complete sono in PALESTRE."
+      "Any order. SHAUNTAL (GHOST), ace {0}; GRIMSLEY (DARK), ace {1}; MARSHAL (FIGHTING), ace {2}; CAITLIN (PSYCHIC), ace {3}. Their full teams are in GYMS.": "In qualsiasi ordine. SHAUNTAL (GHOST), asso {0}; GRIMSLEY (DARK), asso {1}; MARSHAL (FIGHTING), asso {2}; CAITLIN (PSYCHIC), asso {3}. Le squadre complete sono in PALESTRE.",
+      "Rematch once you are Champion (highest Lv {0}): {1}.": "Rivincita quando sei Campione (livello più alto {0}): {1}."
     },
     "fr": {
       "Where do I start?": "Par où commencer ?",
@@ -1349,7 +1351,8 @@
       "the one whose type beats your starter": "celui dont le type bat ton starter",
       "The leader is the one whose type beats your first POKeMON: CHILI (FIRE) against SNIVY, CRESS (WATER) against TEPIG, CILAN (GRASS) against OSHAWOTT. ": "Le champion est celui dont le type bat ton premier POKeMON : CHILI (FIRE) contre SNIVY, CRESS (WATER) contre TEPIG, CILAN (GRASS) contre OSHAWOTT. ",
       "Reward: TRIO BADGE and TM83 WORK UP.": "Récompense : TRIO BADGE et TM83 WORK UP.",
-      "Any order. SHAUNTAL (GHOST), ace {0}; GRIMSLEY (DARK), ace {1}; MARSHAL (FIGHTING), ace {2}; CAITLIN (PSYCHIC), ace {3}. Their full teams are in GYMS.": "Dans n'importe quel ordre. SHAUNTAL (GHOST), atout {0} ; GRIMSLEY (DARK), atout {1} ; MARSHAL (FIGHTING), atout {2} ; CAITLIN (PSYCHIC), atout {3}. Leurs équipes complètes sont dans ARÈNES."
+      "Any order. SHAUNTAL (GHOST), ace {0}; GRIMSLEY (DARK), ace {1}; MARSHAL (FIGHTING), ace {2}; CAITLIN (PSYCHIC), ace {3}. Their full teams are in GYMS.": "Dans n'importe quel ordre. SHAUNTAL (GHOST), atout {0} ; GRIMSLEY (DARK), atout {1} ; MARSHAL (FIGHTING), atout {2} ; CAITLIN (PSYCHIC), atout {3}. Leurs équipes complètes sont dans ARÈNES.",
+      "Rematch once you are Champion (highest Lv {0}): {1}.": "Revanche une fois Maître (niveau max {0}) : {1}."
     },
     "de": {
       "Where do I start?": "Wo fange ich an?",
@@ -1796,7 +1799,8 @@
       "the one whose type beats your starter": "der, dessen Typ deinen Starter schlägt",
       "The leader is the one whose type beats your first POKeMON: CHILI (FIRE) against SNIVY, CRESS (WATER) against TEPIG, CILAN (GRASS) against OSHAWOTT. ": "Der Leiter ist der, dessen Typ dein erstes POKeMON schlägt: CHILI (FIRE) gegen SNIVY, CRESS (WATER) gegen TEPIG, CILAN (GRASS) gegen OSHAWOTT. ",
       "Reward: TRIO BADGE and TM83 WORK UP.": "Belohnung: TRIO BADGE und TM83 WORK UP.",
-      "Any order. SHAUNTAL (GHOST), ace {0}; GRIMSLEY (DARK), ace {1}; MARSHAL (FIGHTING), ace {2}; CAITLIN (PSYCHIC), ace {3}. Their full teams are in GYMS.": "Beliebige Reihenfolge. SHAUNTAL (GHOST), Ass {0}; GRIMSLEY (DARK), Ass {1}; MARSHAL (FIGHTING), Ass {2}; CAITLIN (PSYCHIC), Ass {3}. Ihre ganzen Teams stehen unter ARENEN."
+      "Any order. SHAUNTAL (GHOST), ace {0}; GRIMSLEY (DARK), ace {1}; MARSHAL (FIGHTING), ace {2}; CAITLIN (PSYCHIC), ace {3}. Their full teams are in GYMS.": "Beliebige Reihenfolge. SHAUNTAL (GHOST), Ass {0}; GRIMSLEY (DARK), Ass {1}; MARSHAL (FIGHTING), Ass {2}; CAITLIN (PSYCHIC), Ass {3}. Ihre ganzen Teams stehen unter ARENEN.",
+      "Rematch once you are Champion (highest Lv {0}): {1}.": "Revanche, sobald du Champ bist (höchstes Lv. {0}): {1}."
     },
     "ja": {
       "Where do I start?": "どこから始める？",
@@ -2243,7 +2247,8 @@
       "the one whose type beats your starter": "最初のポケモンに有利なタイプのリーダー",
       "The leader is the one whose type beats your first POKeMON: CHILI (FIRE) against SNIVY, CRESS (WATER) against TEPIG, CILAN (GRASS) against OSHAWOTT. ": "リーダーは最初のPOKeMONに有利なタイプの人：SNIVYにはCHILI（FIRE）、TEPIGにはCRESS（WATER）、OSHAWOTTにはCILAN（GRASS）。",
       "Reward: TRIO BADGE and TM83 WORK UP.": "報酬：TRIO BADGEとTM83 WORK UP。",
-      "Any order. SHAUNTAL (GHOST), ace {0}; GRIMSLEY (DARK), ace {1}; MARSHAL (FIGHTING), ace {2}; CAITLIN (PSYCHIC), ace {3}. Their full teams are in GYMS.": "順番は自由。SHAUNTAL（GHOST）切り札{0}、GRIMSLEY（DARK）切り札{1}、MARSHAL（FIGHTING）切り札{2}、CAITLIN（PSYCHIC）切り札{3}。全員の手持ちはジムにある。"
+      "Any order. SHAUNTAL (GHOST), ace {0}; GRIMSLEY (DARK), ace {1}; MARSHAL (FIGHTING), ace {2}; CAITLIN (PSYCHIC), ace {3}. Their full teams are in GYMS.": "順番は自由。SHAUNTAL（GHOST）切り札{0}、GRIMSLEY（DARK）切り札{1}、MARSHAL（FIGHTING）切り札{2}、CAITLIN（PSYCHIC）切り札{3}。全員の手持ちはジムにある。",
+      "Rematch once you are Champion (highest Lv {0}): {1}.": "チャンピオンになった後の再戦（最高Lv.{0}）：{1}。"
     },
     "ko": {
       "Where do I start?": "어디서부터 시작하나요?",
@@ -2690,7 +2695,8 @@
       "the one whose type beats your starter": "스타팅 포켓몬에 유리한 타입의 관장",
       "The leader is the one whose type beats your first POKeMON: CHILI (FIRE) against SNIVY, CRESS (WATER) against TEPIG, CILAN (GRASS) against OSHAWOTT. ": "관장은 첫 POKeMON에 유리한 타입을 가진 사람입니다: SNIVY에는 CHILI(FIRE), TEPIG에는 CRESS(WATER), OSHAWOTT에는 CILAN(GRASS). ",
       "Reward: TRIO BADGE and TM83 WORK UP.": "보상: TRIO BADGE와 TM83 WORK UP.",
-      "Any order. SHAUNTAL (GHOST), ace {0}; GRIMSLEY (DARK), ace {1}; MARSHAL (FIGHTING), ace {2}; CAITLIN (PSYCHIC), ace {3}. Their full teams are in GYMS.": "순서는 자유. SHAUNTAL(GHOST) 에이스 {0}, GRIMSLEY(DARK) 에이스 {1}, MARSHAL(FIGHTING) 에이스 {2}, CAITLIN(PSYCHIC) 에이스 {3}. 전체 팀은 체육관에 있습니다."
+      "Any order. SHAUNTAL (GHOST), ace {0}; GRIMSLEY (DARK), ace {1}; MARSHAL (FIGHTING), ace {2}; CAITLIN (PSYCHIC), ace {3}. Their full teams are in GYMS.": "순서는 자유. SHAUNTAL(GHOST) 에이스 {0}, GRIMSLEY(DARK) 에이스 {1}, MARSHAL(FIGHTING) 에이스 {2}, CAITLIN(PSYCHIC) 에이스 {3}. 전체 팀은 체육관에 있습니다.",
+      "Rematch once you are Champion (highest Lv {0}): {1}.": "챔피언이 된 뒤의 재대결 (최고 Lv.{0}): {1}."
     },
     "pt": {
       "Where do I start?": "Por onde eu começo?",
@@ -3137,7 +3143,8 @@
       "the one whose type beats your starter": "aquele cujo tipo vence seu inicial",
       "The leader is the one whose type beats your first POKeMON: CHILI (FIRE) against SNIVY, CRESS (WATER) against TEPIG, CILAN (GRASS) against OSHAWOTT. ": "O líder é aquele cujo tipo vence seu primeiro POKeMON: CHILI (FIRE) contra SNIVY, CRESS (WATER) contra TEPIG, CILAN (GRASS) contra OSHAWOTT. ",
       "Reward: TRIO BADGE and TM83 WORK UP.": "Recompensa: TRIO BADGE e TM83 WORK UP.",
-      "Any order. SHAUNTAL (GHOST), ace {0}; GRIMSLEY (DARK), ace {1}; MARSHAL (FIGHTING), ace {2}; CAITLIN (PSYCHIC), ace {3}. Their full teams are in GYMS.": "Em qualquer ordem. SHAUNTAL (GHOST), carta na manga {0}; GRIMSLEY (DARK), carta na manga {1}; MARSHAL (FIGHTING), carta na manga {2}; CAITLIN (PSYCHIC), carta na manga {3}. As equipes completas deles estão em GYMS."
+      "Any order. SHAUNTAL (GHOST), ace {0}; GRIMSLEY (DARK), ace {1}; MARSHAL (FIGHTING), ace {2}; CAITLIN (PSYCHIC), ace {3}. Their full teams are in GYMS.": "Em qualquer ordem. SHAUNTAL (GHOST), carta na manga {0}; GRIMSLEY (DARK), carta na manga {1}; MARSHAL (FIGHTING), carta na manga {2}; CAITLIN (PSYCHIC), carta na manga {3}. As equipes completas deles estão em GYMS.",
+      "Rematch once you are Champion (highest Lv {0}): {1}.": "Revanche depois de virar Campeão (nível mais alto {0}): {1}."
     }
   }
 }
