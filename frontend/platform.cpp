@@ -1,4 +1,5 @@
 // Host implementation of melonDS's Platform interface for the ssrecomp frontend.
+#include <atomic>
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
@@ -18,6 +19,7 @@
 #endif
 
 namespace Host { std::string FirmwarePath; }
+namespace FulldexMic { std::atomic<bool> open{ false }, blow{ false }; }
 
 namespace melonDS::Platform
 {
@@ -274,9 +276,21 @@ void Camera_Start(int, void*) {}
 void Camera_Stop(int, void*) {}
 void Camera_CaptureFrame(int, u32*, int, int, bool, void*) {}
 
-void Mic_Start(void*) {}
-void Mic_Stop(void*) {}
-int Mic_ReadInput(s16*, int, void*) { return 0; }
+// The microphone: none is read. While FulldexMic::blow is set (L and R held while a game listens, main.cpp)
+// it hears a loud rush of noise, as when you blow into a DS's microphone: the Underground's fire trap,
+// and the other places that ask you to blow.
+void Mic_Start(void*) { FulldexMic::open = true; }
+void Mic_Stop(void*) { FulldexMic::open = false; }
+int Mic_ReadInput(s16* data, int maxlength, void*)
+{
+    static uint32_t r = 0x1234567u;
+    for (int i = 0; i < maxlength; i++)
+    {
+        r = r * 1103515245u + 12345u;
+        data[i] = FulldexMic::blow ? (s16)(r >> 16) : 0;
+    }
+    return maxlength;
+}
 
 AACDecoder* AAC_Init() { return nullptr; }
 void AAC_DeInit(AACDecoder*) {}

@@ -13660,6 +13660,16 @@ int main(int argc, char** argv)
                     freeFlight.bWas = b;
                 }
             }
+            // (BLOWING INTO THE MICROPHONE: while a game listens, as the Underground's fire trap does, L and R held
+            // together blow into it. The first time it listens, a note says so.)
+            {
+                static bool told = false;
+                static int openFor = 0;
+                const bool lr = (keys & (1u << KEY_L)) && (keys & (1u << KEY_R));
+                FulldexMic::blow = FulldexMic::open && lr;
+                openFor = FulldexMic::open ? openFor + 1 : 0;
+                if (openFor == 90 && !told) { told = true; say("HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE"); }
+            }
             nds->SetKeyMask(~keys & 0xFFF);
             if (touching) nds->TouchScreen((u16)touchX, (u16)touchY);
             else nds->ReleaseScreen();

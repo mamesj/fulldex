@@ -14,3 +14,7 @@ void SaveDirty(const uint8_t* data, uint32_t len);
 // The DS firmware's file (firmware.bin beside the saves), or empty: not kept (tests). See MakeConsole.
 extern std::string FirmwarePath;
 }
+
+// The microphone (platform.cpp): open while the game listens; blow, a loud noise heard while set.
+#include <atomic>
+namespace FulldexMic { extern std::atomic<bool> open, blow; }
