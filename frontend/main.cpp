@@ -12410,15 +12410,12 @@ int main(int argc, char** argv)
                 if (!fits(oneRefresh, pipelined ? 0.95 : 1.0)) oneRefresh = 0;
                 for (int n = cfg.fastSpeed; n > oneRefresh && n >= 2; n--)
                     if (fits(n, 1.1)) { oneRefresh = n; break; }
-#if defined(SSR_PHONE) || defined(__SWITCH__)
-                if (oneRefresh * 2 >= speed) speed = oneRefresh;
-#else
-                // (A PC: a picture every refresh wherever two frames or more fit in one, whatever
-                // the speed set; a whole number of refreshes apart only where not even two fit.
-                // Fewer pictures of more frames each, 8x on a Steam Deck, which cannot run eight
-                // frames a refresh, was far choppier than 4x.)
+                // (A picture every refresh wherever two frames or more fit in one, whatever the speed
+                // set; a whole number of refreshes apart only where not even two fit. Fewer pictures
+                // of more frames each, 8x on a Steam Deck, which cannot run eight frames a refresh,
+                // was far choppier than 4x. Phones and the Switch too: they kept the older rule, a
+                // picture every refresh only within half the speed set, and stuttered the same way.)
                 if (oneRefresh >= 2) speed = oneRefresh;
-#endif
                 // Otherwise the pictures are shown a whole number of refreshes apart, as many as
                 // their frames take. Shown as each was ready, pictures 25 ms apart reached a
                 // 60 Hz screen 17 and 33 ms apart by turns, which is the judder in the
