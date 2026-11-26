@@ -1424,7 +1424,14 @@
       "Attach diagnostics.txt, beside game.log, to your report.": "Adjunta diagnostics.txt, junto a game.log, a tu informe.",
       "The folder could not be written. Copy the details another way.": "No se pudo escribir en la carpeta. Copia los detalles de otra forma.",
       "CANNOT READ THE SAVE IN THE SYNC FOLDER": "NO SE PUEDE LEER LA PARTIDA DE LA CARPETA DE SINCRONIZACIÓN",
-      "CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION": "LAS PARTIDAS EN LA NUBE SIGUEN OCUPADAS: ESTE JUEGO NO SE SINCRONIZARÁ EN ESTA SESIÓN"
+      "CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION": "LAS PARTIDAS EN LA NUBE SIGUEN OCUPADAS: ESTE JUEGO NO SE SINCRONIZARÁ EN ESTA SESIÓN",
+      "TOUCH SCREEN": "PANTALLA TÁCTIL",
+      "Type a Pokémon's name or number.": "Escribe el nombre o el número de un Pokémon.",
+      "B clears the search.": "B borra la búsqueda.",
+      "SEARCH POKEDEX": "BUSCAR EN LA POKÉDEX",
+      "A Pokémon's name or number": "Nombre o número de un Pokémon",
+      "Find a Pokémon by its name or its number.": "Busca un Pokémon por su nombre o su número.",
+      "OBTAINED ": "OBTENIDO: "
     },
     "it": {
       " (NEXT START)": " (AL RIAVVIO)",
@@ -2840,7 +2847,14 @@
       "Attach diagnostics.txt, beside game.log, to your report.": "Allega diagnostics.txt, accanto a game.log, alla tua segnalazione.",
       "The folder could not be written. Copy the details another way.": "Impossibile scrivere nella cartella. Copia i dettagli in un altro modo.",
       "CANNOT READ THE SAVE IN THE SYNC FOLDER": "IMPOSSIBILE LEGGERE IL SALVATAGGIO NELLA CARTELLA DI SINCRONIZZAZIONE",
-      "CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION": "I SALVATAGGI CLOUD SONO ANCORA OCCUPATI: QUESTO GIOCO NON SI SINCRONIZZERÀ IN QUESTA SESSIONE"
+      "CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION": "I SALVATAGGI CLOUD SONO ANCORA OCCUPATI: QUESTO GIOCO NON SI SINCRONIZZERÀ IN QUESTA SESSIONE",
+      "TOUCH SCREEN": "SCHERMO TATTILE",
+      "Type a Pokémon's name or number.": "Scrivi il nome o il numero di un Pokémon.",
+      "B clears the search.": "B cancella la ricerca.",
+      "SEARCH POKEDEX": "CERCA NEL POKÉDEX",
+      "A Pokémon's name or number": "Nome o numero di un Pokémon",
+      "Find a Pokémon by its name or its number.": "Trova un Pokémon dal nome o dal numero.",
+      "OBTAINED ": "OTTENUTO: "
     },
     "fr": {
       " (NEXT START)": " (PROCHAIN DÉBUT)",
@@ -4256,7 +4270,14 @@
       "Attach diagnostics.txt, beside game.log, to your report.": "Joignez diagnostics.txt, à côté de game.log, à votre rapport.",
       "The folder could not be written. Copy the details another way.": "Impossible d'écrire dans le dossier. Copiez les détails autrement.",
       "CANNOT READ THE SAVE IN THE SYNC FOLDER": "IMPOSSIBLE DE LIRE LA SAUVEGARDE DANS LE DOSSIER DE SYNCHRONISATION",
-      "CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION": "LES SAUVEGARDES CLOUD SONT ENCORE OCCUPÉES : CE JEU NE SERA PAS SYNCHRONISÉ PENDANT CETTE SESSION"
+      "CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION": "LES SAUVEGARDES CLOUD SONT ENCORE OCCUPÉES : CE JEU NE SERA PAS SYNCHRONISÉ PENDANT CETTE SESSION",
+      "TOUCH SCREEN": "ÉCRAN TACTILE",
+      "Type a Pokémon's name or number.": "Tapez le nom ou le numéro d'un Pokémon.",
+      "B clears the search.": "B efface la recherche.",
+      "SEARCH POKEDEX": "CHERCHER DANS LE POKÉDEX",
+      "A Pokémon's name or number": "Nom ou numéro d'un Pokémon",
+      "Find a Pokémon by its name or its number.": "Trouvez un Pokémon par son nom ou son numéro.",
+      "OBTAINED ": "OBTENU : "
     },
     "de": {
       " (NEXT START)": " (NÄCHSTER START)",
@@ -5672,7 +5693,14 @@
       "Attach diagnostics.txt, beside game.log, to your report.": "Hänge diagnostics.txt, neben game.log, an deinen Bericht an.",
       "The folder could not be written. Copy the details another way.": "Der Ordner konnte nicht beschrieben werden. Kopiere die Details anders.",
       "CANNOT READ THE SAVE IN THE SYNC FOLDER": "DER SPIELSTAND IM SYNCHRONISIERUNGSORDNER KANN NICHT GELESEN WERDEN",
-      "CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION": "CLOUD-SPIELSTÄNDE SIND NOCH BESCHÄFTIGT: DIESES SPIEL WIRD IN DIESER SITZUNG NICHT SYNCHRONISIERT"
+      "CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION": "CLOUD-SPIELSTÄNDE SIND NOCH BESCHÄFTIGT: DIESES SPIEL WIRD IN DIESER SITZUNG NICHT SYNCHRONISIERT",
+      "TOUCH SCREEN": "TOUCHSCREEN",
+      "Type a Pokémon's name or number.": "Gib den Namen oder die Nummer eines Pokémon ein.",
+      "B clears the search.": "B löscht die Suche.",
+      "SEARCH POKEDEX": "POKÉDEX DURCHSUCHEN",
+      "A Pokémon's name or number": "Name oder Nummer eines Pokémon",
+      "Find a Pokémon by its name or its number.": "Finde ein Pokémon über seinen Namen oder seine Nummer.",
+      "OBTAINED ": "ERHALTEN: "
     },
     "ja": {
       " (NEXT START)": " (次のスタート)",
@@ -7088,7 +7116,14 @@
       "Attach diagnostics.txt, beside game.log, to your report.": "game.log の隣にある diagnostics.txt を報告に添付してください。",
       "The folder could not be written. Copy the details another way.": "フォルダに書き込めませんでした。別の方法で詳細をコピーしてください。",
       "CANNOT READ THE SAVE IN THE SYNC FOLDER": "同期フォルダのセーブを読み込めません",
-      "CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION": "クラウドセーブはまだ処理中です: このゲームは今回同期されません"
+      "CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION": "クラウドセーブはまだ処理中です: このゲームは今回同期されません",
+      "TOUCH SCREEN": "タッチスクリーン",
+      "Type a Pokémon's name or number.": "ポケモンの なまえか ばんごうを いれてください。",
+      "B clears the search.": "Bで けんさくを けします。",
+      "SEARCH POKEDEX": "ずかんをさがす",
+      "A Pokémon's name or number": "ポケモンの名前か番号",
+      "Find a Pokémon by its name or its number.": "名前か番号でポケモンをさがします。",
+      "OBTAINED ": "入手: "
     },
     "ko": {
       " (NEXT START)": " (다음 시작)",
@@ -8504,7 +8539,14 @@
       "Attach diagnostics.txt, beside game.log, to your report.": "game.log 옆의 diagnostics.txt를 신고에 첨부하세요.",
       "The folder could not be written. Copy the details another way.": "폴더에 쓸 수 없습니다. 다른 방법으로 세부 정보를 복사하세요.",
       "CANNOT READ THE SAVE IN THE SYNC FOLDER": "동기화 폴더의 세이브를 읽을 수 없습니다",
-      "CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION": "클라우드 세이브가 아직 처리 중입니다: 이번에는 이 게임이 동기화되지 않습니다"
+      "CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION": "클라우드 세이브가 아직 처리 중입니다: 이번에는 이 게임이 동기화되지 않습니다",
+      "TOUCH SCREEN": "터치스크린",
+      "Type a Pokémon's name or number.": "포켓몬의 이름이나 번호를 입력하세요.",
+      "B clears the search.": "B로 검색을 지웁니다.",
+      "SEARCH POKEDEX": "도감 검색",
+      "A Pokémon's name or number": "포켓몬 이름이나 번호",
+      "Find a Pokémon by its name or its number.": "이름이나 번호로 포켓몬을 찾아요.",
+      "OBTAINED ": "획득: "
     },
     "pt": {
       " (NEXT START)": " (PRÓXIMA INICIALIZAÇÃO)",
@@ -9920,7 +9962,14 @@
       "WARN OVER THE CAP": "AVISAR ACIMA DO LIMITE",
       "When a Repel wears off and the Bag has another, FullDex Nav opens on its Repel app: A uses one, B closes it.": "Quando um Repelente acaba e a Bolsa tem outro, o FullDex Nav abre no app Repelente: A usa um, B fecha.",
       "{0} IS OVER THE LEVEL CAP: Lv {1} OF {2}": "{0} PASSOU DO LIMITE DE NÍVEL: NV. {1} DE {2}",
-      "{0} of {1} caught here": "{0} de {1} capturados aqui"
+      "{0} of {1} caught here": "{0} de {1} capturados aqui",
+      "TOUCH SCREEN": "TELA DE TOQUE",
+      "Type a Pokémon's name or number.": "Digite o nome ou o número de um Pokémon.",
+      "B clears the search.": "B limpa a pesquisa.",
+      "SEARCH POKEDEX": "BUSCAR NA POKÉDEX",
+      "A Pokémon's name or number": "Nome ou número de um Pokémon",
+      "Find a Pokémon by its name or its number.": "Encontre um Pokémon pelo nome ou pelo número.",
+      "OBTAINED ": "OBTIDO: "
     }
   }
 }

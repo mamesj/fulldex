@@ -22,6 +22,7 @@ static uint64_t clockNow, lastDriverReturn;
 static bool driverBlocks;
 static uint64_t SDL_GetPerformanceCounter() { return ++clockNow; }
 static uint32_t SDL_GetTicks() { return clockNow / 1000; }
+static int SDL_GL_SetSwapInterval(int) { return 0; }
 static void SleepPrecise(double seconds) { clockNow += (uint64_t)(seconds * 1000000); }
 static double perfNow() { return clockNow / 1000.0; }
 static void SDL_RenderPresent(void*) {
@@ -36,7 +37,7 @@ struct DrawJob { bool wantShot = false; };
 static void Run(bool blocks, bool sync, bool swapAccepted) {
     clockNow = 1; lastDriverReturn = 0; driverBlocks = blocks;
     bool syncToDisplay = sync, swapPaced = swapAccepted, pipelined = false, perfOn = false;
-    int swapQuick = 0;
+    int swapQuick = 0, swapSlow = 0;
     uint64_t perfFreq = 1000000, nextTick = 0, lastShownAt = 0, lastPresentRet = 0, lastRefresh = 0;
     int shownGaps = 0, shownGapsLong = 0, presented = 0, shownFps = 0, refreshSamples = 0;
     uint32_t fpsSince = 0;
