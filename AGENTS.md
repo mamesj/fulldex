@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Instructions for AI agents and contributors working on **Pokémon Fulldex**
-(`mamesj/pokemon-fulldex`). Read this before building or changing anything. The fuller
+(`mamesj/fulldex`). Read this before building or changing anything. The fuller
 human guide is [`docs/DEVELOPING.md`](docs/DEVELOPING.md); the player-facing guide is
 [`README.md`](README.md).
 

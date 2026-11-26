@@ -356,7 +356,7 @@ Apple):
 `tools/updater/write_checksums.py` writes `SHA256SUMS.txt` next to the PC assets, with a
 `# fulldex-build <asset> <epoch>` line for each binary so an unchanged asset keeps its build
 ID. The AppImage's update information points at the PC release's `.zsync`
-(`gh-releases-zsync|mamesj|pokemon-fulldex|pc-v1|…`), which is how Gear Lever and
+(`gh-releases-zsync|mamesj|fulldex|pc-v1|…`), which is how Gear Lever and
 AppImageUpdate find new versions. Include the licences the build needs: `LICENSE-mGBA.txt`
 when GBA is built in, `LICENSE-SDL2.txt` for the shipped SDL2, and the font licences.
 

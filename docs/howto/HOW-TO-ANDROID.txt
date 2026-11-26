@@ -27,4 +27,4 @@ Saves:
 Speed: the 3D world starts at 720P (Graphics > 3D Resolution). If a busy place
 slows down, turn on Lower Detail When Busy, or turn 60 FPS off.
 
-Help, bugs and updates: https://github.com/mamesj/pokemon-fulldex
+Help, bugs and updates: https://github.com/mamesj/fulldex

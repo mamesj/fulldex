@@ -518,7 +518,7 @@ DESKTOP
     rm -f "build-pc-dist/$APPIMAGE" "build-pc-dist/$APPIMAGE.zsync"
     (cd build-pc-dist && ARCH="$arch" APPIMAGE_EXTRACT_AND_RUN=1 "$AIT" --no-appstream \
         "${runtime_args[@]}" \
-        -u "gh-releases-zsync|mamesj|pokemon-fulldex|pc-v1|$APPIMAGE.zsync" "$ad_name" "$APPIMAGE")
+        -u "gh-releases-zsync|mamesj|fulldex|pc-v1|$APPIMAGE.zsync" "$ad_name" "$APPIMAGE")
     [ -f "build-pc-dist/$APPIMAGE.zsync" ] || fail "no .zsync was made for the AppImage"
     # (Its contents: the program, SDL2, the tables and notes, the icon and the desktop file.)
     (cd "$AD" && find . -mindepth 1 \( -type d -printf '%P/\n' \) -o -printf '%P\n' |

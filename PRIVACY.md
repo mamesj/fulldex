@@ -10,7 +10,7 @@ This Privacy Policy explains how FullDex handles information when users access i
 
 FullDex is developed and maintained as an independent, community-driven project.
 
-Official repository: https://github.com/mamesj/pokemon-fulldex
+Official repository: https://github.com/mamesj/fulldex
 
 2. Local Game Data
 
@@ -169,9 +169,9 @@ Updates will be published in the official GitHub repository with a revised date.
 
 For privacy-related questions, concerns or requests, contact the FullDex project maintainer through:
 
-GitHub Issues: https://github.com/mamesj/pokemon-fulldex/issues
+GitHub Issues: https://github.com/mamesj/fulldex/issues
 
-Project repository: https://github.com/mamesj/pokemon-fulldex
+Project repository: https://github.com/mamesj/fulldex
 
 ---
 

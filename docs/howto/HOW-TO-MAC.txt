@@ -20,4 +20,4 @@ menu, Left Shift to fast forward). Ctrl+Cmd+F switches fullscreen.
 Saves are in the saves folder next to roms. A game's menu > Manage Saves shows
 its save, backups and save states, and can export or import a save.
 
-Help, bugs and updates: https://github.com/mamesj/pokemon-fulldex
+Help, bugs and updates: https://github.com/mamesj/fulldex

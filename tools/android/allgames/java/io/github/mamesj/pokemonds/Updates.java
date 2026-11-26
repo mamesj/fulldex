@@ -1,5 +1,5 @@
 // CHECK FOR UPDATES in the Android app (GameActivity.checkUpdates, from the game list's settings):
-// the newest release with pokemon-ds-wide-android.apk on github.com/mamesj/pokemon-fulldex. When
+// the newest release with pokemon-ds-wide-android.apk on github.com/mamesj/fulldex. When
 // the release has a SHA256SUMS.txt, the APK is downloaded, checked against it, the installed APK
 // kept in Android/data/io.github.mamesj.pokemonds/files/update/previous.apk, and handed to
 // Android's installer (which asks the player, and only installs an APK signed with the same key).
@@ -36,9 +36,9 @@ final class Updates {
     private static final String TAG = "PokemonDS";
     private static final String TITLE = "Pokémon Fulldex updates";
     private static final String ASSET = "pokemon-ds-wide-android.apk";
-    private static final String RELEASES = "https://api.github.com/repos/mamesj/pokemon-fulldex/releases?per_page=30";
-    private static final String DOWNLOADS = "https://github.com/mamesj/pokemon-fulldex/releases/download/";
-    private static final String PAGE = "https://github.com/mamesj/pokemon-fulldex/releases";
+    private static final String RELEASES = "https://api.github.com/repos/mamesj/fulldex/releases?per_page=30";
+    private static final String DOWNLOADS = "https://github.com/mamesj/fulldex/releases/download/";
+    private static final String PAGE = "https://github.com/mamesj/fulldex/releases";
     private static final String INSTALLED = "io.github.mamesj.pokemonds.UPDATE_INSTALLED";
     private static boolean receiverRegistered;
 

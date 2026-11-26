@@ -1,7 +1,7 @@
 # Changelog
 
 
-## FullDex 1.7.1 (not released yet)
+## FullDex 1.8 (not released yet)
 
 - **Repel Prompt** (DS and GBA games; Settings > Display, on to start). When a Repel wears off and the Bag has another, FullDex Nav opens on its Repel app: A uses the strongest one, B closes it. In the GBA games the watch waits until you close the game's "REPEL's effect wore off..." text. Black 2 and White 2 already ask by themselves, so nothing changes there.
 - **European Platinum: Fly and Open PC** from FullDex Nav and the Companion (the European cart, CPUE rev 10, uses the US cart's code at the same places). European HeartGold and SoulSilver already had them.
@@ -655,7 +655,7 @@
 - French revision 0 ROMs of Black, White, Black 2, White 2, SoulSilver, HeartGold
   and Platinum, with separate French saves and regional widescreen map profiles.
 - Platinum: controller answers work with the French introduction's OUI/NON buttons.
-- **A new address: github.com/mamesj/pokemon-fulldex** (the old pokemon-ds-widescreen address
+- **A new address: github.com/mamesj/fulldex** (the old pokemon-ds-widescreen address
   still leads there). The bug report link, the PC download's `README.txt` and the Linux
   AppImage's updates use it.
 - **The README:** a new trailer (the new name, the GBA games, RetroAchievements, cheats and the

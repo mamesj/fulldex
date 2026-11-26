@@ -25,4 +25,4 @@ the Files app. A game's menu > Manage Saves shows its save, backups and save sta
 Speed: iOS lets no app make code as it runs, so an iPhone 13 or newer is the
 most likely to keep up. The 3D world starts at 720P (Graphics > 3D Resolution).
 
-Help, bugs and updates: https://github.com/mamesj/pokemon-fulldex
+Help, bugs and updates: https://github.com/mamesj/fulldex

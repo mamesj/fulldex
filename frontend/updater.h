@@ -1,5 +1,5 @@
 // Updates for the all-games program on a PC, a Mac, an iPhone (pc_launcher.cpp) and the Switch
-// (switch_platform.cpp): the newest release of its own download on github.com/mamesj/pokemon-fulldex,
+// (switch_platform.cpp): the newest release of its own download on github.com/mamesj/fulldex,
 // checked against that release's SHA256SUMS.txt before anything is replaced. Windows, Linux (the
 // unpacked download and the AppImage) and the Switch put the new version in place, keeping the
 // old one; a Mac and an iPhone only say that there is one and open its page. (The Android app

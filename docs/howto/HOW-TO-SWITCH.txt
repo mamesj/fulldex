@@ -29,4 +29,4 @@ Saves:
 Full speed: sys-clk, handheld: CPU 1785 MHz, GPU 460 MHz, memory 1600 MHz.
 Settings worth knowing: 60 FPS ON, WORLD DETAIL 720 (540 for headroom).
 
-Help, bugs and updates: https://github.com/mamesj/pokemon-fulldex
+Help, bugs and updates: https://github.com/mamesj/fulldex

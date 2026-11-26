@@ -797,7 +797,7 @@ OLED in handheld mode; a PC has room to spare, and draws the same picture up to
 
 ## Reporting a bug
 
-Open a **[bug report](https://github.com/mamesj/pokemon-fulldex/issues/new?template=bug_report.yml)**
+Open a **[bug report](https://github.com/mamesj/fulldex/issues/new?template=bug_report.yml)**
 (you need to be signed in to GitHub). The form asks for the game, your ROM's
 version and the **`game.log`** file, which says what the program did:
 

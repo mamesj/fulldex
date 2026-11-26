@@ -3,5 +3,5 @@
 // from 1.6 on are numbered, tagged vMAJOR.MINOR.PATCH). A build sets its own with
 // -DFULLDEX_VERSION="...".
 #ifndef FULLDEX_VERSION
-#define FULLDEX_VERSION "1.7.1"
+#define FULLDEX_VERSION "1.8"
 #endif

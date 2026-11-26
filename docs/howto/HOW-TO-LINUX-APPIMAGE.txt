@@ -23,4 +23,4 @@ Saves are in ~/.local/share/pokemon-ds-wide/saves (black2.sav ...). A game's
 menu > Manage Saves shows its save, backups and save states, and can export or
 import a save.
 
-Help, bugs and updates: https://github.com/mamesj/pokemon-fulldex
+Help, bugs and updates: https://github.com/mamesj/fulldex

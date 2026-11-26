@@ -4680,7 +4680,7 @@ inline int ThemePick(const std::string& pick)
 }
 // (The Fulldex Discord: people to trade with, help, news. The Hub's last row.)
 static const char* const kDiscordUrl = "https://discord.gg/pnGeMYyJR";
-static const char* const kReleasesUrl = "https://github.com/mamesj/pokemon-fulldex/releases";
+static const char* const kReleasesUrl = "https://github.com/mamesj/fulldex/releases";
 #ifdef SSR_POKEMON_HUB
 inline int DexPageRows(); // (dex_page.h)
 #endif
@@ -4978,7 +4978,7 @@ inline const char* AboutLinkAt(int mx, int my)
 }
 inline std::string AboutUrl(int row)
 {
-    return row == 0 ? "https://buymeacoffee.com/mamesj" : row == 2 ? "https://github.com/mamesj/pokemon-fulldex/issues" : row == 4 ? "https://github.com/mamesj/pokemon-fulldex" : row == 3 ? "https://github.com/mamesj/pokemon-fulldex/blob/main/frontend/fonts/FONT-LICENSES.txt" : "";
+    return row == 0 ? "https://buymeacoffee.com/mamesj" : row == 2 ? "https://github.com/mamesj/fulldex/issues" : row == 4 ? "https://github.com/mamesj/fulldex" : row == 3 ? "https://github.com/mamesj/fulldex/blob/main/frontend/fonts/FONT-LICENSES.txt" : "";
 }
 // Not a page: REPORT A BUG's row and card copy the diagnostics (the platform's launcher does it).
 inline const char* const kDiagnosticsUrl = "#diagnostics";
@@ -7201,14 +7201,14 @@ inline void DrawPage(Canvas& c, const GlassSpots& sp, bool solid, float u)
         y += (int)(12 * u);
         const int linkW = GW("Open the GitHub issues page", 15 * u, true) + (int)(44 * u);
         GT(c, px + ip, y + 10 * u, "Open the GitHub issues page", 15 * u, text, true);
-        link(px + ip, y, linkW, (int)(32 * u), "https://github.com/mamesj/pokemon-fulldex/issues");
+        link(px + ip, y, linkW, (int)(32 * u), "https://github.com/mamesj/fulldex/issues");
         TextLow() = std::max(TextLow(), y + (int)(32 * u));
     }
     else if (F.prow == 3)
     {
         heading("Licences");
-        static const char* const licUrl[6] = { "https://github.com/mamesj/pokemon-fulldex", "https://github.com/melonDS-emu/melonDS", "https://github.com/lidor30/pokedaisy",
-            "https://github.com/switchbrew/nx-hbloader", "https://mgba.io", "https://github.com/mamesj/pokemon-fulldex/blob/main/frontend/fonts/FONT-LICENSES.txt" };
+        static const char* const licUrl[6] = { "https://github.com/mamesj/fulldex", "https://github.com/melonDS-emu/melonDS", "https://github.com/lidor30/pokedaisy",
+            "https://github.com/switchbrew/nx-hbloader", "https://mgba.io", "https://github.com/mamesj/fulldex/blob/main/frontend/fonts/FONT-LICENSES.txt" };
         static const char* lic[][2] = {
             { "Fulldex", "GPL-3.0-or-later" }, { "melonDS", "GPL-3.0" }, { "Pok\xC3\xA9" "Daisy readers", "GPL-3.0" },
             { "HOME Menu icon loader (nx-hbloader)", "GPL-3.0" }, { "mGBA", "MPL-2.0" }, { "The launcher's fonts", "SIL Open Font License" } };
@@ -7244,7 +7244,7 @@ inline void DrawPage(Canvas& c, const GlassSpots& sp, bool solid, float u)
                 link(px + ip, y, pw - 2 * ip, rh, licUrl[i]);
                 y += rh + (int)(6 * u); } });
         bl.push_back({ (int)(4 * u) + paraH(p1), [&]() { y += (int)(4 * u); para(p1); } });
-        bl.push_back({ (int)(78 * u), [&]() { card(px + ip, y, pw - 2 * ip, (int)(64 * u), "FONT-LICENSES.txt", open); link(px + ip, y, pw - 2 * ip, (int)(64 * u), "https://github.com/mamesj/pokemon-fulldex/blob/main/frontend/fonts/FONT-LICENSES.txt"); y += (int)(78 * u); } });
+        bl.push_back({ (int)(78 * u), [&]() { card(px + ip, y, pw - 2 * ip, (int)(64 * u), "FONT-LICENSES.txt", open); link(px + ip, y, pw - 2 * ip, (int)(64 * u), "https://github.com/mamesj/fulldex/blob/main/frontend/fonts/FONT-LICENSES.txt"); y += (int)(78 * u); } });
         bl.push_back({ paraH(p2), [&]() { para(p2); } });
         runBlocks(bl, rh + (int)(6 * u));
     }
@@ -7252,8 +7252,8 @@ inline void DrawPage(Canvas& c, const GlassSpots& sp, bool solid, float u)
     {
         heading("Website");
         para("Downloads, the latest changes and the full instructions are on the GitHub page.");
-        card(px + ip, y, pw - 2 * ip, (int)(64 * u), "github.com/mamesj/pokemon-fulldex", open);
-        link(px + ip, y, pw - 2 * ip, (int)(64 * u), "https://github.com/mamesj/pokemon-fulldex");
+        card(px + ip, y, pw - 2 * ip, (int)(64 * u), "github.com/mamesj/fulldex", open);
+        link(px + ip, y, pw - 2 * ip, (int)(64 * u), "https://github.com/mamesj/fulldex");
         y += (int)(84 * u);
         para("Tips are welcome but never expected: see Support, at the top of this page.");
     }
