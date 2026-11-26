@@ -1527,6 +1527,18 @@ static std::string NativeDsProgram(const Launcher::Game& g)
         { "IPKE", "sdmc:/switch/fulldex-native-heartgold/fulldex-native-heartgold.nro", { 0xa5f1e66c24f9bae2ull } },
         // SoulSilver (US code IPGE): the decompiled game on libntr (nat-hg-*.sh)
         { "IPGE", "sdmc:/switch/fulldex-native-soulsilver/fulldex-native-soulsilver.nro", { 0x91f66e58cc459dfaull } },
+        // Black and White: eidos (Project-Holon, MIT) on aletheia's decompiled code, with FullDex's hand-off
+        // (nds-port/bw-plan). One program plays both; each game has its own folder (its extracted data).
+        { "IRBO", "sdmc:/switch/fulldex-native-black/fulldex-native-black.nro", { 0x4277fdeb1e4b5b4bull } },
+        { "IRBF", "sdmc:/switch/fulldex-native-black/fulldex-native-black.nro", { 0x509501cd16117b86ull } },
+        { "IRBD", "sdmc:/switch/fulldex-native-black/fulldex-native-black.nro", { 0xf8098b4760c7b976ull } },
+        { "IRBI", "sdmc:/switch/fulldex-native-black/fulldex-native-black.nro", { 0xc9a83c4d3e56a279ull } },
+        { "IRBS", "sdmc:/switch/fulldex-native-black/fulldex-native-black.nro", { 0x6f692f625560bd6eull } },
+        { "IRAO", "sdmc:/switch/fulldex-native-white/fulldex-native-white.nro", { 0x9c42252467ff2ec7ull } },
+        { "IRAF", "sdmc:/switch/fulldex-native-white/fulldex-native-white.nro", { 0x8f87c41425915015ull } },
+        { "IRAD", "sdmc:/switch/fulldex-native-white/fulldex-native-white.nro", { 0x94f31eef1d995480ull } },
+        { "IRAI", "sdmc:/switch/fulldex-native-white/fulldex-native-white.nro", { 0x181bd9dacf1da8b1ull } },
+        { "IRAS", "sdmc:/switch/fulldex-native-white/fulldex-native-white.nro", { 0x63f4f5f7f9108bf5ull } },
     };
     for (const Native& n : natives)
     {
