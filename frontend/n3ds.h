@@ -642,6 +642,17 @@ inline bool MakeFolder(const std::string& appDir, const Launcher::Game& g)
                     g.folder.c_str(), ProgramDir(appDir).c_str(), ec.value(), ec.message().c_str());
             return false;
         }
+        // (Ultra Sun and Ultra Moon's add-on, tools/pc/usum-addon: the kit's SDL2.dll goes in front of the
+        // program's own, which the kit has as SDL2_real.dll. CopyMissing never replaces a file, so a folder
+        // made before the kit had the add-on still has the program's own SDL2.dll: the add-on goes in front
+        // of it now. A folder whose SDL2.dll is anything else, such as an add-on put in by hand, keeps it.)
+        if (RuntimeKit::SameBytes(from / "SDL2_real.dll", to / "SDL2.dll") && fs::is_regular_file(from / "SDL2.dll", ec)
+            && fs::is_regular_file(to / "SDL2_real.dll", ec))
+        {
+            if (!RuntimeKit::ReplaceWith(from / "SDL2.dll", to / "SDL2.dll", ec))
+                fprintf(stderr, "[3ds] the add-on's SDL2.dll to %s: %s\n", g.folder.c_str(), ec.message().c_str());
+        }
+        ec.clear();
     }
 #ifdef _WIN32
     FILE* f = _wfopen(W(g.folder + "/rom.txt").c_str(), L"wb");
