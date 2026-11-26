@@ -10712,10 +10712,12 @@ int main(int argc, char** argv)
                     }
                     if (ev.type == SDL_FINGERDOWN)
                     {
-                        // A finger on the screen brings the controls back (that finger only
-                        // touches the picture, see Down).
+                        // A finger where a control is brings the controls back (that finger only
+                        // touches the picture, see Down). Not one on the rest of the picture: a
+                        // handheld with its own buttons (Retroid Pocket 6, Discord 10 Nov) plays the
+                        // DS touch screen with a finger, and that brought them back every time.
                         touchPad.Down(ev.tfinger.fingerId, fx, fy);
-                        touchPad.visible = true;
+                        if (!touchPad.visible && touchPad.HitButton(fx, fy) != TouchPad::NONE) touchPad.visible = true;
                     }
                     else if (ev.type == SDL_FINGERMOTION) touchPad.Move(ev.tfinger.fingerId, fx, fy);
                     else touchPad.Up(ev.tfinger.fingerId);
