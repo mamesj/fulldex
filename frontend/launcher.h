@@ -1120,6 +1120,55 @@ inline void AdoptHackSaves(std::vector<Game>& games, const std::function<std::st
     }
 }
 
+// Two ROMs of one game in one folder, neither told apart as a hack (a full-size Renegade Platinum
+// beside Platinum, Discord 15 Nov): both played from the game's one save, each over the other's. The
+// one that is not a clean release plays as a hack, with a save of its own; when none is (two dumps of
+// one's own, or two hacks that kept the game's size), every one but the first by file name. A ROM still
+// being read is left for a later look. wait: read it now (before a game starts).
+inline bool SharesGameSave(const std::vector<Game>& games, size_t index, RomHacks::Cache& cache, bool wait)
+{
+    const Game& g = games[index];
+    if (g.platform != DS || !g.known || g.hack) return false;
+    const std::string key = RomHacks::Cache::Key(g.rom, "ds-v5");
+    std::string mine;
+    if (wait) RomHacks::CheckDs(g.rom, g.code, cache, true);
+    if (!cache.Get(key, mine) || mine == "clean") return false;
+    for (size_t j = 0; j < games.size(); j++)
+    {
+        const Game& o = games[j];
+        if (j == index || o.platform != DS || !o.known || o.hack || o.code != g.code || o.folder != g.folder || o.saveName != g.saveName) continue;
+        if (wait) RomHacks::CheckDs(o.rom, o.code, cache, true);
+        std::string theirs;
+        if (!cache.Get(RomHacks::Cache::Key(o.rom, "ds-v5"), theirs)) continue;
+        if (theirs == "clean" || o.rom < g.rom) return true;
+    }
+    return false;
+}
+// Each such ROM made a hack (its own name and save; the game's save copied to it the first time, as
+// AdoptHackSaves does, so whichever game was played last is not lost). Between BeginScan and EndScan.
+inline void SplitSharedSaves(std::vector<Game>& games, const std::function<std::string(const Game&, const std::string&)>& savePath)
+{
+    if (!ScanCache()) return;
+    std::vector<size_t> split;
+    for (size_t i = 0; i < games.size(); i++)
+        if (SharesGameSave(games, i, *ScanCache(), false)) split.push_back(i);
+    for (size_t i : split)
+    {
+        Game& g = games[i];
+        const KnownGame* k = Known(g.code);
+        if (!k) continue;
+        g.hack = true;
+        g.baseSave = k->save;
+        g.name = HackName(g.rom);
+        g.saveName = HackSave(g.rom);
+        const std::string own = savePath(g, g.saveName), base = savePath(g, g.baseSave);
+        if (!RomHacks::Exists(own) && RomHacks::Exists(base) && RomHacks::CopyFile(base, own))
+            fprintf(stderr, "[launcher] %s: shared %s with another copy of its game; a copy is its own save now (%s)\n", g.rom.c_str(), base.c_str(), own.c_str());
+        g.hasSave = RomHacks::Exists(own);
+        fprintf(stderr, "[launcher] %s: another ROM of %s is in the list; this one plays as a hack\n", g.rom.c_str(), k->name);
+    }
+}
+
 // Before a DS game starts: its ROM checked for certain (waiting while it is read, the first time),
 // so that a hack never plays with its game's save. games[index] is the game; cacheFolder holds
 // rom-check.txt (BeginScan's folder).
@@ -1177,6 +1226,7 @@ inline void ConfirmHack(std::vector<Game>& games, size_t index, const std::strin
                 cache.Put(regionalKey, hack ? "modified" : "clean");
             }
         }
+    if (!hack) hack = SharesGameSave(games, index, cache, true);
     cache.Save(false);
     if (!hack) return;
     g.hack = true;

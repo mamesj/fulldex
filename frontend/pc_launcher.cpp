@@ -599,6 +599,7 @@ std::vector<Launcher::Game> FindGames(const Folders& fo, std::map<std::string, s
         const size_t before = games.size();
         Launcher::AddPatchedHacks(romDirs, HacksFolder(fo), fo.saves, games, false);
         for (size_t i = before; i < games.size(); i++) artFor(games[i]);
+        Launcher::SplitSharedSaves(games, [&fo](const Launcher::Game&, const std::string& name) { return fo.saves + "/" + name; });
         Launcher::AdoptHackSaves(games, [&fo](const Launcher::Game&, const std::string& name) { return fo.saves + "/" + name; });
     }
     Launcher::EndScan();

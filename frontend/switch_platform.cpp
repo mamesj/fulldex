@@ -1405,6 +1405,7 @@ std::vector<Launcher::Game> FindGames(const std::string& dir, bool& ownFolder)
 #endif
 #endif
     savesIn(games);
+    Launcher::SplitSharedSaves(games, SavePathFor);
     Launcher::AdoptHackSaves(games, SavePathFor);
     // Omega Ruby and Alpha Sapphire: the FullDex Builder's folders in /switch (n3ds.h).
     N3ds::AddSwitch(games);
