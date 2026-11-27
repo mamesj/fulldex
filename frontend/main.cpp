@@ -1731,6 +1731,10 @@ struct Settings : OptionalFeatures
     bool ultraNoticeSeen = false;
     // FAST FORWARD SOUND: off plays silence while fast forwarding (GitHub #45).
     bool ffMute = false;
+    // SPEED UP WAITS: fast forward by itself while the game is busy, reading no buttons (busyFrames).
+    bool busyFast = false;
+    // MUSIC THROUGH JINGLES: the game's pause of its music for a jingle is a silence instead (GameMusic::Duck).
+    bool musicThroughJingles = false;
     // ACHIEVEMENT BANNER: CLASSIC is the first unlock card (#213), in the pixel font; else FullDex's own.
     bool raClassicBanner = false;
     // QUIET GAME MUSIC: while the player's own music app plays (now_playing.h), the game's music is off.
@@ -1851,6 +1855,8 @@ struct Settings : OptionalFeatures
             else if (k == "ui_size") uiSize=v;
             else if (k == "screen_filter") screenFilter=std::clamp(atoi(v.c_str()),0,2);
             else if (k == "smart_fast") smartFast = v=="1";
+            else if (k == "busy_fast") busyFast = v=="1";
+            else if (k == "music_through_jingles") musicThroughJingles = v=="1";
             else if (k == "zoom") zoom = v=="1";
             else if (k == "zoom_text") zoomText = v=="1";
             else if (k == "turbo_a") turboA = v=="1";
@@ -1927,6 +1933,8 @@ struct Settings : OptionalFeatures
         if (!gbaLcd.empty()) f << "gba_lcd=" << gbaLcd << "\n";
         SaveExtras(f);
         f << "smart_fast=" << smartFast << "\n";
+        f << "busy_fast=" << busyFast << "\n";
+        f << "music_through_jingles=" << musicThroughJingles << "\n";
         f << "zoom=" << zoom << "\n";
         f << "zoom_text=" << zoomText << "\n";
         f << "turbo_a=" << turboA << "\n";
@@ -2518,6 +2526,7 @@ int main(int argc, char** argv)
     cfg.padTouch = true;
 #endif
     for (const std::string& kv : opt.sets) cfg.Apply(kv);
+    gameMusic.Duck = cfg.musicThroughJingles; // (MUSIC THROUGH JINGLES, after a test run's "set" lines)
     ApplyWfcSetting(cfg); // (NINTENDO WFC: before the first packet, not only from the menu)
     if (!opt.sets.empty() || opt.keepSettings) cfg.readOnly = true;
     if (autoStateAllowed && cfg.autoResume && opt.stateLoad.empty() && AutoState::Present(autoStatePath))
@@ -6402,7 +6411,7 @@ int main(int argc, char** argv)
         M_QUIT_YES, M_RESET_YES, // (QUIT GAME / RESET GAME asked first: PAGE_QUIT_CONFIRM)
         M_SHORTCUTS, // (CONTROLS: Fulldex's own four shortcuts, opening KEYS AND BUTTONS at them)
         M_EXTRAS, M_EXTRA0=92000, M_EXTRA_END=92007, M_PLAYBACK=93000, M_FAST_SPEED, M_SMART_FAST, M_SLOW_MOTION, M_REWIND_MB, M_REWIND, M_TURBO_A, M_SCREEN_FILTER, M_COMPANION_OVERLAY, M_PARTY_HUD, M_STATUS_BAR, M_LIVE_GLASS, M_FAST_BUTTON, M_ZOOM, M_ZOOM_TEXT,
-        M_STATES, M_SLOT_SAVE, M_SLOT_LOAD, M_SLOT_PREVIOUS, M_UNDO_LOAD, M_AUTO_STATE, M_AUTO_RESUME,
+        M_STATES, M_SLOT_SAVE, M_SLOT_LOAD, M_SLOT_PREVIOUS, M_UNDO_LOAD, M_AUTO_STATE, M_AUTO_RESUME, M_BUSY_FAST, M_MUSIC_JINGLES,
         M_KEY0=94000, M_KEY_LAYER=94900, M_KEY_SPACE, M_KEY_DEL, M_KEY_DONE, M_KEY_SYMBOLS, // (the keyboard's keys, Menu::keyGrid: SEARCH, the log in)
         M_FLY0=96000, M_FREEFLIGHT=95990, M_CFORM0=97000, M_CPARTY0=80000, M_CDEX0=81000, M_CITEM0=83000, M_RRESULT0=86000, M_SLOT0=90000, M_GUIDE0=91000, M_CGUIDE_GYM0=91100,
         M_BACKUP0 = 70000,
@@ -7006,6 +7015,9 @@ int main(int argc, char** argv)
                        "While your own music app is playing, turn the game's music off and keep its sound effects.", "Its music comes back when yours stops or pauses.");
             toggle(M_FFMUTE, "FAST FORWARD SOUND", Glass::I_FAST, Menu::P_NONE, !cfg.ffMute,
                    "Keep the sound on while fast forwarding.", "Off keeps fast forward silent.");
+            toggle(M_MUSIC_JINGLES, "MUSIC THROUGH JINGLES", Glass::I_NOTE, Menu::P_NONE, cfg.musicThroughJingles,
+                   "While a jingle plays (a level up, an item), the game's music goes on silently instead of pausing, so it comes straight back.",
+                   "Off: it pauses, as on a DS, and comes back a note at a time.");
         }
         else if (menuPage == PAGE_GRAPHICS)
         {
@@ -7145,6 +7157,9 @@ int main(int argc, char** argv)
             toggle(M_SMART_FAST, "SMART FAST", Glass::I_SPARKLE, Menu::P_NONE, cfg.smartFast,
                    "Fast forward only while walking around and through battle animations, not while text is shown or you choose.",
                    "So text and menus never fly past.");
+            toggle(M_BUSY_FAST, "SPEED UP WAITS", Glass::I_FAST, Menu::P_NONE, cfg.busyFast,
+                   "Fast forward by itself while the game stops to work something out or load, with nothing moving (a ROM hack's double battles).",
+                   "Back to normal speed as soon as the game carries on.");
             picker(M_SLOW_MOTION, "SLOW MOTION", Glass::I_GAUGE, Menu::P_NONE, { "OFF", "1/2", "1/4" }, cfg.slowDivisor == 4 ? 2 : cfg.slowDivisor == 2 ? 1 : 0,
                    "Run the game at half or a quarter of its speed.", "Handy for tricky timing.");
             section("ASSIST", Glass::I_REWIND);
@@ -9602,6 +9617,10 @@ int main(int argc, char** argv)
     });
 #endif
     int emuSpeed = 1, emuGot = 0;
+    // SPEED UP WAITS: how many frames in a row the game has read no buttons (melonDS's lag frames):
+    // busy working something out or loading, with nothing moving. Heartfelt Gold's double battles
+    // read the cartridge for every choice the other side's Pokémon make, about 160 frames each.
+    std::atomic<int> busyFrames{0};
     // Fast forward's music at its own speed (ff_music.h): a copy of the console that only plays
     // the song, a frame of it for each frame shown. Its sound instead of the game's while there
     // is any (emuMusicGot); else the stretches of FastForwardAudio, as before.
@@ -9682,6 +9701,7 @@ int main(int argc, char** argv)
             if (funcWatchOn) funcWatch.NextFrame();
             const double f0 = perfNow();
             nds->RunFrame();
+            busyFrames.store(nds->LagFrameFlag ? busyFrames.load(std::memory_order_relaxed) + 1 : 0, std::memory_order_relaxed);
             if (testMusicOffAt && rc_frame == testMusicOffAt) gameMusic.Music = 0;
             gameMusic.Apply(); // (MUSIC / SOUND EFFECTS: a change heard at once)
             pokeActions.Frame();
@@ -11831,6 +11851,7 @@ int main(int argc, char** argv)
                 cfg.fastSpeed=speeds[(i+(dir<0?3:1))%4];cfg.Save(opt.config);break;
             }
             case M_SMART_FAST:cfg.smartFast=!cfg.smartFast;cfg.Save(opt.config);break;
+            case M_BUSY_FAST:cfg.busyFast=!cfg.busyFast;cfg.Save(opt.config);break;
             case M_ENCSHOWN: cfg.encountersShown = !cfg.encountersShown; cfg.Save(opt.config); break;
             case M_REPELPROMPT: cfg.repelPrompt = !cfg.repelPrompt; cfg.Save(opt.config); break;
             case M_LEVELCAPWARN: cfg.levelCapWarn = !cfg.levelCapWarn; cfg.Save(opt.config); break;
@@ -12241,6 +12262,11 @@ int main(int argc, char** argv)
             case M_FFMUTE:
                 cfg.ffMute = !cfg.ffMute;
                 break;
+            case M_MUSIC_JINGLES:
+                cfg.musicThroughJingles = !cfg.musicThroughJingles;
+                gameMusic.Duck = cfg.musicThroughJingles;
+                cfg.Save(opt.config);
+                break;
             case M_RA_BANNER:
                 cfg.raClassicBanner = !cfg.raClassicBanner;
                 break;
@@ -12425,7 +12451,15 @@ int main(int argc, char** argv)
         // in about 33 ms by the last time's measure (ffFrameMs): where the emulation itself is
         // the limit (the Switch, 10 ms or more a frame) running 4 at once is no faster than 3, it
         // only shows fewer of them.
-        if (!paused && fastRequested && (!cfg.smartFast || ((pokeActions.Flags() & PK_NDS_FIELD_SCREEN) && !(pokeActions.Flags() & (PK_NDS_FIELD_LOCKED|PK_NDS_FIELD_TEXT))) || ((pokeActions.Flags() & PK_NDS_FIELD_BATTLE) && !(pokeActions.Flags() & PK_NDS_FIELD_BATTLE_INPUT)) || (!pokeActions.Supported() && (ffInBattle || lastFieldForSpeed))))
+        // SPEED UP WAITS: fast forward by itself once the game has read no buttons for a third of a
+        // second (busyFrames), back to normal speed with the first frame that reads them again.
+        const bool busyFast = cfg.busyFast && !opt.lockstep && busyFrames.load(std::memory_order_relaxed) >= 20;
+        {
+            static bool wasBusyFast = false;
+            if (busyFast != wasBusyFast) fprintf(stderr, "[ff] frame %u: %s\n", frame, busyFast ? "the game is busy: fast forward (SPEED UP WAITS)" : "the game goes on: normal speed");
+            wasBusyFast = busyFast;
+        }
+        if (!paused && ((fastRequested && (!cfg.smartFast || ((pokeActions.Flags() & PK_NDS_FIELD_SCREEN) && !(pokeActions.Flags() & (PK_NDS_FIELD_LOCKED|PK_NDS_FIELD_TEXT))) || ((pokeActions.Flags() & PK_NDS_FIELD_BATTLE) && !(pokeActions.Flags() & PK_NDS_FIELD_BATTLE_INPUT)) || (!pokeActions.Supported() && (ffInBattle || lastFieldForSpeed)))) || busyFast))
         {
             speed = ffFrameMs > 0 && !opt.headless ? std::clamp((int)(33.3 / ffFrameMs), 2, cfg.fastSpeed) : cfg.fastSpeed; // (tests: always 4)
             // Where two frames or more fit in one refresh of the screen with the picture's own
