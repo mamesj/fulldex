@@ -1,6 +1,8 @@
-# Pokémon Fulldex
+# FullDex
 
 <a href="https://recomplauncher.com/game/pokemon-fulldex"><picture><source media="(prefers-color-scheme: dark)" srcset="https://recomplauncher.com/assets/press/launcher/badge-light.svg"><img alt="Get it on RecompLauncher" src="https://recomplauncher.com/assets/press/launcher/badge-dark.svg" height="48"></picture></a>
+
+**Website: [fulldex.co.uk](https://fulldex.co.uk)**, to see it in motion and find the download for your device.
 
 **All your favourite Pokémon games on a PC (Windows and Linux), a Mac, a Steam
 Deck or other handheld PC, an Android phone, an iPhone or iPad, or a modded Nintendo Switch: one screen,
@@ -8,10 +10,10 @@ widescreen, 60 fps, up to 4K on a PC and 720p on the Switch.** No more squinting
 
 **DS:** Black 2, White 2, Black, White, HeartGold, SoulSilver, Platinum, Diamond and Pearl.<br>
 **GBA:** Emerald, Ruby, Sapphire, FireRed, LeafGreen and Ultra Violet.<br>
-**3DS (beta):** Omega Ruby and Alpha Sapphire on Windows, Android and Switch; X, Y, Ultra Sun and Ultra Moon coming soon.<br>
+**3DS (beta):** Omega Ruby, Alpha Sapphire, X, Y, Ultra Sun and Ultra Moon on Windows, Linux (and the Steam Deck), Android and Switch; Mac being tested, iPhone and iPad later.<br>
 Which languages: [Supported games](#supported-games).
 
-![Pokémon Fulldex: Black 2, White 2, Black, White, SoulSilver, HeartGold, Platinum, Diamond and Pearl, and the GBA games Emerald, Ruby, Sapphire, FireRed, LeafGreen and Ultra Violet, in widescreen at 60 fps on a PC, a Mac, a Steam Deck, an Android phone and a Nintendo Switch; RetroAchievements, cheats, save states and your own colour and background built in](docs/screenshots/trailer-3.gif)
+![FullDex: Black 2, White 2, Black, White, SoulSilver, HeartGold, Platinum, Diamond and Pearl, and the GBA games Emerald, Ruby, Sapphire, FireRed, LeafGreen and Ultra Violet, in widescreen at 60 fps on a PC, a Mac, a Steam Deck, an Android phone and a Nintendo Switch; RetroAchievements, cheats, save states and your own colour and background built in](docs/screenshots/trailer-3.gif)
 
 ## Downloads
 
@@ -57,8 +59,9 @@ DS game, presented the way it should look on a modern screen.
 | **FireRed / LeafGreen** (GBA) | English (1.0, 1.1) | |
 | **Ultra Violet** (GBA, a FireRed hack) | 1.22 | as its `.gba`, or its `.ips` patch beside a FireRed 1.0 ROM |
 | **Generation 3 Evolved** (GBA, a FireRed hack) | 1.0.22 | as its `.gba`, or its `.bps` patch beside a FireRed 1.0 ROM ([details](docs/GEN3-EVOLVED-WIDESCREEN.md)) |
-| **Omega Ruby / Alpha Sapphire** (3DS) | Every language on the cartridge | Beta: Windows, Android and Switch ([how](#omega-ruby-and-alpha-sapphire-3ds-beta)); Mac, iPhone and iPad coming soon |
-| **X / Y, Ultra Sun / Ultra Moon** (3DS) | | Coming soon |
+| **Omega Ruby / Alpha Sapphire** (3DS) | Every language on the cartridge | Beta: Windows, Linux, Android and Switch ([how](#the-3ds-games-beta)); Mac being tested; iPhone and iPad later |
+| **X / Y** (3DS) | Every language on the cartridge | Beta, as above |
+| **Ultra Sun / Ultra Moon** (3DS) | Every language on the cartridge | Beta, as above |
 
 - **Beta** languages work with the exact ROM copies they were checked against, and complete
   playthroughs haven't been verified yet. Other GBA games play too, without widescreen.
@@ -160,7 +163,7 @@ up-to-date drivers; without it, the processor draws the world (that wants a
 much faster processor).
 
 **Steam Deck:** in Desktop Mode, unpack the Linux download and put your ROMs in
-its `roms` folder. Quit Steam. Open Fulldex from your apps menu; add the launcher from
+its `roms` folder. Quit Steam. Open FullDex from your apps menu; add the launcher from
 Settings > **Shortcuts** > **STEAM LAUNCHER**, or one game from its menu (A on the game) > **ADD TO STEAM**.
 The game menu says **ADD TO DESKTOP** instead when Steam is not found (automatic fallback).
 Start Steam again; then start FullDex or the game from your library in Gaming Mode with a
@@ -371,14 +374,15 @@ Please tell us how it runs on yours, with your model (see [Reporting a bug](#rep
 
 </details>
 
-### Omega Ruby and Alpha Sapphire (3DS, beta)
+### The 3DS games (beta)
 
-Played natively from your own game dump (a `.3ds` file; none is included), with widescreen or one
-screen, sharp 3D up to 4K, fast forward and the FullDex menus. They are in the **3DS Beta** tab.
+Omega Ruby, Alpha Sapphire, X, Y, Ultra Sun and Ultra Moon are played natively from your own game
+dump (a `.3ds` file; none is included), with widescreen or one screen, sharp 3D up to 4K, fast
+forward and the FullDex menus. They are in the **3DS Beta** tab.
 The game's code is built once from your dump for the best speed; until then it can still play.
 
-- **Windows:** put your `.3ds` in the roms folder and pick the game. The first time, FullDex
-  builds it (5 to 15 minutes, the list shows how it goes); then it plays.
+- **Windows and Linux (and the Steam Deck):** put your `.3ds` in the roms folder and pick the game.
+  The first time, FullDex builds it (5 to 15 minutes, the list shows how it goes); then it plays.
 - **Android (64-bit phones):** put your `.3ds` in your ROMs folder and pick the game. It is copied
   into FullDex once (about 2 GB) and starts. In the game's menu, **Build For Best Speed** builds it
   on the phone (about 25 minutes, keep it plugged in), or **Use Game Code From PC** takes the file
@@ -393,6 +397,8 @@ The game's code is built once from your dump for the best speed; until then it c
   `.h` files alone are not a playable game folder. If setup fails, keep the first
   failing step and its log when [reporting it](#reporting-a-bug).
 
+- **Mac:** being tested now. **iPhone and iPad:** later.
+
 It is a beta: back up your saves, and please [report](#reporting-a-bug) anything that goes wrong.
 
 **Custom 3DS textures:** the runtime accepts Citra-style PNG replacements in the
@@ -401,6 +407,18 @@ for the folder, file naming and **3DS > HD textures** setting. The packs are sup
 separately; compatibility of the individual packs requested in #266 still needs testing.
 
 ## Features
+
+- **One widescreen picture** for every DS game, the touch screen's buttons beside the action, at 60 fps.
+- **FullDex Nav:** a watch with Fly, Party, Open PC, Repel, Encounters, Map, Pokédex and Bag,
+  while you play.
+- **Free Flight in every DS game** (new in 1.8; Companion > FLY > FREE FLIGHT), outdoors, in any
+  language, and in hacks built on them such as Renegade Platinum. The GBA games have it too.
+- **The Companion:** party, bag, map, Pokédex, battle info with damage ranges, the next boss's team,
+  DexNav and Nuzlocke level caps.
+- **The Hub:** cloud saves, moving Pokémon between your games, trading, and one Pokédex across all
+  of them.
+- **Your own look and ROM hacks:** themes, colours and backgrounds for the game list, and the ROM hacks built on these games.
+- What changed in each update: [Releases](../../releases).
 
 ### Settings
 
@@ -498,6 +516,9 @@ cartridge. Copy it in under the game's name, in this folder:
 | Platinum | `platinum.sav` |
 | Diamond / Pearl | `diamond.sav` / `pearl.sav` |
 | GBA games | `emerald.sav`, `ruby.sav`, `sapphire.sav` ... |
+| Omega Ruby / Alpha Sapphire (3DS) | `omegaruby.sav` / `alphasapphire.sav` |
+| X / Y (3DS) | `pokemonx.sav` / `pokemony.sav` |
+| Ultra Sun / Ultra Moon (3DS) | `ultrasun.sav` / `ultramoon.sav` |
 
 Other languages add theirs to the name (`heartgold-it.sav`, `black2-es.sav` ...).
 
@@ -791,7 +812,7 @@ OLED in handheld mode; a PC has room to spare, and draws the same picture up to
 
 ## What's next
 
-- **The 3DS games**: Omega Ruby, Alpha Sapphire, X, Y, Ultra Sun and Ultra Moon, in the works.
+- **The 3DS games out of beta**, and on the Mac, iPhone and iPad.
 - **Native ports**: the dream, hopefully for all of them. Optimistic, but we're
   aiming for it.
 
