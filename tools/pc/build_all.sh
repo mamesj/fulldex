@@ -34,8 +34,9 @@
 # libegl1-mesa-dev, libdrm-dev, libgbm-dev, libasound2-dev, libpulse-dev and the rest named if
 # one is missing). It does not run the ARM program: it only compiles it.
 # GBA games too: SSR_GBA_DIR, Pokemon GBA Widescreen's folder after its setup.sh (optional).
-# With SSR_3DS_WIN_DIR, Ultra Sun and Ultra Moon's add-on (tools/pc/usum-addon) is built too when
-# glslangValidator and the Vulkan headers are there (sudo apt install glslang-tools libvulkan-dev).
+# With SSR_3DS_WIN_DIR or SSR_3DS_LINUX_KIT, the 3DS program's add-on (tools/pc/usum-addon: Ultra Sun and Ultra
+# Moon's battle buttons and X menu, X and Y's X menu, for one screen) is built too when glslangValidator and the
+# Vulkan headers are there (sudo apt install glslang-tools libvulkan-dev).
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -461,6 +462,17 @@ build_linux() {
             while IFS= read -r -d '' f; do chmod +x "$OUT/3ds/program/$f" 2>/dev/null || true; done
         rm -f "$OUT/3ds/program/game.3ds" "$OUT/3ds/program/rom.txt" "$OUT/3ds/program/title.so" "$OUT/3ds/program/title.hints"
         say "Omega Ruby and Alpha Sapphire too: $SSR_3DS_LINUX_KIT"
+        # X and Y's X menu made for one screen (tools/pc/usum-addon): usumfix.so, which the launcher loads in front
+        # of the program's libraries (LD_PRELOAD, frontend/n3ds.h). (A kit with a usumfix.so of its own keeps it.)
+        if [ -f "$OUT/3ds/program/usumfix.so" ]; then
+            say "The 3DS add-on left out: 3ds/program already has a usumfix.so"
+        elif ! command -v glslangValidator > /dev/null || { [ -z "${VULKAN_INC:-}" ] && [ ! -f /usr/include/vulkan/vulkan.h ]; }; then
+            say "The 3DS add-on left out: it needs glslang-tools and libvulkan-dev"
+        else
+            tools/pc/usum-addon/build.sh build-pc-usum-addon-linux linux > /dev/null || fail "building the 3DS add-on for Linux (tools/pc/usum-addon)"
+            cp build-pc-usum-addon-linux/usumfix.so "$OUT/3ds/program/usumfix.so"
+            say "The 3DS add-on in 3ds/program (usumfix.so)"
+        fi
     fi
     local TGZ="pokemon-ds-wide-pc-linux-${arch}.tar.gz"
     UPDATE_BUILDS+=(--build "$TGZ=$build_dir/fulldex-build-id.txt" --build "pokemon-ds-wide-pc-linux-${arch}.AppImage=$build_dir/fulldex-build-id.txt")

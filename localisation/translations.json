@@ -1435,7 +1435,9 @@
       "HMS WITHOUT TEACHING": "MO SIN ENSEÑAR",
       "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "Corte, Surf, Fuerza, Golpe Roca y los demás movimientos de campo funcionan sin un Pokémon que los sepa. El primer Pokémon de tu equipo usa el movimiento.",
       "You still need the badge the game asks for.": "Sigues necesitando la medalla que pide el juego.",
-      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "MANTÉN L Y R A LA VEZ PARA SOPLAR AL MICRÓFONO"
+      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "MANTÉN L Y R A LA VEZ PARA SOPLAR AL MICRÓFONO",
+      "COPYING THE DUMP": "COPIANDO EL VOLCADO",
+      "A ROM HACK: 3DS ROM HACKS PLAY ON WINDOWS AND LINUX FOR NOW": "UN ROM HACK: POR AHORA, LOS ROM HACKS DE 3DS SE JUEGAN EN WINDOWS Y LINUX"
     },
     "it": {
       " (NEXT START)": " (AL RIAVVIO)",
@@ -2862,7 +2864,9 @@
       "HMS WITHOUT TEACHING": "MN SENZA INSEGNARE",
       "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "Taglio, Surf, Forza, Spaccaroccia e le altre mosse da campo funzionano senza un Pokémon che le conosca. Le usa il primo Pokémon della squadra.",
       "You still need the badge the game asks for.": "Serve comunque la medaglia che chiede il gioco.",
-      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "TIENI PREMUTI L E R INSIEME PER SOFFIARE NEL MICROFONO"
+      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "TIENI PREMUTI L E R INSIEME PER SOFFIARE NEL MICROFONO",
+      "COPYING THE DUMP": "COPIA DEL DUMP",
+      "A ROM HACK: 3DS ROM HACKS PLAY ON WINDOWS AND LINUX FOR NOW": "UN ROM HACK: PER ORA I ROM HACK 3DS SI GIOCANO SU WINDOWS E LINUX"
     },
     "fr": {
       " (NEXT START)": " (PROCHAIN DÉBUT)",
@@ -4289,7 +4293,9 @@
       "HMS WITHOUT TEACHING": "CS SANS LES APPRENDRE",
       "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "Coupe, Surf, Force, Éclate-Roc et les autres capacités de terrain marchent sans Pokémon qui les connaisse. Le premier Pokémon de l'équipe utilise la capacité.",
       "You still need the badge the game asks for.": "Il faut toujours le badge que demande le jeu.",
-      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "MAINTIENS L ET R ENSEMBLE POUR SOUFFLER DANS LE MICRO"
+      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "MAINTIENS L ET R ENSEMBLE POUR SOUFFLER DANS LE MICRO",
+      "COPYING THE DUMP": "COPIE DU DUMP",
+      "A ROM HACK: 3DS ROM HACKS PLAY ON WINDOWS AND LINUX FOR NOW": "UN ROM HACK : POUR L'INSTANT, LES ROM HACKS 3DS SE JOUENT SUR WINDOWS ET LINUX"
     },
     "de": {
       " (NEXT START)": " (NÄCHSTER START)",
@@ -5716,7 +5722,9 @@
       "HMS WITHOUT TEACHING": "VM OHNE ERLERNEN",
       "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "Zerschneider, Surfer, Stärke, Zertrümmerer und die anderen Feldattacken gehen ohne ein Pokémon, das sie kann. Das erste Pokémon im Team setzt die Attacke ein.",
       "You still need the badge the game asks for.": "Den Orden, den das Spiel verlangt, brauchst du weiterhin.",
-      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "HALTE L UND R ZUSAMMEN, UM INS MIKROFON ZU PUSTEN"
+      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "HALTE L UND R ZUSAMMEN, UM INS MIKROFON ZU PUSTEN",
+      "COPYING THE DUMP": "DUMP WIRD KOPIERT",
+      "A ROM HACK: 3DS ROM HACKS PLAY ON WINDOWS AND LINUX FOR NOW": "EIN ROM-HACK: 3DS-ROM-HACKS LAUFEN VORERST UNTER WINDOWS UND LINUX"
     },
     "ja": {
       " (NEXT START)": " (次のスタート)",
@@ -7143,7 +7151,9 @@
       "HMS WITHOUT TEACHING": "ひでんわざを覚えずに使う",
       "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "いあいぎり、なみのり、かいりき、いわくだきなどのフィールドわざを、覚えているポケモンがいなくても使えます。手持ちの先頭のポケモンが使います。",
       "You still need the badge the game asks for.": "ゲームが求めるジムバッジは引き続き必要です。",
-      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "LとRを同時に押し続けるとマイクに息を吹きかけます"
+      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "LとRを同時に押し続けるとマイクに息を吹きかけます",
+      "COPYING THE DUMP": "ダンプをコピー中",
+      "A ROM HACK: 3DS ROM HACKS PLAY ON WINDOWS AND LINUX FOR NOW": "ROMハック: 3DSのROMハックは今のところWINDOWSとLINUXでプレイできます"
     },
     "ko": {
       " (NEXT START)": " (다음 시작)",
@@ -8570,7 +8580,9 @@
       "HMS WITHOUT TEACHING": "비전머신 없이 사용",
       "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "풀베기, 파도타기, 괴력, 바위깨기 등 필드 기술을 배운 포켓몬이 없어도 쓸 수 있습니다. 파티의 첫 번째 포켓몬이 기술을 사용합니다.",
       "You still need the badge the game asks for.": "게임이 요구하는 배지는 여전히 필요합니다.",
-      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "L과 R을 함께 누르고 있으면 마이크에 바람을 붑니다"
+      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "L과 R을 함께 누르고 있으면 마이크에 바람을 붑니다",
+      "COPYING THE DUMP": "덤프 복사 중",
+      "A ROM HACK: 3DS ROM HACKS PLAY ON WINDOWS AND LINUX FOR NOW": "롬 해킹: 3DS 롬 해킹은 지금은 WINDOWS와 LINUX에서 플레이할 수 있습니다"
     },
     "pt": {
       " (NEXT START)": " (PRÓXIMA INICIALIZAÇÃO)",
@@ -9997,7 +10009,9 @@
       "HMS WITHOUT TEACHING": "MO SEM ENSINAR",
       "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "Corte, Surfar, Força, Esmagar Rocha e os outros golpes de campo funcionam sem um Pokémon que os saiba. O primeiro Pokémon da equipe usa o golpe.",
       "You still need the badge the game asks for.": "Você ainda precisa da insígnia que o jogo pede.",
-      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "SEGURE L E R JUNTOS PARA SOPRAR NO MICROFONE"
+      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "SEGURE L E R JUNTOS PARA SOPRAR NO MICROFONE",
+      "COPYING THE DUMP": "COPIANDO O DUMP",
+      "A ROM HACK: 3DS ROM HACKS PLAY ON WINDOWS AND LINUX FOR NOW": "UM ROM HACK: POR ENQUANTO, ROM HACKS DE 3DS SÃO JOGADOS NO WINDOWS E NO LINUX"
     }
   }
 }

@@ -284,6 +284,8 @@ struct Game
     // A 3DS game found as a dump where it cannot be built (the Switch): choosing it says how to set
     // it up on a Windows PC (Put On My Switch).
     bool needsSetup = false;
+    // A 3DS ROM hack with a title id of its own (X Legacy, n3ds.h): that id; its code is its game's.
+    std::string hackId;
 };
 
 inline std::string& ContinueRom() { static std::string r; return r; } // the game played last (last-game.txt)
@@ -3093,12 +3095,16 @@ inline bool MonIcon(int species, bool egg, std::vector<uint32_t>& out)
         if (!tried3)
         {
             tried3 = true;
-            for (const Game& g : RomList())
-                if (g.known && g.platform == N3DS && Icons3ds::Load(g.rom, set3))
-                {
-                    fprintf(stderr, "[hub] Kalos and Alola icons from %s: %zu\n", g.rom.c_str(), set3.icons.size());
-                    break;
-                }
+            // (A game's own dump first: a ROM hack's icons may be its own.)
+            bool found = false;
+            for (int hacks = 0; hacks < 2 && !found; hacks++)
+                for (const Game& g : RomList())
+                    if (g.known && g.platform == N3DS && g.hack == (hacks == 1) && Icons3ds::Load(g.rom, set3))
+                    {
+                        fprintf(stderr, "[hub] Kalos and Alola icons from %s: %zu\n", g.rom.c_str(), set3.icons.size());
+                        found = true;
+                        break;
+                    }
         }
         if (Icons3ds::Icon(set3, species, out)) return true;
     }
@@ -8009,7 +8015,8 @@ inline void DrawGlass(Canvas& c, const std::vector<Game>& games, const View& v, 
             static const int icons[] = { Glass::I_PLAY, Glass::I_POKEBALL, Glass::I_SPARKLE, Glass::I_WINDOW, Glass::I_SAVE, Glass::I_LAYERS, Glass::I_BACK, Glass::I_GLOBE, Glass::I_PAD, Glass::I_SCREENS };
             const Game& g = games[mg];
 #ifdef _WIN32 // (SSR_N3DS_PC is set by n3ds.h, after this)
-            Popup3ds() = g.platform == N3DS && !g.comingSoon;
+            // (Not for a ROM hack: the Switch and phone programs play only the games' own title ids.)
+            Popup3ds() = g.platform == N3DS && !g.comingSoon && !g.hack;
 #endif
             const int n = PopupCount(), rowH = (int)(44 * u), rg = (int)(4 * u), pad = (int)(8 * u), pw = (int)(250 * u);
             const int ph = n * rowH + (n - 1) * rg + 2 * pad;

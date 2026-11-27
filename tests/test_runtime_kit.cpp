@@ -86,6 +86,50 @@ int main(int argc, char** argv)
     assert(Read(fs::u8path(byHand.folder)/"SDL2.dll")=="another add-on");
     assert(N3ds::MakeFolder(root.string(),older));   // and once in, it stays
     assert(Read(fs::u8path(older.folder)/"SDL2.dll")=="add-on");
+
+    // The add-on kept as the kit has it (Windows's SDL2.dll, Linux's usumfix.so; every build holds the name of the
+    // file that turns it off): an older one in a game's folder gives way to the kit's, anything else is kept.
+    const fs::path addon=N3ds::kAddon;
+    Put(kit/addon,"add-on 2, usumfix_off.txt");
+    Launcher::Game stale=game;                     // made by a FullDex with an older add-on
+    stale.folder=(root/"3ds/0004000000055D00").string();
+    Put(fs::u8path(N3ds::Exe(stale.folder)),"existing executable");
+    Put(fs::u8path(stale.folder)/addon,"add-on 1, usumfix_off.txt");
+    Put(fs::u8path(stale.folder)/"SDL2_real.dll","program's SDL2");
+    assert(N3ds::MakeFolder(root.string(),stale));
+    assert(Read(fs::u8path(stale.folder)/addon)=="add-on 2, usumfix_off.txt");
+    Launcher::Game other=game;                     // something else in its place is kept
+    other.folder=(root/"3ds/0004000000055E00").string();
+    Put(fs::u8path(N3ds::Exe(other.folder)),"existing executable");
+    Put(fs::u8path(other.folder)/addon,"something else");
+    Put(fs::u8path(other.folder)/"SDL2_real.dll","program's SDL2");
+    assert(N3ds::MakeFolder(root.string(),other));
+    assert(Read(fs::u8path(other.folder)/addon)=="something else");
+#ifndef _WIN32
+    assert(N3ds::AddonPreload(older.folder,"/steam/overlay.so").empty()); // (a folder without it: nothing to load)
+    assert(N3ds::MakeFolder(root.string(),older));   // a folder without it gets it
+    assert(Read(fs::u8path(older.folder)/addon)=="add-on 2, usumfix_off.txt");
+    // Linux: Play loads it first, in front of any others asked for (such as Steam's overlay); from a folder whose
+    // path has a space in it (as this one has), as ./usumfix.so, the folder the program starts in
+    const std::string mine="./usumfix.so";
+    assert(N3ds::AddonPreload(older.folder,nullptr)==mine);
+    assert(N3ds::AddonPreload(older.folder,"")==mine);
+    assert(N3ds::AddonPreload(older.folder,"/steam/overlay.so")==mine+":/steam/overlay.so");
+    const fs::path plain=fs::temp_directory_path()/("fulldex-addon-test-"+std::to_string(getpid()));
+    Put(plain/"usumfix.so","add-on 2, usumfix_off.txt");
+    assert(N3ds::AddonPreload(plain.string(),"/steam/overlay.so")==(plain/"usumfix.so").string()+":/steam/overlay.so");
+    fs::remove_all(plain);
+    setenv("LD_PRELOAD","/steam/overlay.so",1);
+    setenv("LD_PRELOAD_TEST_KEPT","1",1);
+    const std::vector<std::string> env=N3ds::EnvWith("LD_PRELOAD",N3ds::AddonPreload(older.folder,getenv("LD_PRELOAD")));
+    size_t preloads=0, kept=0;
+    for (const std::string& e:env)
+    {
+        if (e.rfind("LD_PRELOAD=",0)==0) { preloads++; assert(e=="LD_PRELOAD="+mine+":/steam/overlay.so"); }
+        kept+=e=="LD_PRELOAD_TEST_KEPT=1";
+    }
+    assert(preloads==1 && kept==1);
+#endif
 #ifdef _WIN32
     // The #208 log's install directory is 219 characters. Its source compiler path
     // fits MAX_PATH; the per-title copy grows to 267 characters and must still copy.

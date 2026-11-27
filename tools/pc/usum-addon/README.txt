@@ -1,11 +1,20 @@
-Ultra Sun / Ultra Moon: single-screen battle buttons and X menu (Windows)
-=======================================================================
+The 3DS program's add-on: single-screen battle buttons and X menus
+==================================================================
 
-An SDL2.dll for the Windows 3DS program (Pokemon ORAS.exe and Pokemon ORAS (Vulkan).exe) that goes in
-front of the program's own SDL2.dll, renamed SDL2_real.dll. Every SDL call goes on to the real one; on top
-of that, in Ultra Sun and Ultra Moon's one-screen layout (Settings > Display > Layout: One screen), the
-add-on draws real single-screen battle buttons and a cleaner X menu, both made live from the game's own
-bottom screen. In every other game's folder it only passes SDL through.
+In the 3DS program's one-screen layout (Settings > Display > Layout: One screen), the add-on draws:
+
+- Ultra Sun and Ultra Moon (Windows): real single-screen battle buttons and a cleaner X menu;
+- X and Y, X Legacy and Y Legacy too (Windows and Linux): the X menu, its options cut out of the grey;
+
+all made live from the game's own bottom screen. In every other game's folder it does nothing.
+
+On Windows it is an SDL2.dll for the 3DS program (Pokemon ORAS.exe and Pokemon ORAS (Vulkan).exe) that goes
+in front of the program's own SDL2.dll, renamed SDL2_real.dll; every SDL call goes on to the real one. On
+Linux it is usumfix.so, which FullDex loads in front of the program's libraries (LD_PRELOAD) when it starts
+a game (pokemon-oras, and pokemon-oras-vulkan, which pokemon-oras starts for Vulkan). It points the
+program's own imports of dlsym and SDL_PollEvent at its own (in the program's global offset table, as the
+Windows build does in its import table), and exports nothing: no other library's calls reach it, so other
+LD_PRELOAD hooks, such as Steam's overlay, work as they always do.
 
 Battle
 ------
@@ -46,6 +55,17 @@ pieces of the bottom screen. The add-on draws it anew in the same places:
 
 Clicks on the menu reach the game exactly as before (everything is where the program's pieces are).
 
+X and Y's X menu
+----------------
+With Menus: Laid out, the program shows X and Y's X menu (up to six options, two a row on the bottom
+screen) as a column at the right of the screen, each option a rectangle of the bottom screen with the
+menu's grey around the pill. The add-on draws each option anew in its place: the pill, its icon and its
+name cut out along the pill's dark blue outline (a flood from the rectangle's edges through the grey,
+stopped by the outline and by the game's red cursor), so only the pill and the cursor show over the
+scenery, with a soft shadow; the option under the pointer gets a white rim. The cursor moves with the
+game's, and clicks reach the game as before. Nothing else of X and Y changes (their battles keep the
+program's own layouts).
+
 Settings it works with
 ----------------------
 Both Graphics APIs (Vulkan and OpenGL ES), every Resolution, every Aspect ratio and any window size. When
@@ -57,16 +77,20 @@ that layout alone, as it does every layout but One screen.
 
 In FullDex's download
 ---------------------
-tools/pc/build_all.sh builds the add-on when it packs the Windows 3DS program (SSR_3DS_WIN_DIR): 3ds\program
-gets SDL2.dll (the add-on) and SDL2_real.dll (the program's own). A game's folder is a copy of 3ds\program;
-a folder made before the add-on was there, whose SDL2.dll is still the program's own, gets it the next time
-FullDex starts that game (frontend/n3ds.h, MakeFolder). A folder whose SDL2.dll is anything else (an add-on
-put in by hand, say) keeps it.
+tools/pc/build_all.sh builds the add-on when it packs the 3DS program: for Windows (SSR_3DS_WIN_DIR),
+3ds\program gets SDL2.dll (the add-on) and SDL2_real.dll (the program's own); for Linux (SSR_3DS_LINUX_KIT),
+3ds/program gets usumfix.so. A game's folder is a copy of 3ds/program. A folder made before the add-on was
+there gets it the next time FullDex starts that game (frontend/n3ds.h, MakeFolder): on Windows when its
+SDL2.dll is still the program's own, on Linux as a file it lacks. A folder with an older add-on gets the
+kit's (every build holds the name usumfix_off.txt, which tells it from other files); one whose SDL2.dll is
+anything else keeps it. On Linux, FullDex starts the game with LD_PRELOAD set to the folder's usumfix.so,
+in front of any others already there (./usumfix.so when the folder's path has a space or a colon, which
+LD_PRELOAD cannot hold).
 
 To turn it off for a game, put an empty file named  usumfix_off.txt  in the game's folder
-(3ds\00040000001B5000 is Ultra Sun, 3ds\00040000001B5100 Ultra Moon): the program's own box and X menu come
-back within a second, even mid-battle, and Battle buttons is left as you set it. Delete the file to turn it
-on again.
+(3ds\00040000001B5000 is Ultra Sun, 3ds\00040000001B5100 Ultra Moon, 3ds\0004000000055D00 X and
+3ds\0004000000055E00 Y): the program's own box and X menu come back within a second, even mid-battle, and
+Battle buttons is left as you set it. Delete the file to turn it on again.
 
 If something looks wrong, an empty file named  usumfix_debug.txt  in the game's folder makes the add-on
 write usumfix.log there, with what it saw on the bottom screen.
@@ -79,18 +103,25 @@ Notes
   2560x1440, including 1920x1200 and 2560x1080.
 - The battle lettering is matched against the English version's screens; in another language the commands
   fall back by themselves to cut-out pieces of the bottom screen.
-- Windows only: the Linux program has no SDL2.dll to stand in for.
+- X and Y's X menu: tested with X Legacy (four options) in the bedroom, the cursor on each option, the
+  pointer over them and a click on BAG; with OpenGL and Vulkan (lavapipe) on Linux, including Vulkan started
+  by pokemon-oras as its child and with another LD_PRELOAD hook beside it. The Windows build compiles; it
+  was not run on Windows.
+- Linux: Ultra Sun and Ultra Moon are left alone there for now (settings and all), until their battle
+  buttons and X menu have been tried with the Linux program.
 
 Building
 --------
-    tools/pc/usum-addon/build.sh OUT_DIR
+    tools/pc/usum-addon/build.sh OUT_DIR            (Windows: OUT_DIR/SDL2.dll)
+    tools/pc/usum-addon/build.sh OUT_DIR linux      (Linux: OUT_DIR/usumfix.so)
 
-makes OUT_DIR/SDL2.dll with MinGW-w64's C compiler, glslangValidator (glslang-tools), the Vulkan headers
-(libvulkan-dev, or VULKAN_INC) and Python 3. The files:
+with glslangValidator (glslang-tools), the Vulkan headers (libvulkan-dev, or VULKAN_INC) and Python 3, and
+MinGW-w64's C compiler for Windows or the usual C compiler for Linux. The files:
 
-  usumfix.c      the whole add-on: SDL pass-through (usumfix.def forwards every export to SDL2_real.dll),
-                 the OpenGL and Vulkan hooks, the read-back of the bottom screen, the layouts and the
-                 shader (OpenGL's GLSL; mkglsl.py makes Vulkan's from it, spv2h.py embeds the SPIR-V).
+  usumfix.c      the whole add-on: SDL pass-through on Windows (usumfix.def forwards every export to
+                 SDL2_real.dll), the hooks on the program's imports, the OpenGL and Vulkan hooks, the
+                 read-back of the bottom screen, the layouts and the shader (OpenGL's GLSL; mkglsl.py makes
+                 Vulkan's from it, spv2h.py embeds the SPIR-V).
   usum_masks.h   the battle buttons' lettering and symbols as one-bit coverage, with points to recognise
                  them, traced from pictures of the English game's bottom screen.
   usum_glyphs.h  the letters L and R for the X menu's keys, as distance fields; made by gen_glyphs.py from

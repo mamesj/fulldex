@@ -393,6 +393,13 @@ The game's code is built once from your dump for the best speed; until then it c
   `.h` files alone are not a playable game folder. If setup fails, keep the first
   failing step and its log when [reporting it](#reporting-a-bug).
 
+**3DS ROM hacks with a title ID of their own** (Pokémon X Legacy and Y Legacy; Windows and Linux):
+put the decrypted `.3ds` in your ROMs folder. It is listed in the **3DS Beta** and **Romhacks** tabs
+beside its game, with a save of its own. The first launch copies it once into its own folder with its
+game's title ID (about 1.7 GB; your file is not changed), because the 3DS program plays only the
+games' own title IDs, and then builds it as above. For now the 3DS program's Companion shows the
+wrong Party, Bag and Pokédex for them; Location and the Mini Map are right.
+
 It is a beta: back up your saves, and please [report](#reporting-a-bug) anything that goes wrong.
 
 **Custom 3DS textures:** the runtime accepts Citra-style PNG replacements in the

@@ -61,8 +61,10 @@ into /switch/ on the card. Wait until every step succeeds; .c, .o and .h files a
 a playable folder. For Android, use Game Options > Put On My Phone and copy the file it
 makes to the phone's ROMs folder. The separate FullDex Builder 0.1 is obsolete.
 Ultra Sun and Ultra Moon get battle buttons and an X menu made for the One screen layout (an
-SDL2.dll in front of the program's own, SDL2_real.dll). To turn them off for a game, put an empty
-file named usumfix_off.txt in its folder (3ds\00040000001B5000 is Ultra Sun).
+SDL2.dll in front of the program's own, SDL2_real.dll), and X and Y (X Legacy and Y Legacy too)
+an X menu made for it, on Linux as well (usumfix.so, which FullDex loads with the game). To turn
+them off for a game, put an empty file named usumfix_off.txt in its folder (3ds\00040000001B5000
+is Ultra Sun, 3ds\0004000000055D00 X).
 
 
 STEAM DECK

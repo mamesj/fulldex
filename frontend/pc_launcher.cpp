@@ -660,7 +660,7 @@ std::vector<Launcher::Game> FindGames(const Folders& fo, std::map<std::string, s
     for (Launcher::Game& g : games)
         if (g.platform == Launcher::N3DS)
         {
-            g.saveName = N3ds::SaveName(g.code);
+            g.saveName = N3ds::SaveName(g); // (a ROM hack: its own, hack-....sav)
             N3ds::SyncSave(g, fo.saves + "/" + g.saveName);
             g.hasSave = N3ds::IsFile(fo.saves + "/" + g.saveName);
         }
@@ -1830,7 +1830,7 @@ int PickGame(Folders& fo, std::vector<Launcher::Game>& games, int selected, bool
                     F.banner = 2;
                     F.popup = 0;
 #ifdef _WIN32
-                    Launcher::Popup3ds() = games[selected].platform == Launcher::N3DS && !games[selected].comingSoon; // (its rows before it is drawn)
+                    Launcher::Popup3ds() = games[selected].platform == Launcher::N3DS && !games[selected].comingSoon && !games[selected].hack; // (its rows before it is drawn)
 #endif
                     follow = true;
                 }
@@ -1852,7 +1852,7 @@ int PickGame(Folders& fo, std::vector<Launcher::Game>& games, int selected, bool
                 const bool valid = selected >= 0 && selected < (int)games.size();
 #if defined(SSR_N3DS_PC) && defined(_WIN32)
                 // (A 3DS game: Put On My Switch, Put On My Phone, the dialog that walks through it.)
-                if ((item == 8 || item == 9) && valid && games[selected].platform == Launcher::N3DS)
+                if ((item == 8 || item == 9) && valid && games[selected].platform == Launcher::N3DS && !games[selected].hack)
                 {
                     N3ds::SetupOpenAndGo(fo.dir, games[selected], item == 8 ? 1 : 2);
                     F.dialog = 21; F.drow = 0;
@@ -1934,7 +1934,7 @@ int PickGame(Folders& fo, std::vector<Launcher::Game>& games, int selected, bool
             {
                 F.popup = 0; // (A on a game: its menu, Play first)
 #ifdef _WIN32
-                Launcher::Popup3ds() = games[selected].platform == Launcher::N3DS && !games[selected].comingSoon; // (its rows before it is drawn)
+                Launcher::Popup3ds() = games[selected].platform == Launcher::N3DS && !games[selected].comingSoon && !games[selected].hack; // (its rows before it is drawn)
 #endif
                 note.clear();
                 return;
@@ -4680,14 +4680,17 @@ bool Start(int& argc, char**& argv)
         // (A 3DS dump from anywhere: the 3DS game, as if it were with the ROMs; one that cannot be played says why.)
         if (directGame < 0 && (N3ds::EndsWith(directRom, ".3ds") || N3ds::EndsWith(directRom, ".cci") || N3ds::EndsWith(directRom, ".cia")))
         {
-            if (const N3ds::Title* t = N3ds::Check(directRom, false))
+            N3ds::Hack hack;
+            if (const N3ds::Title* t = N3ds::Check(directRom, false, &hack))
             {
+                // (Its game's tile, or a ROM hack's own: by the folder each plays in.)
+                const std::string folder = fo.dir + "/3ds/" + N3ds::FolderId(*t, &hack);
                 for (size_t i = 0; i < games.size() && directGame < 0; i++)
-                    if (games[i].platform == Launcher::N3DS && games[i].code == t->code) directGame = (int)i;
+                    if (games[i].platform == Launcher::N3DS && !games[i].comingSoon && games[i].folder == folder) directGame = (int)i;
                 if (directGame < 0 && N3ds::ProgramHere())
                 {
-                    games.push_back(N3ds::Make(*t, directRom, fo.dir + "/3ds/" + t->id));
-                    games.back().saveName = N3ds::SaveName(t->code);
+                    games.push_back(N3ds::Make(*t, directRom, folder, &hack));
+                    games.back().saveName = N3ds::SaveName(games.back());
                     games.back().built = N3ds::Prepared(games.back());
                     directGame = (int)games.size() - 1;
                 }
