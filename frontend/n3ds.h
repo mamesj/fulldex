@@ -27,6 +27,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 #include <sys/stat.h>
 #ifdef __ANDROID__
@@ -704,7 +705,9 @@ inline bool MakeFolder(const std::string& appDir, const Launcher::Game& g)
 struct LooseThread : std::thread
 {
     using std::thread::thread;
-    using std::thread::operator=;
+    // (the move written out: "using std::thread::operator=" also brings in a copy that libc++ (macOS)
+    // keeps private, which will not compile there)
+    LooseThread& operator=(std::thread&& t) noexcept { std::thread::operator=(std::move(t)); return *this; }
     ~LooseThread() { if (joinable()) detach(); }
 };
 struct Prep
