@@ -161,6 +161,16 @@ $ICONKEY
 $GBA_DOCS
 </dict></plist>
 PLIST
+# The 3DS games (Apple silicon): the Mac 3DS kit (pokemon-oras on Vulkan/MoltenVK, SDL2, the recompiler and
+# zig, which build each player's game code from their own dump; no game files) in Resources/3ds/program,
+# when SSR_MAC_3DS_KIT names it. (In Resources: Contents/MacOS may only hold programs.)
+if [ -n "${SSR_MAC_3DS_KIT:-}" ] && [ "$ARCH" = arm64 ]; then
+    [ -f "$SSR_MAC_3DS_KIT" ] || fail "SSR_MAC_3DS_KIT: no $SSR_MAC_3DS_KIT"
+    mkdir -p "$APP/Contents/Resources/3ds/program"
+    tar -xJf "$SSR_MAC_3DS_KIT" -C "$APP/Contents/Resources/3ds/program"
+    [ -x "$APP/Contents/Resources/3ds/program/pokemon-oras" ] || fail "the 3DS kit has no pokemon-oras"
+    say "3DS games too: $(cat "$APP/Contents/Resources/3ds/program/VERSIONS.txt" 2>/dev/null | tr '\n' ' ')"
+fi
 lipo -archs "$APP/Contents/MacOS/pokemon-ds-wide" | grep -qx "$ARCH" || fail "the program is not built for $ARCH"
 python3 tools/macos/check_binary.py "$APP/Contents/MacOS/pokemon-ds-wide" --max-macos 11.0 --system-libraries-only
 # Signed for this Mac only ("ad hoc"): Apple silicon starts nothing unsigned. Not notarised.
@@ -188,7 +198,10 @@ import re, sys, zipfile
 regional_codes = '|'.join(p['code'] for p in __import__('json').loads(__import__('pathlib').Path(__import__('os').environ['SSR_SRC'], 'tools/regions/profiles.json').read_text())['profiles'] if p['kind']=='functions')
 ok = re.compile(r'^Pokemon Fulldex\.app/(Contents/(Info\.plist|MacOS/(pokemon-ds-wide)?|_CodeSignature/(CodeResources)?|Resources/(AppIcon\.icns|README\.txt|LICENSE\.txt|LICENSE-mGBA\.txt|LICENSE-Noto\.txt|FONT-LICENSES\.txt|data/|data/funcs/|data/funcs/(?:IREO|IRDO|IRBO|IRAO|CPUE|ADAE|APAE|ADAS|APAF|APAS|APAD|ADAD|ADAI|IRAS|CPUS|IREF|IRDF|CPUF|IRBF|IRAF|IRBS|IRES|IRDS|' + regional_codes + r')\.txt)?)?)?$')
 names = zipfile.ZipFile(sys.argv[1]).namelist()
-bad = [n for n in names if not ok.match(n)]
+# (the Mac 3DS kit: its program, libraries, compiler and titles' settings; never a dump or a save)
+kit = re.compile(r'^Pokemon Fulldex\.app/Contents/Resources/3ds/(program/.*)?$')
+bad = [n for n in names if not ok.match(n) and not kit.match(n)]
+bad += [n for n in names if kit.match(n) and re.search(r'\.(3ds|cci|cia|cxi|sav|title\.dylib)$', n, re.I)]
 if bad: sys.exit('unexpected files in the Mac download: %s' % bad)
 print('ok: %s (%d entries)' % (sys.argv[1].split('/')[-1], len(names)))
 PY

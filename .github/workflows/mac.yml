@@ -41,6 +41,9 @@ jobs:
           mkdir -p inputs
           gh release download mac-build-inputs -R "${{ github.repository }}" -p mac-inputs.tar.gz -D inputs
           tar -xzf inputs/mac-inputs.tar.gz -C inputs
+          # (the Mac 3DS kit, when the inputs have it: the 3DS games in the Apple silicon download)
+          gh release download mac-build-inputs -R "${{ github.repository }}" -p mac-3ds-kit.tar.xz -D inputs || echo "no Mac 3DS kit in the inputs"
+          if [ -f inputs/mac-3ds-kit.tar.xz ]; then echo "SSR_MAC_3DS_KIT=$PWD/inputs/mac-3ds-kit.tar.xz" >> "$GITHUB_ENV"; fi
           ls inputs
       - name: GBA games (mGBA and the widescreen patches, when the inputs include them)
         run: bash tools/apple/fetch_gba.sh inputs

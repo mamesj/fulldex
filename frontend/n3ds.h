@@ -10,6 +10,8 @@
 //     once from the dump ("Pokemon ORAS.exe" --prepare, 5 to 15 minutes) and the game then plays.
 //   Linux (x86_64): the same, with the Linux program (pokemon-oras, title.so) in 3ds/program beside
 //     FullDex's own program (inside the AppImage too); each game's folder in FullDex's data folder.
+//   macOS (Apple silicon): as Linux, the Mac program (pokemon-oras, title.dylib, Vulkan on MoltenVK)
+//     in 3ds/program beside FullDex's own (in the .app). iPhone and iPad: still Coming Soon.
 #pragma once
 #include <algorithm>
 #include <chrono>
@@ -35,7 +37,14 @@
 #include <windows.h>
 #include "windows_runtime_log.h"
 #endif
-#if defined(__linux__) && !defined(__ANDROID__) && !defined(__SWITCH__)
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
+#if defined(__APPLE__) && TARGET_OS_OSX
+#include <mach-o/dyld.h>
+#include <sys/xattr.h>
+#endif
+#if (defined(__linux__) && !defined(__ANDROID__) && !defined(__SWITCH__)) || (defined(__APPLE__) && TARGET_OS_OSX)
 #include <sys/wait.h>
 #include <cerrno>
 #include <unistd.h>
@@ -44,8 +53,8 @@
 #include "launcher.h"
 #include "runtime_kit.h"
 #include "runtime_diagnostics.h"
-#if defined(_WIN32) || (defined(__linux__) && !defined(__ANDROID__) && !defined(__SWITCH__))
-#define SSR_N3DS_PC 1 // (the 3DS games' own program beside FullDex: Windows and Linux)
+#if defined(_WIN32) || (defined(__linux__) && !defined(__ANDROID__) && !defined(__SWITCH__)) || (defined(__APPLE__) && TARGET_OS_OSX)
+#define SSR_N3DS_PC 1 // (the 3DS games' own program beside FullDex: Windows, Linux and macOS)
 #endif
 
 namespace N3ds
@@ -403,7 +412,9 @@ inline void DropPlaceholders(std::vector<Launcher::Game>& games)
             // (Mac, iPhone, iPad, and Linux without the program (ARM): still coming, so the tiles stay,
             // saying Coming Soon with no countdown.)
             bool stays = false;
-#if defined(__APPLE__)
+#if defined(__APPLE__) && TARGET_OS_OSX
+            stays = !ProgramHere(); // (macOS: as Linux, once the download has the 3DS program)
+#elif defined(__APPLE__)
             stays = true;
 #elif defined(__linux__) && !defined(__ANDROID__)
             stays = !ProgramHere();
@@ -578,13 +589,24 @@ inline std::filesystem::path W(const std::string& s) { return std::filesystem::p
 inline std::string ProgramDir(const std::string&)
 {
     char b[PATH_MAX];
+#ifdef __APPLE__
+    // (macOS: FullDex's program in the .app's Contents/MacOS, the 3DS program in 3ds/program beside it)
+    uint32_t size = sizeof b;
+    char real[PATH_MAX];
+    if (_NSGetExecutablePath(b, &size) != 0 || !realpath(b, real)) return "3ds/program";
+    return std::filesystem::path(real).parent_path().string() + "/3ds/program";
+#endif
     const ssize_t n = readlink("/proc/self/exe", b, sizeof b - 1);
     if (n <= 0) return "3ds/program";
     b[n] = 0;
     return std::filesystem::path(b).parent_path().string() + "/3ds/program";
 }
 inline std::string Exe(const std::string& folder) { return folder + "/pokemon-oras"; }
+#ifdef __APPLE__
+inline const char* kTitleLib = "title.dylib";
+#else
 inline const char* kTitleLib = "title.so";
+#endif
 #endif
 inline bool HaveProgram(const std::string& appDir) { std::error_code ec; return std::filesystem::is_regular_file(W(Exe(ProgramDir(appDir))), ec); }
 inline bool Prepared(const Launcher::Game& g) { std::error_code ec; return std::filesystem::is_regular_file(W(g.folder + "/" + kTitleLib), ec); }
@@ -605,7 +627,7 @@ inline void AddPc(const std::vector<std::string>& romDirs, const std::string& ap
             if (!t) continue;
             if (!ProgramHere())
             {
-#if defined(_WIN32) || defined(__x86_64__)
+#if defined(_WIN32) || defined(__x86_64__) || defined(__APPLE__)
                 Skip(path, "THE 3DS FOLDER FROM THE FULLDEX DOWNLOAD IS MISSING BESIDE THE PROGRAM", 3);
 #endif
                 continue;
@@ -654,6 +676,14 @@ inline bool MakeFolder(const std::string& appDir, const Launcher::Game& g)
         }
         ec.clear();
     }
+#if defined(__APPLE__) && TARGET_OS_OSX
+    // (macOS: the copied program, its libraries and the compiler keep the download's quarantine mark,
+    // and macOS would refuse to run them from here; taken off the game's own folder only)
+    removexattr(g.folder.c_str(), "com.apple.quarantine", XATTR_NOFOLLOW);
+    for (fs::recursive_directory_iterator it(W(g.folder), ec), end; !ec && it != end; it.increment(ec))
+        removexattr(it->path().c_str(), "com.apple.quarantine", XATTR_NOFOLLOW);
+    ec.clear();
+#endif
 #ifdef _WIN32
     FILE* f = _wfopen(W(g.folder + "/rom.txt").c_str(), L"wb");
 #else
