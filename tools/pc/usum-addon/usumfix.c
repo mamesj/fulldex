@@ -580,6 +580,16 @@ static Scene read_scene(void)
         if (region_frac(262, 36, 316, 76, C_FIGHT) >= 0.2f && region_frac(262, 160, 316, 200, C_FIGHT2) >= 0.2f) s.state = S_CMD;
         else s.state = S_IDLE;
     }
+    if (s.state == S_NONE) {
+        /* the battle's opening, from the encounter to the first commands (about 10 s): the program's bottom
+           screen black during the swirl, then the arena dimmed and empty (dim about 0.6, nothing lit, no back
+           button, dark overall). Held back as between turns, with nothing drawn, so its box does not show in the
+           corner; the bag, the party and the summaries look nothing like it and keep the program's own box */
+        float lum = 0;
+        for (int y = 4; y < 240; y += 8) for (int x = 4; x < 320; x += 8) { const unsigned char *c = rb[y][x]; lum += (0.299f * c[0] + 0.587f * c[1] + 0.114f * c[2]) / 255; }
+        lum /= 30 * 40;
+        if (lum < 0.02f || (dim >= 0.5f && lit < 0.2f && back < 0.2f && lum < 0.35f)) s.state = S_IDLE;
+    }
     if (s.state == S_CMD) {
         s.bag = region_frac(5, 135, 55, 175, C_BAG) >= 0.5f;
         s.ball = region_frac(27, 19, 38, 30, C_ORANGE) >= 0.3f;
@@ -1031,12 +1041,79 @@ static void grad_two(float st[7][4], const float *a, const float *b)
 {
     for (int i = 0; i < 7; i++) { float t = i / 6.0f; for (int c = 0; c < 3; c++) st[i][c] = a[c] + (b[c] - a[c]) * t; st[i][3] = 1; }
 }
+/* ---- the command buttons' lettering, cut out of the live bottom screen: no traced lettering is kept (it is the
+   game's own artwork), so the game's white letters and the dark edge round them are found in each button's
+   lettering band as it is drawn, in any language, and that is the mask the strip's labels are cut out by */
+#define LIVE_AY 180             /* the masks: side by side from this atlas row (clear of the icons and the move details) */
+typedef struct { int m, x0, y0, x1, y1; } LiveBand;
+static const LiveBand LIVE_BANDS[] = {
+    { M_FIGHT, 240, 106, 320, 136 }, { M_MON_T, 0, 106, 82, 134 }, { M_MON_W, 0, 89, 80, 113 },
+    { M_BAG, 0, 174, 62, 197 }, { M_RUN, 110, 214, 208, 238 } };
+#define LIVE_N ((int)(sizeof LIVE_BANDS / sizeof LIVE_BANDS[0]))
+static MaskInfo live_mi[M_N];
+static int live_have[M_N];
+static float live_plate[M_N][3];
+static void live_read(void)
+{
+    /* the letters are ringed by a dark edge (their fill runs from white to the button's own colour): what a flood from
+       the band's border cannot reach through the dark is a letter (or a hole in one), and the dark next to it its edge */
+    static unsigned char dark[32][100], reach[32][100], fill[32][100];
+    static int q[32 * 100];
+    int ax = 1;
+    for (int i = 0; i < LIVE_N; i++) {
+        const LiveBand *b = &LIVE_BANDS[i];
+        int W = b->x1 - b->x0, H = b->y1 - b->y0, m = b->m, qh = 0, qt = 0;
+        for (int y = 0; y < H; y++) for (int x = 0; x < W; x++) {
+            const unsigned char *c = rb[b->y0 + y][b->x0 + x];
+            dark[y][x] = 0.299f * c[0] + 0.587f * c[1] + 0.114f * c[2] < 0.30f * 255;
+            reach[y][x] = 0;
+            if (!x && !b->x0) dark[y][x] = 1;   /* (lettering that reaches the screen's own edge: closed there, as the flood would leak in) */
+        }
+        for (int y = 0; y < H; y++) for (int x = 0; x < W; x++) {
+            if ((y && y < H - 1 && x && x < W - 1) || dark[y][x]) continue;
+            reach[y][x] = 1; q[qt++] = y * W + x;
+        }
+        while (qh < qt) {
+            int k = q[qh++], y = k / W, x = k % W;
+            static const int D[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+            for (int d = 0; d < 4; d++) {
+                int xx = x + D[d][0], yy = y + D[d][1];
+                if (xx < 0 || yy < 0 || xx >= W || yy >= H || reach[yy][xx] || dark[yy][xx]) continue;
+                reach[yy][xx] = 1; q[qt++] = yy * W + xx;
+            }
+        }
+        int nf = 0;
+        for (int y = 0; y < H; y++) for (int x = 0; x < W; x++) { fill[y][x] = !reach[y][x] && !dark[y][x]; nf += fill[y][x]; }
+        int bx0 = W, by0 = H, bx1 = -1, by1 = -1, pn = 0;
+        float pc[3] = { 0, 0, 0 };
+        for (int y = 0; y < H; y++) for (int x = 0; x < W; x++) {
+            int v = fill[y][x];
+            if (!v && dark[y][x])
+                for (int dy = -2; dy <= 2 && !v; dy++) for (int dx = -2; dx <= 2; dx++) {
+                    int xx = x + dx, yy = y + dy;
+                    if (xx >= 0 && yy >= 0 && xx < W && yy < H && fill[yy][xx]) { v = 1; break; }
+                }
+            atlas_px[LIVE_AY + y][ax + x] = v ? 255 : 0;
+            if (v) { if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y; }
+            if (v && dark[y][x]) { const unsigned char *c = rb[b->y0 + y][b->x0 + x]; for (int k = 0; k < 3; k++) pc[k] += c[k] / 255.0f; pn++; }
+        }
+        live_have[m] = nf > 25 && nf < W * H * 2 / 5 && bx1 >= bx0;
+        if (live_have[m]) {
+            MaskInfo *mi = &live_mi[m];
+            mi->sx = (float)(b->x0 + bx0); mi->sy = (float)(b->y0 + by0);
+            mi->w = (float)(bx1 - bx0 + 1); mi->h = (float)(by1 - by0 + 1);
+            mi->ax = (float)(ax + bx0); mi->ay = (float)(LIVE_AY + by0);
+            for (int k = 0; k < 3; k++) live_plate[m][k] = pn ? pc[k] / pn : DARK[k];
+        }
+        ax += W + 4;
+    }
+    atlas_mark(LIVE_AY, LIVE_AY + 32);
+}
 /* the game's lettering is where we expect it: its dark plate darker than its light letters, in the live picture */
 static int mask_ok(int m)
 {
 #ifdef USUM_NO_LETTERING
-    (void)m;
-    return 0;  /* (no traced lettering: the layouts that cut the game's own pieces out instead) */
+    return m >= 0 && m < M_N && live_have[m];
 #endif
     const MaskInfo *mi = &MASKS[m];
     float d = 0, l = 0;
@@ -1046,6 +1123,10 @@ static int mask_ok(int m)
 }
 static void plate_col(int m, float *c)
 {
+#ifdef USUM_NO_LETTERING
+    for (int k = 0; k < 3; k++) c[k] = live_plate[m][k];
+    return;
+#endif
     const MaskInfo *mi = &MASKS[m];
     c[0] = c[1] = c[2] = 0;
     for (int i = 0; i < mi->np; i++) for (int k = 0; k < 3; k++) c[k] += rbf(mi->plate[i][0], mi->plate[i][1], k) / mi->np;
@@ -1054,7 +1135,11 @@ static void plate_col(int m, float *c)
    pill: on a pill of its plate's colour, reaching padx, pady (bottom-screen px) past it */
 static void label(int m, float cx, float cy, float ks, int turned, int pill, float padx, float pady)
 {
+#ifdef USUM_NO_LETTERING
+    const MaskInfo *mi = &live_mi[m];
+#else
     const MaskInfo *mi = &MASKS[m];
+#endif
     if (!mask_ok(m)) return;      /* (a moment while the screen changes: no lettering rather than the wrong pixels) */
     float w = (turned ? mi->h : mi->w) * ks, h = (turned ? mi->w : mi->h) * ks;
     float x = cx - w / 2, y = cy - h / 2;
@@ -1315,7 +1400,7 @@ static void lay_commands_old(const Scene *s, float u);
 static void lay_commands(const Scene *s, float u)
 {
     static unsigned icons_of;
-    if (icons_of != rb_frame) { icons_of = rb_frame; for (int i = 0; i < 4; i++) icon_read(i); }
+    if (icons_of != rb_frame) { icons_of = rb_frame; for (int i = 0; i < 4; i++) icon_read(i); live_read(); }
     static int bad;
     bad = cmd_labels_ok(s) ? 0 : bad + 1;
     if (bad > 40) { lay_commands_old(s, u); return; }
@@ -3485,17 +3570,30 @@ static void read_battle_size(void)
     }
     fclose(f);
 }
-/* the add-on works with the whole bottom screen in a box (Battle Buttons: Whole screen) */
+/* the add-on works with the whole bottom screen in a box (Battle Buttons: Whole screen). The program only
+   writes its settings once something is saved, and its own default is Buttons only: with no battle_buttons
+   line (a new install, or settings from before the option) the line is added, at the top of the file, where
+   it cannot fall inside a [table]; with no file yet, a file of that one line (the rest the program's defaults). */
 static void want_whole_screen(void)
 {
+    static const char ON[] = "battle_buttons = true", OFF[] = "battle_buttons = false";
     const char *p = path_here("config\\settings.toml");
+    char buf[16384]; size_t n = 0;
     FILE *f = fopen(p, "rb");
-    if (!f) return;
-    char buf[16384]; size_t n = fread(buf, 1, sizeof buf - 1, f); fclose(f); buf[n] = 0;
-    char *k = strstr(buf, "battle_buttons = true");
-    if (!k || n + 1 >= sizeof buf) return;
-    memmove(k + strlen("battle_buttons = false"), k + strlen("battle_buttons = true"), strlen(k + strlen("battle_buttons = true")) + 1);
-    memcpy(k, "battle_buttons = false", strlen("battle_buttons = false"));
+    if (f) { n = fread(buf, 1, sizeof buf - 1, f); fclose(f); }
+    buf[n] = 0;
+    if (n + sizeof OFF + 2 >= sizeof buf) return;
+    char *k = strstr(buf, ON);
+    if (k) {
+        memmove(k + strlen(OFF), k + strlen(ON), strlen(k + strlen(ON)) + 1);
+        memcpy(k, OFF, strlen(OFF));
+    } else if (!strstr(buf, "battle_buttons")) {
+        const size_t L = strlen(OFF) + 1;
+        memmove(buf + L, buf, n + 1);
+        memcpy(buf, OFF, L - 1);
+        buf[L - 1] = '\n';
+        CreateDirectoryA(path_here("config"), NULL);
+    } else return;   /* (already Whole screen) */
     f = fopen(p, "wb");
     if (f) { fwrite(buf, 1, strlen(buf), f); fclose(f); lg("Battle Buttons set to Whole screen for the add-on"); }
 }
