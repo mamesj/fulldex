@@ -31,6 +31,15 @@ fi
 ART="${2:-}"; [ -n "$ART" ] && ART="$(cd "$ART" && pwd)"
 ICON="${3:-}"
 TARGET="${SSR_IOS_TARGET:-device}"
+# The 3DS games: SSR_IOS_3DS_KIT names oras-apple's ios-engine-kit.tar.xz (the engine as a library, for
+# iPhones and iPads only: no Simulator build of it).
+KIT3DS=""
+if [ -n "${SSR_IOS_3DS_KIT:-}" ] && [ "$TARGET" = device ]; then
+    [ -f "$SSR_IOS_3DS_KIT" ] || { printf '\n== FAILED: SSR_IOS_3DS_KIT: no %s\n' "$SSR_IOS_3DS_KIT" >&2; exit 1; }
+    KIT3DS="$HERE/build-ios-3ds-kit"
+    rm -rf "$KIT3DS"; mkdir -p "$KIT3DS"
+    tar -xJf "$SSR_IOS_3DS_KIT" -C "$KIT3DS"
+fi
 BW2_DECOMP=https://github.com/fuddlesworth/pokebw2.git
 BW2_COMMIT=753b3fd97683fc619bb98b52e7276afac3d5e32f
 W2_COMMIT=be2c125a700c23702ba1c5a4ef63e0e970bcc87a
@@ -99,6 +108,7 @@ ONLINE=()
 [ -n "${FULLDEX_GOOGLE_CLIENT_FILE:-}" ] && ONLINE+=(-DFULLDEX_GOOGLE_CLIENT_FILE="$FULLDEX_GOOGLE_CLIENT_FILE")
 OPTS+=(${ONLINE[@]+"${ONLINE[@]}"})
 [ -n "$ART" ] && OPTS+=(-DSSR_PC_ART="$ART")
+[ -n "$KIT3DS" ] && OPTS+=(-DSSR_IOS_3DS_KIT="$KIT3DS")
 if [ -n "${SSR_GBA_DIR:-}" ]; then
     [ -f "$SSR_GBA_DIR/frontend/embed.h" ] || fail "SSR_GBA_DIR: not Pokemon GBA Widescreen: $SSR_GBA_DIR"
     OPTS+=(-DSSR_GBA_DIR="$SSR_GBA_DIR")
@@ -121,6 +131,17 @@ cp "$BIN" "$APP/pokemon-ds-wide"
 strip -x "$APP/pokemon-ds-wide"
 cp -r "$DATA/funcs" "$APP/data/funcs"
 cp LICENSE "$APP/LICENSE.txt"
+if [ -n "$KIT3DS" ]; then
+    # (the engine's MoltenVK, the iPhone and iPad slice of its framework, and the titles' settings)
+    MVK=$(find "$KIT3DS/Frameworks/MoltenVK.xcframework" -type d -name MoltenVK.framework -path '*ios-arm64/*' -not -path '*simulator*' | head -1)
+    [ -n "$MVK" ] || fail "the 3DS kit has no iPhone MoltenVK.framework"
+    mkdir -p "$APP/Frameworks" "$APP/3ds"
+    cp -R "$MVK" "$APP/Frameworks/"
+    cp -R "$KIT3DS/titles" "$APP/3ds/titles"
+    cp "$KIT3DS/VERSIONS.txt" "$APP/3ds/VERSIONS.txt"
+    codesign --force --sign - --timestamp=none "$APP/Frameworks/MoltenVK.framework"
+    say "3DS games too: $(tr '\n' ' ' < "$KIT3DS/VERSIONS.txt")"
+fi
 cp LICENSE-Noto.txt "$APP/LICENSE-Noto.txt"
 cp frontend/fonts/FONT-LICENSES.txt "$APP/FONT-LICENSES.txt"
 GBA_DOCS=""
@@ -206,9 +227,11 @@ rm -rf "$DIST/Payload"
 SSR_SRC="$HERE" python3 - "$IPA" <<'PY'
 import re, sys, zipfile
 regional_codes = '|'.join(p['code'] for p in __import__('json').loads(__import__('pathlib').Path(__import__('os').environ['SSR_SRC'], 'tools/regions/profiles.json').read_text())['profiles'] if p['kind']=='functions')
-ok = re.compile(r'^Payload/(Pokemon Fulldex\.app/(pokemon-ds-wide|Info\.plist|LICENSE\.txt|LICENSE-mGBA\.txt|LICENSE-Noto\.txt|FONT-LICENSES\.txt|AppIcon[0-9.x@~a-z]+\.png|_CodeSignature/(CodeResources)?|data/|data/funcs/|data/funcs/(?:IREO|IRDO|IRBO|IRAO|CPUE|ADAE|APAE|ADAS|APAF|APAS|APAD|ADAD|ADAI|IRAS|CPUS|IREF|IRDF|CPUF|IRBF|IRAF|IRBS|IRES|IRDS|' + regional_codes + r')\.txt)?)?$')
+ok = re.compile(r'^Payload/(Pokemon Fulldex\.app/(pokemon-ds-wide|Info\.plist|LICENSE\.txt|LICENSE-mGBA\.txt|LICENSE-Noto\.txt|FONT-LICENSES\.txt|AppIcon[0-9.x@~a-z]+\.png|_CodeSignature/(CodeResources)?|Frameworks/|Frameworks/MoltenVK\.framework/.*|3ds/|3ds/VERSIONS\.txt|3ds/titles/.*|data/|data/funcs/|data/funcs/(?:IREO|IRDO|IRBO|IRAO|CPUE|ADAE|APAE|ADAS|APAF|APAS|APAD|ADAD|ADAI|IRAS|CPUS|IREF|IRDF|CPUF|IRBF|IRAF|IRBS|IRES|IRDS|' + regional_codes + r')\.txt)?)?$')
 names = zipfile.ZipFile(sys.argv[1]).namelist()
 bad = [n for n in names if not ok.match(n)]
+# (the 3DS titles' settings and MoltenVK only: never a dump, a save or game code)
+bad += [n for n in names if '/3ds/' in n and re.search(r'\.(3ds|cci|cia|cxi|sav|so|dylib|dll)$', n, re.I)]
 if bad: sys.exit('unexpected files in the iOS download: %s' % bad)
 print('ok: %s (%d entries)' % (sys.argv[1].split('/')[-1], len(names)))
 PY

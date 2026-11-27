@@ -366,7 +366,7 @@ void ExtractFuncs(const Folders& fo)
 }
 #endif
 
-#ifdef SSR_N3DS_PC
+#if defined(SSR_N3DS_PC) || defined(SSR_N3DS_IOS)
 std::string& N3dsPrepRom() { static std::string rom; return rom; } // (the game being prepared, for the card and the start)
 #endif
 
@@ -645,7 +645,7 @@ std::vector<Launcher::Game> FindGames(const Folders& fo, std::map<std::string, s
             fprintf(stderr, "[launcher] GBA games: %zu in %s\n", gbaSeen, fo.roms.c_str());
     }
 #endif
-#ifdef SSR_N3DS_PC
+#if defined(SSR_N3DS_PC) || defined(SSR_N3DS_IOS)
     // Omega Ruby and Alpha Sapphire: a dump (.3ds) with the ROMs, played by the 3ds folder's program.
     N3ds::AddPc(romDirs, fo.dir, games);
     for (Launcher::Game& g : games)
@@ -1630,7 +1630,7 @@ int PickGame(Folders& fo, std::vector<Launcher::Game>& games, int selected, bool
     std::function<void()> savesRequestFn; // (savesRequest, below: what Manage Saves leaves to do)
     auto launchSelected = [&]() {
         if (games.empty() || selected < 0 || selected >= (int)games.size()) return;
-#ifdef SSR_N3DS_PC
+#if defined(SSR_N3DS_PC) || defined(SSR_N3DS_IOS)
         // Omega Ruby and Alpha Sapphire: their code is made once from the dump (n3ds.h), the list
         // staying open and saying how it goes; then they play.
         if (games[selected].platform == Launcher::N3DS && !games[selected].comingSoon)
@@ -4676,7 +4676,7 @@ bool Start(int& argc, char**& argv)
         if (directGame < 0 && copiedDirectGba && IsGbaRomName(directRom))
             for (size_t i = 0; i < games.size() && directGame < 0; i++)
                 if (sameRom(games[i].rom, copy) && Playable(fo, games[i])) directGame = (int)i;
-#ifdef SSR_N3DS_PC
+#if defined(SSR_N3DS_PC) || defined(SSR_N3DS_IOS)
         // (A 3DS dump from anywhere: the 3DS game, as if it were with the ROMs; one that cannot be played says why.)
         if (directGame < 0 && (N3ds::EndsWith(directRom, ".3ds") || N3ds::EndsWith(directRom, ".cci") || N3ds::EndsWith(directRom, ".cia")))
         {
@@ -4700,7 +4700,7 @@ bool Start(int& argc, char**& argv)
         if (directGame < 0) directGame = DirectRom::Ds(directRom, fo.saves, fo.art, games);
         if (directGame >= 0 && !Playable(fo, games[directGame])) directGame = -1;
         if (directGame < 0) fprintf(stderr, "[launcher] --rom %s: not in the list\n", directRom.c_str());
-#ifdef SSR_N3DS_PC
+#if defined(SSR_N3DS_PC) || defined(SSR_N3DS_IOS)
         // (A 3DS game whose code is not made yet: the list, with it being made, rather than a game that cannot start.)
         if (directGame >= 0 && games[directGame].platform == Launcher::N3DS && !N3ds::Prepared(games[directGame]))
         {
@@ -4755,7 +4755,7 @@ bool Start(int& argc, char**& argv)
             const std::string error = PrepareLaunch(games[chosen]);
             if (!error.empty()) { fprintf(stderr, "[launcher] %s\n", error.c_str()); directGame = -1; continue; }
         }
-#ifdef SSR_N3DS_PC
+#if defined(SSR_N3DS_PC) || defined(SSR_N3DS_IOS)
         // Omega Ruby or Alpha Sapphire: its own program plays it (n3ds.h), then the list again.
         if (games[chosen].platform == Launcher::N3DS)
         {
@@ -4768,6 +4768,9 @@ bool Start(int& argc, char**& argv)
             DiscordPresence::Playing(Launcher::TitleCase(games[chosen].name));
             const auto start = std::chrono::steady_clock::now();
             N3ds::SyncSave(games[chosen], fo.saves + "/" + games[chosen].saveName, true); // (a save brought in since the list was made)
+#ifdef SSR_N3DS_IOS
+            MobileOrientation::Game(false); // (the 3DS games sideways, as the DS games' wide view)
+#endif
             N3ds::Play(fo.dir, games[chosen]);
             PlayTime::Add(fo.settings, (long long)std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start).count());
             DiscordPresence::InLauncher();

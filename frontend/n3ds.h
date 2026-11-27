@@ -11,7 +11,9 @@
 //   Linux (x86_64): the same, with the Linux program (pokemon-oras, title.so) in 3ds/program beside
 //     FullDex's own program (inside the AppImage too); each game's folder in FullDex's data folder.
 //   macOS (Apple silicon): as Linux, the Mac program (pokemon-oras, title.dylib, Vulkan on MoltenVK)
-//     in 3ds/program beside FullDex's own (in the .app). iPhone and iPad: still Coming Soon.
+//     in 3ds/program beside FullDex's own (in the .app).
+//   iPhone and iPad: the engine is linked into FullDex (SSR_IOS_3DS, libomega_ios.a) and plays in its process,
+//     the game's code interpreted (iOS lets no app build or load code); without the engine, Coming Soon.
 #pragma once
 #include <algorithm>
 #include <chrono>
@@ -56,6 +58,11 @@
 #include "runtime_diagnostics.h"
 #if defined(_WIN32) || (defined(__linux__) && !defined(__ANDROID__) && !defined(__SWITCH__)) || (defined(__APPLE__) && TARGET_OS_OSX)
 #define SSR_N3DS_PC 1 // (the 3DS games' own program beside FullDex: Windows, Linux and macOS)
+#endif
+#if defined(__APPLE__) && !TARGET_OS_OSX && defined(SSR_IOS_3DS)
+#define SSR_N3DS_IOS 1 // (iPhone and iPad: the engine linked in, tools/ios/build_all.sh with SSR_IOS_3DS_KIT)
+#include <SDL2/SDL.h>
+#include "omega_ios.h"
 #endif
 
 namespace N3ds
@@ -415,6 +422,8 @@ inline void DropPlaceholders(std::vector<Launcher::Game>& games)
             bool stays = false;
 #if defined(__APPLE__) && TARGET_OS_OSX
             stays = !ProgramHere(); // (macOS: as Linux, once the download has the 3DS program)
+#elif defined(__APPLE__) && defined(SSR_N3DS_IOS)
+            stays = !ProgramHere(); // (iPhone and iPad: with the engine linked in)
 #elif defined(__APPLE__)
             stays = true;
 #elif defined(__linux__) && !defined(__ANDROID__)
@@ -574,6 +583,70 @@ inline bool RoomFor(const Launcher::Game& g, const std::string& appDir, double& 
     const double need = (double)st.st_size + 300.0 * 1024 * 1024;
     needGb = need / (1024.0 * 1024 * 1024);
     return (double)vs.f_bavail * vs.f_frsize >= need;
+}
+#endif
+
+#ifdef SSR_N3DS_IOS
+// iPhone and iPad (the engine linked in, libomega_ios.a from oras-apple's iOS engine kit): the dumps in the ROM
+// folders (the app's Documents, which the Files app shows), each its folder 3ds/<title id> in FullDex's (its
+// saves, settings and log). iOS lets no app build or load code, so nothing is prepared: the game's code is
+// interpreted, and the game plays in FullDex's own process, in a window of its own, until the player quits.
+inline void AddPc(const std::vector<std::string>& romDirs, const std::string& appDir, std::vector<Launcher::Game>& games)
+{
+    ProgramHere() = true;
+    SkipNote().clear(); SkipRank() = 0;
+    for (const std::string& dir : romDirs)
+    {
+        DIR* d = opendir(dir.c_str());
+        if (!d) continue;
+        while (dirent* e = readdir(d))
+        {
+            std::string path = dir + "/" + e->d_name;
+            if (!EndsWith(path, ".3ds") && !EndsWith(path, ".cci") && !EndsWith(path, ".cia")) continue;
+            if (!IsFile(path)) continue;
+            const Title* t = Check(path);
+            if (!t) continue;
+            bool dup = false;
+            for (const Launcher::Game& o : games) dup |= o.platform == Launcher::N3DS && o.code == t->code;
+            if (dup) continue;
+            games.push_back(Make(*t, path, appDir + "/3ds/" + t->id));
+            fprintf(stderr, "[3ds] %s: %s\n", t->name, path.c_str());
+        }
+        closedir(d);
+    }
+}
+// (Nothing to prepare on iOS: these keep the PC's calls in pc_launcher.cpp as they are.)
+inline bool Prepared(const Launcher::Game&) { return true; }
+inline bool Busy() { return false; }
+inline std::string Status() { return std::string(); }
+inline void StartPrepare(const std::string&, const Launcher::Game&) {}
+
+// Plays it in a full-screen window of its own (the list's window is closed by then), the engine drawing
+// with Vulkan on MoltenVK (the app's Frameworks) into a Metal view on it; "Restart game" (3) starts it again.
+inline int Play(const std::string& appDir, const Launcher::Game& g)
+{
+    std::error_code ec;
+    std::filesystem::create_directories(g.folder + "/data", ec);
+    const std::string own = appDir + "/3ds/engine";
+    std::filesystem::create_directories(own, ec);
+    MarkDecrypted(g.rom);
+    char* base = SDL_GetBasePath();
+    const std::string titles = std::string(base ? base : "./") + "3ds/titles";
+    if (base) SDL_free(base);
+    for (;;)
+    {
+        SDL_Window* w = SDL_CreateWindow(g.name.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 0, 0,
+            SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_METAL | SDL_WINDOW_SHOWN);
+        if (!w) { fprintf(stderr, "[3ds] no window for %s: %s\n", g.name.c_str(), SDL_GetError()); return -1; }
+        const auto runtimeLog = RuntimeDiagnostics::Before(g.folder);
+        fprintf(stderr, "[3ds] %s: playing (interpreted) from %s\n", g.name.c_str(), g.rom.c_str());
+        const int code = omega_ios_start(w, titles.c_str(), own.c_str(), g.folder.c_str(), g.rom.c_str());
+        RuntimeDiagnostics::AppendChanged(g.folder, runtimeLog);
+        SDL_DestroyWindow(w);
+        fprintf(stderr, "[3ds] %s ended (%d)%s\n", g.name.c_str(), code,
+                code == 1 ? ": see 3ds/<title id>/data/log.txt (and panic.txt, start-error.txt)" : "");
+        if (code != 3) return code;
+    }
 }
 #endif
 

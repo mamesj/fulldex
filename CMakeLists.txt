@@ -471,6 +471,18 @@ elseif(APPLE)
         target_sources(ssrecomp PRIVATE frontend/ios_orient.mm)
         set_source_files_properties(frontend/ios_orient.mm PROPERTIES LANGUAGE CXX COMPILE_FLAGS "-x objective-c++")
         target_link_libraries(ssrecomp PRIVATE "-framework UIKit" "-framework GameController" "-framework AVFoundation")
+        # The 3DS games (frontend/n3ds.h): oras-apple's iOS engine kit, unpacked (lib/libomega_ios.a,
+        # include/omega_ios.h; tools/ios/build_all.sh puts its MoltenVK.framework and titles in the app).
+        set(SSR_IOS_3DS_KIT "" CACHE PATH "The unpacked iOS engine kit (the 3DS games), empty for none")
+        if(SSR_IOS_3DS_KIT)
+            if(NOT EXISTS "${SSR_IOS_3DS_KIT}/lib/libomega_ios.a")
+                message(FATAL_ERROR "SSR_IOS_3DS_KIT: no lib/libomega_ios.a in ${SSR_IOS_3DS_KIT}")
+            endif()
+            target_compile_definitions(ssrecomp PRIVATE SSR_IOS_3DS=1)
+            target_include_directories(ssrecomp PRIVATE "${SSR_IOS_3DS_KIT}/include")
+            target_link_libraries(ssrecomp PRIVATE "${SSR_IOS_3DS_KIT}/lib/libomega_ios.a"
+                "-framework Metal" "-framework QuartzCore" "-framework IOSurface" "-framework CoreFoundation" "-framework Security")
+        endif()
     endif()
 elseif(SSR_SWITCH)
     # (devkitPro's libcurl, with its TLS library, from the portlibs.)
