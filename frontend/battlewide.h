@@ -19,7 +19,11 @@
 class BattleWide
 {
 public:
-    struct Layer { int num, prio; bool c256; int mapH; melonDS::u32 charBase, mapBase; };
+    // `emptyHalf`: for a map 512 pixels wide, the half (0 the left, 1 the right) that is one tile
+    // throughout while the other holds a picture, or -1. A move's effect drawn in place of the
+    // battle's background (Magma Storm's fire) fills one half of the map and leaves the other
+    // clear: beside the screen, that clear half showed the backdrop (white).
+    struct Layer { int num, prio; bool c256; int mapH; melonDS::u32 charBase, mapBase; int emptyHalf = -1; };
 
     // Everything the picture is made from, as the frame left it: taken by Grab right after the
     // frame (quick), used by Render (the slow part). With `keep`, Grab copies it all, so that
@@ -126,9 +130,12 @@ public:
             }
         // Windows (the stats shown after a level up): a background whose pixels on the screen
         // fill the rectangle they are in, away from both edges of the screen, whatever the
-        // size of its map. They are not continued beyond the screen, stay where the game
-        // put them, in front, and are not moved with the wild Pokémon's side (which would
-        // cut one in two at the bottom of its rows).
+        // size of its map; or against one edge, if it is not most of the screen wide (an
+        // Ability's banner, which slides in from the left). They are not continued beyond the
+        // screen and are not moved with the wild Pokémon's side (which would cut one in two at
+        // the bottom of its rows); one at or by an edge of the screen is moved out to that edge
+        // of the view, as the HP boxes are (see Render). The sprites on one (an icon) count
+        // towards its rectangle.
         uint8_t windowLayers = 0;
         {
             // One pass over the screen for all four backgrounds.
@@ -147,14 +154,51 @@ public:
                     y0[b] = std::min(y0[b], y); y1[b] = std::max(y1[b], y);
                 }
             for (int b = 0; b < 4; b++)
-                if (n[b] >= 256 && x0[b] > 0 && x1[b] < 255 && n[b] * 10 >= (x1[b] - x0[b] + 1) * (y1[b] - y0[b] + 1) * 9)
-                    windowLayers |= 1 << b;
+            {
+                if (n[b] < 256) continue;
+                const bool left = x0[b] == 0, right = x1[b] == 255;
+                if (left && right) continue;
+                const int area = (x1[b] - x0[b] + 1) * (y1[b] - y0[b] + 1);
+                int filled = n[b];
+                if (left || right)
+                {
+                    if (x1[b] - x0[b] + 1 > 160) continue;
+                    for (int y = y0[b]; y <= y1[b]; y++)
+                        for (int x = x0[b]; x <= x1[b]; x++)
+                            filled += LayerClass(top.flags[y * 256 + x]) == LAYER_OBJ;
+                }
+                if (filled * 10 >= area * 9) windowLayers |= 1 << b;
+            }
         }
         {
             int kept = 0;
             for (int i = 0; i < nLayers; i++)
                 if (!(windowLayers & (1 << layers[i].num))) layers[kept++] = layers[i];
             nLayers = kept;
+        }
+        // (A map's two halves, each 32 tiles wide, over the rows the screen shows: one entry
+        // throughout in one, several in the other.)
+        for (int i = 0; i < nLayers; i++)
+        {
+            Layer& l = layers[i];
+            u16 first[2] = {};
+            bool one[2] = { true, true };
+            int kinds[2] = {};
+            u16 seen[2][8] = {};
+            const int rows = l.mapH == 512 ? 64 : 32;
+            for (int half = 0; half < 2; half++)
+                for (int ty = 0; ty < rows; ty++)
+                    for (int tx = 0; tx < 32; tx++)
+                    {
+                        const u32 a = l.mapBase + (half + ((ty >> 5) << 1)) * 0x800 + ((ty & 31) * 32 + tx) * 2;
+                        const u16 e = unitNum == 0 ? nds.GPU.ReadVRAM_ABG<u16>(a) : nds.GPU.ReadVRAM_BBG<u16>(a);
+                        if (ty == 0 && tx == 0) first[half] = e;
+                        else if (e != first[half]) one[half] = false;
+                        bool known = false;
+                        for (int k = 0; k < kinds[half] && !known; k++) known = seen[half][k] == e;
+                        if (!known && kinds[half] < 8) seen[half][kinds[half]++] = e;
+                    }
+            if (one[0] != one[1] && kinds[one[0] ? 1 : 0] >= 8) l.emptyHalf = one[0] ? 0 : 1;
         }
         uint8_t layerMask = 0;
         for (int i = 0; i < nLayers; i++) layerMask |= 1 << layers[i].num;
@@ -452,8 +496,17 @@ public:
                 }
                 if (i == nLayers) break;
                 const Layer& l = layers[i];
-                const int sx = (C.lineScroll[y][l.num][0] + x) & 511;
+                int sx = (C.lineScroll[y][l.num][0] + x) & 511;
                 const int sy = (C.lineScroll[y][l.num][1] + y) & (l.mapH - 1);
+                if (l.emptyHalf >= 0 && (sx >> 8) == l.emptyHalf)
+                {
+                    // The empty half of a map (see Layer) shows the other mirrored, as the
+                    // game's own backgrounds are, so that it goes on from the screen's edge.
+                    // (m: 256 is the first pixel past the picture's right end, 511 the last
+                    // before its left end; each mirrors the one as far inside.)
+                    const int base = (1 - l.emptyHalf) * 256, m = (sx - base) & 511;
+                    sx = base + 511 - m;
+                }
                 const int tx = sx >> 3, ty = sy >> 3;
                 const u32 block = (tx >> 5) + ((ty >> 5) << 1);
                 const u32 mapAddr = l.mapBase + block * 0x800 + (((ty & 31) << 5) + (tx & 31)) * 2;
@@ -526,6 +579,9 @@ public:
             if (bg) RowPrio[y] = C.bgcnt[__builtin_ctz(bg)] & 3;
         }
 
+        // A move's effect in place of the battle's background (see Layer).
+        const bool effectBg = nLayers > 0 && layers[nLayers - 1].emptyHalf >= 0;
+
         // With the 3D layer (BG0) over them where it is in front.
         const bool use3D = world && world->pixels && !world->placed && world->w > 0 && (dispcnt & 0x100) && (dispcnt & 8) && (shown & 1);
         const int prio3D = C.bgcnt[0] & 3;
@@ -554,6 +610,7 @@ public:
         const u8* objPrioAt = C.objPrio;
         auto hpPixel = [&](int i) { return objPrioAt[i] == 0 && LayerClass(top.flags[i]) == LAYER_OBJ; };
         Label.assign(256 * 192, 0);
+        WinPx.assign(256 * 192, 0);
         int moved[3] = {};
         for (int side = 1; side <= 2; side++)
         {
@@ -589,9 +646,78 @@ public:
                     }
             }
         }
+        // Windows by an edge of the screen (an Ability's banner at the left, the stats after a
+        // level up at the right; see Grab), with the sprites on them or against them (an icon,
+        // the name over the stats of a Pokémon not in the battle, the HP box the stats cover):
+        // moved out to that edge of the view with the HP boxes, so that each stands against it
+        // as it does against the screen's. (Left in place, the banner stood in from the view's
+        // edge, under the HP box that had moved, and the stats stopped short of the name above
+        // them, with the battle showing beside them.) Their sprites are not drawn where they
+        // were (Back): the windows' places show what is behind them.
+        int movedWin[3] = {};
+        // (winL, winR: the windows' own outer edge on each side, which goes to the edge of the view: the
+        // level-up stats end two pixels in from the screen's side, and the HP box beside them showed through.
+        // The sprites taken along with a window keep their place by it, and what goes past the view is cut.)
+        int winL = 256, winR = -1;
+        if (C.windowLayers)
+        {
+            int bx0[4] = { 256, 256, 256, 256 }, bx1[4] = { -1, -1, -1, -1 };
+            for (int i = 0; i < 256 * 192; i++)
+            {
+                const uint8_t c = LayerClass(top.flags[i]);
+                if (!c || c > 0x0F || !(c & C.windowLayers) || (c & (c - 1))) continue;
+                const int b = __builtin_ctz(c);
+                bx0[b] = std::min(bx0[b], i & 255);
+                bx1[b] = std::max(bx1[b], i & 255);
+            }
+            for (int b = 0; b < 4; b++)
+            {
+                const int side = bx0[b] <= 3 && bx1[b] < 252 ? 1 : bx1[b] >= 252 && bx0[b] > 3 ? 2 : 0;
+                if (!side) continue;
+                Stack.clear();
+                for (int i = 0; i < 256 * 192; i++)
+                    if (!Label[i] && LayerClass(top.flags[i]) == (1 << b))
+                    {
+                        Label[i] = side;
+                        Stack.push_back(i);
+                    }
+                auto joins = [&](int q) {
+                    const uint8_t c = LayerClass(top.flags[q]);
+                    return c == (1 << b) || c == LAYER_OBJ;
+                };
+                while (!Stack.empty())
+                {
+                    const int p = Stack.back();
+                    Stack.pop_back();
+                    movedWin[side]++;
+                    WinPx[p] = 1;
+                    const int x = p & 255, y = p >> 8;
+                    if (LayerClass(top.flags[p]) == (1 << b))
+                    {
+                        if (side == 1) winL = std::min(winL, x);
+                        else winR = std::max(winR, x);
+                    }
+                    if (BackPrio[outIndex(x, y)] < 4) { Back[outIndex(x, y)] = 0; BackPrio[outIndex(x, y)] = 4; }
+                    // (Across 6 rows: the name stands 4 rows above the stats.)
+                    for (int dy = -6; dy <= 6; dy++)
+                        for (int dx = -3; dx <= 3; dx++)
+                        {
+                            if (x + dx < 0 || x + dx > 255 || y + dy < 0 || y + dy > 191) continue;
+                            const int q = p + dy * 256 + dx;
+                            if (!Label[q] && joins(q))
+                            {
+                                Label[q] = side;
+                                Stack.push_back(q);
+                            }
+                        }
+                }
+            }
+        }
+        // (Not most of the screen, which would be an effect: a third for HP boxes, more for
+        // windows, as the stats with a name over them are.)
         bool shift[3] = { false, true, true };
         for (int side = 1; side <= 2; side++)
-            if (moved[side] > 256 * 192 / 3) shift[side] = false;
+            if (moved[side] > 256 * 192 / 3 || movedWin[side] > 256 * 192 * 6 / 10) shift[side] = false;
         for (int y = 0; y < 192; y++)
             if (Label[y * 256] && Label[y * 256] == Label[y * 256 + 255]) shift[Label[y * 256]] = false;
 
@@ -644,13 +770,17 @@ public:
                 busy = x1 - x0 >= 160;
             }
         }
-        if (platRight > platLeft)
+        // (Only until it has once got there: a move's or an ability's sprites at the back over the other
+        // side, as Intimidate's, were taken for the platform sliding in again, and the Pokémon and its
+        // platform went back to the middle and glided out once more, over and over in a battle.)
+        if (platRight > platLeft && !Opened)
         {
             if ((platLeft + platRight) / 2 < 192) Glide = 0;
             else if (!busy) Glide = std::min(1.0f, Glide + steps / 20.0f);
         }
         else if ((Glide > 0 || Calls > 300) && !busy)                   // after the opening, or joined late
             Glide = std::min(1.0f, Glide + steps / 20.0f);
+        if (Glide >= 1) Opened = true;
         const int enemyShift = (int)std::lround(extend * Glide);
 
         const int w = 256 + 2 * extend;
@@ -863,10 +993,14 @@ public:
             if (enemyShift > 0)
             {
                 // The backgrounds, those of the wild Pokémon's rows moved, with the gap between
-                // the two Pokémon stretched to fill.
+                // the two Pokémon stretched to fill. Not a move's effect drawn in place of the
+                // battle's background (Magma Storm's fire, see Layer): that is one picture, and
+                // moving its upper rows out cut it in two across the screen; only what moves
+                // with the wild Pokémon goes, with the effect behind where it was.
+                const bool stretch = y < EnemyBottom && !effectBg;
                 for (int x = 0; x < w; x++)
-                    row[x] = (y < EnemyBottom ? fg[x] : move[x]) ? plain[x] : pic[x];
-                if (y < EnemyBottom)
+                    row[x] = (stretch ? fg[x] : move[x]) ? plain[x] : pic[x];
+                if (stretch)
                 {
                     Row.assign(row, row + w);
                     for (int sx = EnemyGapLeft; sx < 256 + extend; sx++)
@@ -889,7 +1023,7 @@ public:
                     for (int x = 0; x < w && !rowHas; x++) rowHas = bridge[x] != 0;
                     if (rowHas)
                     {
-                        if (y >= EnemyBottom)
+                        if (!stretch)
                             for (int x = 0; x < w; x++)
                                 if (bridge[x]) row[x] = plain[x];
                         const int oldW = streamR - streamL;
@@ -943,7 +1077,10 @@ public:
             for (int sx = 0; sx < 256; sx++)
             {
                 const int l = Label[y * 256 + sx];
-                if (l && shift[l]) row[l == 1 ? sx : sx + 2 * extend] = 0xFF000000 | top.pixels[y * 256 + sx];
+                if (!l || !shift[l]) continue;
+                const int win = !WinPx[y * 256 + sx] ? 0 : l == 1 ? (winL < 256 ? -winL : 0) : (winR >= 0 ? 255 - winR : 0);
+                const int to = (l == 1 ? sx : sx + 2 * extend) + win;
+                if (to >= 0 && to < w) row[to] = 0xFF000000 | top.pixels[y * 256 + sx];
             }
         }
         out = WideImage();
@@ -958,6 +1095,7 @@ public:
     void Reset()
     {
         Glide = 0;
+        Opened = false;
         Calls = 0;
         Counted = false;
         Ghosts[0] = Ghosts[1] = Ghost();
@@ -993,12 +1131,14 @@ private:
     std::vector<uint8_t> ScaleOn;
     std::vector<int> Members;
     std::vector<uint8_t> Label;
+    std::vector<uint8_t> WinPx; // pixels of the windows moved out with the HP boxes (see winL, winR)
     std::vector<uint32_t> Back, Row;
     std::vector<uint8_t> BackPrio;
     std::vector<uint8_t> RowFlat, RowPrio;
     std::vector<uint32_t> RowColour;
     std::vector<uint8_t> EdgePrio;   // per row, left and right: priority of the background at the screen's edge
     float Glide = 0;
+    bool Opened = false; // the wild Pokémon has glided out into its place once in this battle
     struct Box { int x, y, w, h; };
     std::vector<Box> Boxes;
     // A trainer's sprites last seen across the left or the right edge of the screen.

@@ -3388,8 +3388,16 @@ int main(int argc, char** argv)
         };
         const bool megaButton = !pt.on && blue(40, 166) && blue(128, 166) && edge(174, 166) && edge(177, 166) &&
                                 megaFace(186, 166) && megaFace(238, 166);
+        // A move's targets in a double battle (HeartGold, SoulSilver and the hacks built on them, as Heartfelt
+        // Gold): the same CANCEL bar along the bottom as the move list, over buttons of one colour (the
+        // Pokémon: the other side's orange, those the move cannot reach grey) where a move's button is white
+        // at the top. It was taken for the move list, and the strip showed those buttons cut and one of them
+        // as chosen, a move that hits both of the other side's Pokémon among them. It is shown whole, as a card
+        // (battle-menu, below). (A pressed button flashes white for a few frames.)
+        auto light = [&](int x, int y) { int r, g, bl; rgb(x, y, r, g, bl); return r > 200 && g > 200 && bl > 200; };
+        const bool targets = !pt.on && !cmd && blue(40, 166) && blue(128, 166) && !light(64, 20) && !light(64, 30);
         const bool moves = pt.dp ? dpShown && ptPanel == 3
-                                 : !cmd && ptPanel != 4 && blue(40, 166) && blue(128, 166) && (blue(216, 166) || megaButton);
+                                 : !cmd && !targets && ptPanel != 4 && blue(40, 166) && blue(128, 166) && (blue(216, 166) || megaButton);
         battleMega = moves && megaButton;
         // The Yes / No panel (battle-yesno, below): red above blue. It is read above the labels,
         // whose letters can be where it was read before ("Switch Pokemon" has one at (128, 64): in
@@ -3846,7 +3854,7 @@ int main(int argc, char** argv)
                 for (size_t k = sc.items.size() - 2; k < sc.items.size(); k++) sc.items[k].border = true;
             }
         }
-        else if (viewWidth < 300 || battleUnknown >= 20)
+        else if (viewWidth < 300 || battleUnknown >= 20 || targets)
         {
             sc.name = "battle-menu";
             float scale = std::min((126 - L) / 256, 98.0f / 192);
@@ -9490,7 +9498,7 @@ int main(int argc, char** argv)
         WideImage wide;
         bool battleRender = false; // the widened battle picture is still to be made (BattleRender)
         std::vector<uint8_t> flags[2], edgeFlat[2];
-        std::vector<uint32_t> edge[2], widePixels;
+        std::vector<uint32_t> edge[2], edgeUnder[2], widePixels;
         std::vector<uint16_t> edgeBlend[2];
 
         // For drawing while the next frame is emulated: copies of what that changes. The
@@ -9508,6 +9516,7 @@ int main(int argc, char** argv)
                 if (sc.edge) { edge[i].assign(sc.edge, sc.edge + 2 * 192); sc.edge = edge[i].data(); }
                 if (sc.edgeBlend) { edgeBlend[i].assign(sc.edgeBlend, sc.edgeBlend + 2 * 192); sc.edgeBlend = edgeBlend[i].data(); }
                 if (sc.edgeFlat) { edgeFlat[i].assign(sc.edgeFlat, sc.edgeFlat + 2 * 192); sc.edgeFlat = edgeFlat[i].data(); }
+                if (sc.edgeUnder) { edgeUnder[i].assign(sc.edgeUnder, sc.edgeUnder + 2 * 192); sc.edgeUnder = edgeUnder[i].data(); }
             }
             if (severalFrames && wide.pixels && wide.w > 0 && wide.h > 0 && wide.pixels == melonDS::Wide.Front)
             {
@@ -13987,8 +13996,10 @@ int main(int argc, char** argv)
         const int topUnit = topUnitOf();
         SmButtonsArt::Ensure(UiLang::lang);
         ScreenImage screenImages[7] = {
-            { top, renderer2d.LayerFlags[topUnit], renderer2d.EdgeColour[topUnit], renderer2d.EdgeBlend[topUnit], renderer2d.EdgeFlat[topUnit] },
-            { bot, renderer2d.LayerFlags[1 - topUnit], renderer2d.EdgeColour[1 - topUnit], renderer2d.EdgeBlend[1 - topUnit], renderer2d.EdgeFlat[1 - topUnit] },
+            { top, renderer2d.LayerFlags[topUnit], renderer2d.EdgeColour[topUnit], renderer2d.EdgeBlend[topUnit], renderer2d.EdgeFlat[topUnit],
+              renderer2d.EdgeUnder[topUnit] },
+            { bot, renderer2d.LayerFlags[1 - topUnit], renderer2d.EdgeColour[1 - topUnit], renderer2d.EdgeBlend[1 - topUnit], renderer2d.EdgeFlat[1 - topUnit],
+              renderer2d.EdgeUnder[1 - topUnit] },
             { g_dexCover[0], nullptr },
             { g_dexCover[1], nullptr },
             { g_dexPages[0], nullptr },
@@ -14225,13 +14236,25 @@ int main(int argc, char** argv)
         }
         MergedPrepareEdgeWindows(scene, screenImages);
         sceneMark(1);
-        // Black 2: a picture in 2D covering the world (the Surf and Fly cut-ins) is shown at 4:3:
-        // continuing it beside the screen would only make streaks.
+        // A picture in 2D covering the world (Black 2's Surf and Fly cut-ins; the snapshot of the world that
+        // Heartfelt Gold's Elite Four introductions show, darkened, then under translucent 3D; the picture it
+        // shows on entering Viridian Forest) is shown at 4:3: continuing it beside the screen would only make
+        // streaks. Beside it, the world as it last was where that matches it (MergedHeldWorld), soft bars if not.
         // (Back to wide only after 10 frames without one: the cut-in's flashes come in between.)
+        static uint32_t pictureFrame = 0;
+        {
+            // (A bitmap background blended under the 3D layer, which is engine A's: see MergedEdgesArePicture.)
+            const auto& ua = nds->GPU.GPU2D_A;
+            const u32 mode = ua.DispCnt & 7;
+            const bool bg2Bitmap = (ua.DispCnt & (1 << 10)) && ((mode == 5 && (ua.BGCnt[2] & 0x80)) || mode == 6);
+            const bool bg3Bitmap = (ua.DispCnt & (1 << 11)) && mode >= 3 && mode <= 5 && (ua.BGCnt[3] & 0x80);
+            const bool under3D = topUnit == 0 && (ua.DispCnt & (1 << 3)) && (ua.DispCnt & (1 << 8)) &&
+                (((ua.BlendCnt & (1 << 10)) && bg2Bitmap) || ((ua.BlendCnt & (1 << 11)) && bg3Bitmap));
+            const bool fading = pictureFrame && frame - pictureFrame < 10;
+            if (scene.wide && MergedEdgesArePicture(scene, screenImages, under3D, fading)) pictureFrame = frame ? frame : 1;
+        }
         if (funcWatchOn)
         {
-            static uint32_t pictureFrame = 0;
-            if (scene.wide && MergedEdgesArePicture(scene, screenImages)) pictureFrame = frame ? frame : 1;
             // Screens drawn on below their last line (Scene::extraRows): copies with the rows
             // added, two of each in turn (the pipeline shows one while the next is made).
             for (int s = 0; s < 2; s++)
@@ -14307,8 +14330,15 @@ int main(int argc, char** argv)
                 screenImages[s].edge = nullptr;
                 screenImages[s].edgeBlend = nullptr;
                 screenImages[s].edgeFlat = nullptr;
+                screenImages[s].edgeUnder = nullptr;
             }
-            scene.narrow = scene.wide && pictureFrame && frame - pictureFrame < 10;
+        }
+        scene.narrow = scene.wide && pictureFrame && frame - pictureFrame < 10;
+        // (A still picture's sprites are not the weather's: none are repeated beside it.)
+        if (scene.narrow)
+        {
+            scene.weatherObj = false;
+            scene.weatherRepeat = 0;
         }
         if (opt.logSections)
         {
