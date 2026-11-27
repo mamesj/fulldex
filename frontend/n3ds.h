@@ -23,6 +23,8 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <functional>
 #include <map>
 #include <mutex>
@@ -877,6 +879,23 @@ inline void AddPc(const std::vector<std::string>& romDirs, const std::string& ap
     }
 }
 
+// The program's add-on (tools/pc/usum-addon: Ultra Sun and Ultra Moon's battle buttons and X menu, X and Y's X
+// menu, for one screen): Windows's SDL2.dll in front of the program's own (SDL2_real.dll), Linux's usumfix.so, which
+// Play loads in front of the program's libraries. Every build of it holds the name of the file that turns it off,
+// which no other file does: an SDL2.dll that is SDL itself, or anything else, is never taken for it.
+#ifdef _WIN32
+inline const char* kAddon = "SDL2.dll";
+#else
+inline const char* kAddon = "usumfix.so";
+#endif
+inline bool IsAddon(const std::filesystem::path& p)
+{
+    std::ifstream f(p, std::ios::binary);
+    if (!f) return false;
+    const std::string bytes((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    return bytes.find("usumfix_off.txt") != std::string::npos;
+}
+
 // The game's folder made (a copy of the program, when it has none yet) and told where the dump is.
 inline bool MakeFolder(const std::string& appDir, const Launcher::Game& g)
 {
@@ -910,6 +929,13 @@ inline bool MakeFolder(const std::string& appDir, const Launcher::Game& g)
             if (!RuntimeKit::ReplaceWith(from / "SDL2.dll", to / "SDL2.dll", ec))
                 fprintf(stderr, "[3ds] the add-on's SDL2.dll to %s: %s\n", g.folder.c_str(), ec.message().c_str());
         }
+        ec.clear();
+        // (The add-on kept as the kit has it: CopyMissing never replaces a file, so a folder would keep the add-on
+        // of the FullDex that made it, and miss what a newer one does, such as X and Y's X menu. Only an add-on
+        // is replaced, by an add-on: a file of another kind put in its place is kept.)
+        if (IsAddon(from / kAddon) && IsAddon(to / kAddon) && !RuntimeKit::SameBytes(from / kAddon, to / kAddon)
+            && !RuntimeKit::ReplaceWith(from / kAddon, to / kAddon, ec))
+            fprintf(stderr, "[3ds] the add-on (%s) to %s: %s\n", kAddon, g.folder.c_str(), ec.message().c_str());
         ec.clear();
     }
 #ifdef _WIN32
@@ -1182,6 +1208,30 @@ inline StatusInfo Peek()
 }
 inline void Ack() { Prep& p = P(); std::lock_guard<std::mutex> l(p.m); p.told = true; }
 
+#ifndef _WIN32
+// (Linux) LD_PRELOAD for the game's program: the add-on in its folder first, in front of any others already asked
+// for (such as Steam's overlay), which it leaves as they were; empty when there is no add-on. (A space or a colon
+// would split the list, so a folder with one in its path, such as a card's whose name has a space, gives the add-on
+// as ./usumfix.so: the program starts in its folder.)
+inline std::string AddonPreload(const std::string& folder, const char* existing)
+{
+    std::string addon = folder + "/" + kAddon;
+    std::error_code ec;
+    if (!std::filesystem::is_regular_file(addon, ec)) return "";
+    if (addon.find_first_of(" :") != std::string::npos) addon = std::string("./") + kAddon;
+    return existing && *existing ? addon + ":" + existing : addon;
+}
+// The environment with name set to value (in place of any it had), for execve.
+inline std::vector<std::string> EnvWith(const std::string& name, const std::string& value)
+{
+    std::vector<std::string> env;
+    for (char** e = environ; e && *e; e++)
+        if (std::strncmp(*e, name.c_str(), name.size()) != 0 || (*e)[name.size()] != '=') env.emplace_back(*e);
+    env.push_back(name + "=" + value);
+    return env;
+}
+#endif
+
 // Plays it (its window, until it quits); "Restart game" (exit code 3) starts it again.
 inline int Play(const std::string& appDir, const Launcher::Game& g)
 {
@@ -1193,11 +1243,19 @@ inline int Play(const std::string& appDir, const Launcher::Game& g)
     {
         const std::string exe = Exe(g.folder), dir = g.folder;
         const auto runtimeLog = RuntimeDiagnostics::Before(g.folder);
+        // (The add-on in front of the program's libraries: the environment made here, as the child of a fork may
+        // only exec.)
+        const std::string preload = AddonPreload(dir, getenv("LD_PRELOAD"));
+        const std::vector<std::string> env = preload.empty() ? std::vector<std::string>() : EnvWith("LD_PRELOAD", preload);
+        std::vector<char*> envp;
+        for (const std::string& e : env) envp.push_back(const_cast<char*>(e.c_str()));
+        envp.push_back(nullptr);
         const pid_t pid = fork();
         if (pid == 0)
         {
             if (chdir(dir.c_str()) != 0) _exit(127);
-            execl(exe.c_str(), exe.c_str(), (char*)nullptr);
+            if (!preload.empty()) execle(exe.c_str(), exe.c_str(), (char*)nullptr, envp.data());
+            else execl(exe.c_str(), exe.c_str(), (char*)nullptr);
             _exit(127);
         }
         if (pid < 0) return -1;

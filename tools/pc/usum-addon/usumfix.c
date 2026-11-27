@@ -12,9 +12,27 @@
  * cut out of the bottom screen and laid out over the battle. Clicks and taps on the new buttons go
  * to the program as clicks on the matching place in the box. With "Menus: Laid out" the field's X
  * menu, which the program shows in pieces of the bottom screen, is drawn anew in the same places.
- * Other games' folders may hold it too: for them it only passes SDL through. */
+ * Pokemon X and Y (and X Legacy and Y Legacy) get only that: their X menu, drawn anew.
+ * Other games' folders may hold it too: for them it only passes SDL through.
+ *
+ * Linux: usumfix.so, which FullDex starts the program with (LD_PRELOAD, frontend/n3ds.h), as the program has
+ * no SDL2.dll to stand in for. It points the program's own imports of dlsym (how the program finds OpenGL ES,
+ * EGL and Vulkan) and SDL_PollEvent at ours, in its global offset table, and exports nothing; the rest is as
+ * on Windows. There it works for X and Y only, so far. */
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#else
+#define _GNU_SOURCE
+#include <dlfcn.h>
+#include <elf.h>
+#include <limits.h>
+#include <link.h>
+#include <sys/mman.h>
+#include <pthread.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -23,9 +41,33 @@
 #include <math.h>
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
+#ifdef _WIN32
+#define USUMFIX_EXPORT __declspec(dllexport)
+#else
+/* (Linux: Windows's names for what we use of it) */
+typedef pthread_mutex_t CRITICAL_SECTION;
+static void InitializeCriticalSection(CRITICAL_SECTION *c)
+{
+    pthread_mutexattr_t a;
+    pthread_mutexattr_init(&a);
+    pthread_mutexattr_settype(&a, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(c, &a);
+}
+#define EnterCriticalSection pthread_mutex_lock
+#define LeaveCriticalSection pthread_mutex_unlock
+#define MAX_PATH 4096
+#endif
+static unsigned long cur_tid(void)
+{
+#ifdef _WIN32
+    return GetCurrentThreadId();
+#else
+    return (unsigned long)pthread_self();
+#endif
+}
 
 /* ================================================================== common */
-static char here[MAX_PATH];          /* the program's folder, with a trailing backslash */
+static char here[MAX_PATH];          /* the program's folder, with a trailing (back)slash */
 static FILE *logf_;
 static int debug_on;
 static CRITICAL_SECTION log_cs;
@@ -37,7 +79,14 @@ static const char *path_here(const char *name)
     snprintf(p, MAX_PATH + 64, "%s%s", here, name);
     return p;
 }
-static int file_here(const char *name) { return GetFileAttributesA(path_here(name)) != INVALID_FILE_ATTRIBUTES; }
+static int file_here(const char *name)
+{
+#ifdef _WIN32
+    return GetFileAttributesA(path_here(name)) != INVALID_FILE_ATTRIBUTES;
+#else
+    return access(path_here(name), F_OK) == 0;
+#endif
+}
 static void lg(const char *fmt, ...)
 {
     if (!debug_on) return;
@@ -49,7 +98,8 @@ static void lg(const char *fmt, ...)
     }
     LeaveCriticalSection(&log_cs);
 }
-static int game_on;         /* this folder holds Ultra Sun or Ultra Moon */
+static int game_on;         /* this folder holds a game we work in: 1 Ultra Sun or Ultra Moon, 2 X or Y */
+static int game_xy;         /* X or Y (and X Legacy, Y Legacy): only the X menu */
 static int fix_off;         /* usumfix_off.txt: leave the program's own battle screen be */
 static unsigned frame;      /* frames shown */
 
@@ -392,8 +442,12 @@ static void back_save(void)
 static void dump_rb(const char *why)
 {
     char fn[96];
+#ifdef _WIN32
     CreateDirectoryA(path_here("usumfix_dumps"), NULL);
-    snprintf(fn, sizeof fn, "usumfix_dumps\\bottom_%06u.ppm", rb_frame);
+#else
+    mkdir(path_here("usumfix_dumps"), 0755);
+#endif
+    snprintf(fn, sizeof fn, "usumfix_dumps/bottom_%06u.ppm", rb_frame);
     FILE *f = fopen(path_here(fn), "wb");
     if (!f) return;
     fprintf(f, "P6\n320 240\n255\n");
@@ -416,7 +470,7 @@ static void rb_arrived(void)
             dump_rb("new picture");
         }
     }
-    if (file_here("usumfix_dump_now")) { DeleteFileA(path_here("usumfix_dump_now")); dump_rb("asked"); }
+    if (file_here("usumfix_dump_now")) { remove(path_here("usumfix_dump_now")); dump_rb("asked"); }
 }
 
 /* ---- telling the menus apart: pixels of the game's own pictures, as they are at 320x240 */
@@ -1778,6 +1832,186 @@ static int xm_layout(void)
     return 1;
 }
 
+/* ======================================================== X and Y's X menu
+ * X and Y show the X menu on the bottom screen: up to six options, two a row, each a pill (its icon and its name) in a
+ * grey surround. With the program's "Menu layouts" on, the one-screen layout shows them as a column at the right of the
+ * window, each option in two pieces of the bottom screen: the pill in its grey rectangle, and over it the same a little
+ * larger, where the game's red cursor shows. We draw each option anew in the larger piece's place: the pill and the
+ * cursor cut out of the grey (a flood from the piece's edges through the light pixels, stopped by the pill's dark outline
+ * and the cursor's red), with a soft shadow, and a white rim under the pointer. Presses go to the program as they are, as
+ * everything is where its piece is. (X Legacy and Y Legacy, played as X and Y, are the same.) The pill's outline is dark
+ * blue, its lighter blue edge included (bright enough to pass on its own where the ends round off), and the cursor is red:
+ * the flood stops at both, and goes corner to corner too, so it reaches the grey left between the cursor and the pill. */
+#define XY_MAX 6
+#define XY_CW 160                       /* its masks: cells of XY_CW x XY_CH, three a row from atlas row XM_AY (Ultra Sun's X */
+#define XY_CH 48                        /* menu cells: the two games never run together) */
+static int xy_n;                        /* the options shown (as the program last drew them) */
+static float xy_src[XY_MAX][4];         /* each option's larger piece: the part of the bottom screen (x, y, w, h) */
+static float xy_dst[XY_MAX][4];         /* where the program puts it (window px from the top) */
+static int xy_mask_ok[XY_MAX];
+static unsigned xy_drawn_frame;         /* the last frame the program drew the pieces (it leaves them out of a frame now and then) */
+static unsigned xy_since, xy_good_frame, xy_read_of;
+static int xy_good;
+/* a piece of the program's: 0 an option's pill in its grey (148 or 150 x 36), 1 the larger piece over it (156 or 158 x 44) */
+static int xy_piece_of(const float *src)
+{
+    if (fabsf(src[3] - 36) < 0.6f && (fabsf(src[2] - 148) < 0.6f || fabsf(src[2] - 150) < 0.6f)) return 0;
+    if (fabsf(src[3] - 44) < 0.6f && (fabsf(src[2] - 156) < 0.6f || fabsf(src[2] - 158) < 0.6f)) return 1;
+    return -1;
+}
+/* the game's X menu pieces, whichever game: the ones the program's draws of them are held back by */
+static int menu_piece_of(const float *src) { return game_xy ? xy_piece_of(src) : xm_piece_of(src); }
+/* this frame's options, from the program's pieces (an option drawn without its larger piece gets it from its pill's) */
+static int xy_find(void)
+{
+    int n = 0;
+    float src[XY_MAX][4], dst[XY_MAX][4];
+    for (int pass = 1; pass >= 0; pass--)
+        for (int i = 0; i < pc_n; i++) {
+            const float *ps = pc_cur[i].src, *pd = pc_cur[i].dst;
+            if (xy_piece_of(ps) != pass) continue;
+            float s4[4], d4[4];
+            memcpy(s4, ps, sizeof s4); memcpy(d4, pd, sizeof d4);
+            if (pass == 0) {    /* a pill alone: its larger piece is 4 px round it */
+                float k = pd[2] / ps[2];
+                s4[0] -= 4; s4[1] -= 4; s4[2] += 8; s4[3] += 8;
+                d4[0] -= 4 * k; d4[1] -= 4 * k; d4[2] += 8 * k; d4[3] += 8 * k;
+            }
+            int dup = 0;
+            for (int k = 0; k < n; k++)
+                dup |= fabsf(src[k][0] + src[k][2] / 2 - (s4[0] + s4[2] / 2)) < 2 && fabsf(src[k][1] + src[k][3] / 2 - (s4[1] + s4[3] / 2)) < 2;
+            if (dup || n == XY_MAX) continue;
+            memcpy(src[n], s4, sizeof s4); memcpy(dst[n], d4, sizeof d4); n++;
+        }
+    if (n) {
+        /* (on the top screen: the options' middle inside it) */
+        if (!top_big()) return 0;
+        float cx = dst[0][0] + dst[0][2] / 2, cy = dst[0][1] + dst[0][3] / 2;
+        if (cx < top_rect[0] || cx > top_rect[0] + top_rect[2] || cy < top_rect[1] || cy > top_rect[1] + top_rect[3]) return 0;
+        /* top to bottom, as they stand */
+        for (int a = 0; a < n; a++) for (int b = a + 1; b < n; b++)
+            if (dst[b][1] < dst[a][1]) {
+                float t[4];
+                memcpy(t, src[a], sizeof t); memcpy(src[a], src[b], sizeof t); memcpy(src[b], t, sizeof t);
+                memcpy(t, dst[a], sizeof t); memcpy(dst[a], dst[b], sizeof t); memcpy(dst[b], t, sizeof t);
+            }
+        memcpy(xy_src, src, sizeof src); memcpy(xy_dst, dst, sizeof dst);
+        xy_n = n; xy_drawn_frame = frame;
+        return n;
+    }
+    /* none this frame: the program leaves them out of a frame now and then; a few frames on they are gone */
+    if (xy_n && frame - xy_drawn_frame <= 4) return xy_n;
+    xy_n = 0;
+    return 0;
+}
+static float xy_lum(int x, int y) { const unsigned char *c = rb[y][x]; return 0.299f * c[0] + 0.587f * c[1] + 0.114f * c[2]; }
+/* the menu's dark blue bands at the top and bottom of the bottom screen, and its light grey between them */
+static int xy_navy(int x, int y) { const unsigned char *c = rb[y][x]; return c[2] >= c[0] + 30 && c[2] < 140 && c[0] < 60; }
+static int xy_grey(int x, int y) { const unsigned char *c = rb[y][x]; float l = xy_lum(x, y); return l > 160 && l < 235 && abs(c[0] - c[2]) < 40; }
+/* the grey and the white, and not the pill's blue outline or the cursor's red: what the flood goes through */
+static int xy_light(int x, int y)
+{
+    const unsigned char *c = rb[y][x];
+    return xy_lum(x, y) > 110 && c[2] < c[0] + 25 && c[0] < c[1] + 40;
+}
+/* an option's mask (its larger piece, (x0, y0) w x h): what a flood from the piece's edges through light pixels cannot reach */
+static int xy_mask(int x0, int y0, int w, int h, int ax, int ay)
+{
+    static unsigned char pass[XY_CH][XY_CW], reach[XY_CH][XY_CW];
+    static int q[XY_CH * XY_CW];
+    int qh = 0, qt = 0;
+    if (w > XY_CW - 2 || h > XY_CH - 2 || x0 < 0 || y0 < 0 || x0 + w > 320 || y0 + h > 240) return 0;
+    for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) { pass[y][x] = xy_light(x0 + x, y0 + y); reach[y][x] = 0; }
+    for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) {
+        if ((y && y < h - 1 && x && x < w - 1) || !pass[y][x]) continue;
+        reach[y][x] = 1; q[qt++] = y * w + x;
+    }
+    while (qh < qt) {
+        int i = q[qh++], y = i / w, x = i % w;
+        for (int dy = -1; dy <= 1; dy++)
+            for (int dx = -1; dx <= 1; dx++) {
+                int xx = x + dx, yy = y + dy;
+                if (xx < 0 || yy < 0 || xx >= w || yy >= h || reach[yy][xx] || !pass[yy][xx]) continue;
+                reach[yy][xx] = 1; q[qt++] = yy * w + xx;
+            }
+    }
+    int n = 0;
+    for (int y = 0; y < XY_CH - 2; y++) for (int x = 0; x < XY_CW - 2; x++) {
+        int m = y < h && x < w && !reach[y][x];
+        atlas_px[ay + y][ax + x] = m ? 255 : 0;
+        n += m;
+    }
+    /* (a pill is most of its piece, and the flood never gets into its middle: else it got through the outline somewhere) */
+    for (int k = 4; k <= 7; k++)
+        if (reach[h / 2][w * k / 10]) return 0;
+    return n > w * h / 2 && n < w * h * 95 / 100;
+}
+/* from the last read-back: is the menu up (its bands and its grey), and each option's mask */
+static int xy_read(void)
+{
+    static const int NAVY[6][2] = { { 40, 8 }, { 160, 8 }, { 280, 8 }, { 40, 230 }, { 160, 232 }, { 250, 230 } };
+    static const int GREY[4][2] = { { 160, 38 }, { 160, 95 }, { 160, 150 }, { 160, 200 } };   /* (between the two columns) */
+    int nv = 0, ng = 0;
+    for (int i = 0; i < 6; i++) nv += xy_navy(NAVY[i][0], NAVY[i][1]);
+    for (int i = 0; i < 4; i++) ng += xy_grey(GREY[i][0], GREY[i][1]);
+    if (nv < 5 || ng < 3) return 0;
+    int ok = 0;
+    for (int i = 0; i < xy_n; i++) {
+        int ax = (i % 3) * XY_CW + 1, ay = XM_AY + (i / 3) * XY_CH + 1;
+        xy_mask_ok[i] = xy_mask((int)(xy_src[i][0] + 0.5f), (int)(xy_src[i][1] + 0.5f), (int)(xy_src[i][2] + 0.5f), (int)(xy_src[i][3] + 0.5f), ax, ay);
+        ok += xy_mask_ok[i];
+    }
+    atlas_mark(XM_AY, XM_AY + 2 * XY_CH);
+    return ok == xy_n;
+}
+static void xy_draw(float u)
+{
+    for (int pass = 0; pass < 2; pass++)
+        for (int i = 0; i < xy_n; i++) {
+            const float *d = xy_dst[i], *src = xy_src[i];
+            float ax = (float)((i % 3) * XY_CW + 1), ay = (float)(XM_AY + (i / 3) * XY_CH + 1);
+            Quad *q;
+            if (!xy_mask_ok[i]) continue;
+            if (pass == 0) {   /* a soft shadow under the pill */
+                if ((q = q_add(K_ATLAS, d[0] + 2 * u, d[1] + 3 * u, d[2], d[3]))) { q_src(q, ax, ay, ax + src[2], ay + src[3]); q_col(q, 0, 0, 0, 0.35f); }
+                continue;
+            }
+            int hover = ptr_in(d[0], d[1], d[2], d[3]);
+            float g = 2.5f * u;
+            if (hover && (q = q_add(K_ATLAS, d[0] - g, d[1] - g, d[2] + 2 * g, d[3] + 2 * g))) {
+                q_src(q, ax, ay, ax + src[2], ay + src[3]); q_col(q, 1, 1, 1, 0.8f);
+            }
+            if ((q = q_add(K_ART, d[0], d[1], d[2], d[3]))) {
+                q_src(q, src[0], src[1], src[0] + src[2], src[1] + src[3]);
+                q->pad[0][0] = ax; q->pad[0][1] = ay; q->pad[0][2] = src[0]; q->pad[0][3] = src[1]; q->pad[1][1] = 1;
+                if (hover) { q_col(q, 1, 1, 1, 1); q->misc[3] = 0.12f; }
+            }
+        }
+}
+/* the frame's X menu (X and Y): 1 if the program's pieces are held back (drawn by us, or for a moment nothing while the
+   read-back catches up) */
+static int xy_layout(void)
+{
+    if (!xy_find()) {
+        if (xy_since) lg("frame %u: X menu pieces gone", frame);
+        xy_since = 0; xy_good = 0;
+        return 0;
+    }
+    if (!xy_since) { xy_since = frame ? frame : 1; xy_read_of = 0; lg("frame %u: X menu pieces, %d options", frame, xy_n); }
+    if (rb_ok && xy_read_of != rb_frame) {
+        xy_read_of = rb_frame;
+        int g = xy_read();
+        if (g != xy_good) lg("frame %u: X menu %s", frame, g ? "drawn by us" : "not in the read-back");
+        xy_good = g;
+        if (g) xy_good_frame = frame;
+    }
+    memset(xm_zone, 0, sizeof xm_zone);   /* (no strip of the program's own to hold back, as Ultra Sun's L and R) */
+    if (!xy_good || art_slot < 0)
+        return frame - xy_since < 12 || (xy_good_frame && frame - xy_good_frame < 12 && xy_good_frame >= xy_since);
+    xy_draw(xy_dst[0][2] / xy_src[0][2] / 2.0f);
+    return 1;
+}
+
 static void read_battle_size(void);
 static float ui_scale;
 /* the frame's decision: from the last read-back, which menu, and our quads for it */
@@ -1791,6 +2025,18 @@ static void layout_frame(void)
     npieces = 0;
     ui_on = 0; ui_box = 0; xm_hold = 0; lay_off[0] = lay_off[1] = 0;
     /* the X menu, in pieces: drawn anew, presses going to the program as they are */
+    /* X and Y: their X menu only */
+    if (game_xy) {
+        if (!fix_off && xy_layout()) {
+            xm_hold = 1; ui_on = 1;
+            for (int i = 0; i < nquads; i++) {
+                quads[i].win[0] = win_w; quads[i].win[1] = win_h;
+                memcpy(quads[i].uvm, art_uvm, sizeof art_uvm);
+            }
+        }
+        publish(0);
+        return;
+    }
     if (game_on && !fix_off && xm_layout()) {
         xm_hold = 1; ui_on = 1;
         for (int i = 0; i < nquads; i++) {
@@ -2013,6 +2259,7 @@ GLFN(void, glDeleteSync, (GLsync))
 GLFN(void, glDrawArraysInstanced, (GLenum, GLint, GLsizei, GLsizei))
 GLFN(void, glDrawElementsInstanced, (GLenum, GLsizei, GLenum, const void *, GLsizei))
 
+#ifdef _WIN32
 typedef PROC (WINAPI *wglGPA_t)(LPCSTR);
 typedef FARPROC (WINAPI *GPA_t)(HMODULE, LPCSTR);
 typedef BOOL (WINAPI *Swap_t)(HDC);
@@ -2028,9 +2275,22 @@ static void *gp(const char *n)
     }
     return p;
 }
+#else
+/* EGL's eglGetProcAddress and eglSwapBuffers as the program got them, and the library it found OpenGL ES's own
+   functions in */
+static void *(*real_egpa)(const char *);
+static unsigned (*real_eglSwap)(void *, void *);
+static void *gl_lib;
+static void *gp(const char *n)
+{
+    void *p = real_egpa ? real_egpa(n) : NULL;
+    if (!p && gl_lib) p = dlsym(gl_lib, n);
+    return p;
+}
+#endif
 
-static DWORD gl_thread;
-#define ON_GL (GetCurrentThreadId() == gl_thread)
+static unsigned long gl_thread;
+#define ON_GL (cur_tid() == gl_thread)
 static int gl_drawlog_on;
 static GLuint draw_fb, read_fb, cur_prog, active_unit, bound_tex[32], sampler_of[32];
 static GLint vp[4], sc[4];
@@ -2045,7 +2305,7 @@ static const char *u_names[U_N] = { "area", "screen", "upright", "smooth_scale",
 static struct { GLuint prog; GLint loc; float size[2]; } gl_uip[NUIP];
 static unsigned char gl_vshadow[65536]; static int gl_vshadow_n;
 typedef struct { GLint loc; int kind; float f[4]; } UVal;
-static struct { GLuint prog; UVal u[U_N]; DWORD thread; } comp[NCOMP];
+static struct { GLuint prog; UVal u[U_N]; unsigned long thread; } comp[NCOMP];
 static int comp_index(GLuint p) { for (int i = 0; i < NCOMP; i++) if (p && comp[i].prog == p) return i; return -1; }
 static int is_comp(GLuint p)
 {
@@ -2298,14 +2558,14 @@ static GLint W_glGetUniformLocation(GLuint p, const GLchar *n)
     }
     for (int k = 0; k < U_N; k++) if (n && !strcmp(n, u_names[k])) {
         int i = comp_index(p);
-        if (i >= 0 && comp[i].thread != GetCurrentThreadId())
+        if (i >= 0 && comp[i].thread != cur_tid())
             for (int j = 0; j < U_N; j++) { comp[i].u[j].loc = -1; comp[i].u[j].kind = 0; }
         if (i < 0) for (i = 0; i < NCOMP; i++) if (!comp[i].prog) {
             comp[i].prog = p;
             for (int j = 0; j < U_N; j++) { comp[i].u[j].loc = -1; comp[i].u[j].kind = 0; }
             break;
         }
-        if (i >= 0 && i < NCOMP) { comp[i].u[k].loc = l; comp[i].thread = GetCurrentThreadId(); }
+        if (i >= 0 && i < NCOMP) { comp[i].u[k].loc = l; comp[i].thread = cur_tid(); }
     }
     return l;
 }
@@ -2360,7 +2620,7 @@ static void W_glDrawArrays(GLenum mode, GLint f, GLsizei c)
             }
             saw_bottom((float)vp[0], win_h - (vp[1] + vp[3]), (float)vp[2], (float)vp[3], cut, part);
             if (box_on && ui_box) return;             /* held back: our menu is drawn instead */
-            if (xm_hold && part && xm_piece_of(part) >= 0) return;
+            if (xm_hold && part && menu_piece_of(part) >= 0) return;
         } else if (scr->kind && scr->f[1] >= 120 && scr->f[0] * 240.0f >= scr->f[1] * 398.0f && scr->f[0] <= scr->f[1] * 4.0f) {
             /* the top screen: 400 x 240, or wider (428 for 16:9, more with "Fill screen") */
             saw_top((float)vp[0], win_h - (vp[1] + vp[3]), (float)vp[2], (float)vp[3]);
@@ -2486,21 +2746,35 @@ static void *gl_wrap_proc(const char *name, void *real)
         }
     return real;
 }
-static PROC WINAPI my_wglGetProcAddress(LPCSTR n) { return (PROC)gl_wrap_proc(n, (void *)real_wglGPA(n)); }
-static BOOL WINAPI my_SwapBuffers(HDC dc)
+/* a frame shown on OpenGL: the thread that shows them is the one we watch */
+static void gl_swapping(void)
 {
-    if (!gl_thread) gl_thread = GetCurrentThreadId();
+    if (!gl_thread) gl_thread = cur_tid();
     if (ON_GL && game_on) {
         fix_off = file_here("usumfix_off.txt");
         gl_frame_end();
         pc_n = 0;
         if (gl_drawlog_on) { gl_drawlog_on = 0; lg("(gl draw log ends)"); }
-        if (debug_on && file_here("usumfix_drawlog.txt")) { DeleteFileA(path_here("usumfix_drawlog.txt")); gl_drawlog_on = 1; lg("gl draw log, frame %u:", frame + 1); }
+        if (debug_on && file_here("usumfix_drawlog.txt")) { remove(path_here("usumfix_drawlog.txt")); gl_drawlog_on = 1; lg("gl draw log, frame %u:", frame + 1); }
         frame++;
         box_on = 0; seen_bottom = 0; box_n = 0; top_seen = 0;
     }
+}
+#ifdef _WIN32
+static PROC WINAPI my_wglGetProcAddress(LPCSTR n) { return (PROC)gl_wrap_proc(n, (void *)real_wglGPA(n)); }
+static BOOL WINAPI my_SwapBuffers(HDC dc)
+{
+    gl_swapping();
     return real_Swap(dc);
 }
+#else
+static void *my_egpa(const char *n) { return gl_wrap_proc(n, real_egpa ? real_egpa(n) : NULL); }
+static unsigned my_eglSwapBuffers(void *dpy, void *surf)
+{
+    gl_swapping();
+    return real_eglSwap(dpy, surf);
+}
+#endif
 
 /* ======================================================== Vulkan backend */
 static PFN_vkGetInstanceProcAddr r_GIPA;
@@ -3203,7 +3477,7 @@ static void VKAPI_CALL W_vkCmdDraw(VkCommandBuffer c, uint32_t vc, uint32_t ic, 
                 && rec.pc_src[2] > 0.5f && rec.pc_src[3] > 0.5f) part = rec.pc_src;
             saw_bottom(v.x, win_h - (v.y + v.height), v.width, v.height, cut, part);
             if (box_on && ui_box) return;
-            if (xm_hold && part && xm_piece_of(part) >= 0) return;
+            if (xm_hold && part && menu_piece_of(part) >= 0) return;
         } else if (e.height && (float)e.width / e.height > 0.25f && (float)e.width / e.height < 0.61f && e.width >= 200) {
             /* the top screen: stored turned, 240 wide and 400 tall, or more (428 for 16:9, more with "Fill screen") */
             VkViewport v = rec.viewport;
@@ -3259,7 +3533,7 @@ static VkResult VKAPI_CALL W_vkQueuePresentKHR(VkQueue q, const VkPresentInfoKHR
     if (v_rbqueued >= 0) rb_sent(q);   /* (sent some other way: the present queue, as a last resort) */
     if (drawlog_on) { drawlog_on = 0; lg("(draw log ends)"); }
     pc_n = 0;
-    if (debug_on && file_here("usumfix_drawlog.txt")) { DeleteFileA(path_here("usumfix_drawlog.txt")); drawlog_on = 1; lg("draw log, frame %u:", frame + 1); }
+    if (debug_on && file_here("usumfix_drawlog.txt")) { remove(path_here("usumfix_drawlog.txt")); drawlog_on = 1; lg("draw log, frame %u:", frame + 1); }
     frame++;
     box_on = 0; seen_bottom = 0; box_n = 0; top_seen = 0;
     return r_vkQueuePresentKHR(q, pi);
@@ -3294,6 +3568,7 @@ static PFN_vkVoidFunction VKAPI_CALL my_GIPA(VkInstance i, const char *name)
 }
 
 /* ========================================================== GetProcAddress */
+#ifdef _WIN32
 static FARPROC WINAPI my_GetProcAddress(HMODULE m, LPCSTR n)
 {
     FARPROC f = real_GPA(m, n);
@@ -3306,6 +3581,86 @@ static FARPROC WINAPI my_GetProcAddress(HMODULE m, LPCSTR n)
     if (n[0] == 'g' && n[1] == 'l') return (FARPROC)gl_wrap_proc(n, (void *)f);
     return f;
 }
+#else
+/* Linux: the program's dlsym stands in for GetProcAddress. The program's own imports pointed at ours: dlsym and
+ * SDL_PollEvent, in the slots of its global offset table that the dynamic linker filled with them (found from its
+ * relocations), as the Windows build does with the program's import table. Only the program's: every library's own
+ * calls go where they always went, so hooks of others in LD_PRELOAD, such as Steam's overlay (whose
+ * dlsym(RTLD_NEXT, ...) looks past whoever calls dlsym), are left as they were. */
+static uintptr_t exe_base;              /* the program's load address, its dynamic section, and the part made read-only */
+static const ElfW(Dyn) *exe_dyn;        /* after relocation (RELRO) */
+static uintptr_t exe_relro_lo, exe_relro_hi;
+static int exe_seg(struct dl_phdr_info *i, size_t sz, void *d)
+{
+    (void)sz; (void)d;
+    exe_base = i->dlpi_addr;
+    for (int k = 0; k < i->dlpi_phnum; k++) {
+        const ElfW(Phdr) *ph = &i->dlpi_phdr[k];
+        if (ph->p_type == PT_DYNAMIC) exe_dyn = (const ElfW(Dyn) *)(i->dlpi_addr + ph->p_vaddr);
+        if (ph->p_type == PT_GNU_RELRO) { exe_relro_lo = i->dlpi_addr + ph->p_vaddr; exe_relro_hi = exe_relro_lo + ph->p_memsz; }
+    }
+    return 1;   /* (the first object is the main executable) */
+}
+#if defined(__x86_64__)
+#define GOT_SLOT(t) ((t) == R_X86_64_JUMP_SLOT || (t) == R_X86_64_GLOB_DAT || (t) == R_X86_64_64)
+#elif defined(__aarch64__)
+#define GOT_SLOT(t) ((t) == R_AARCH64_JUMP_SLOT || (t) == R_AARCH64_GLOB_DAT || (t) == R_AARCH64_ABS64)
+#else
+#define GOT_SLOT(t) 0
+#endif
+/* the slots of the program's imports of `name` set to `ours`: how many */
+static int got_hook(const char *name, void *ours)
+{
+    const ElfW(Sym) *sym = NULL;
+    const char *str = NULL;
+    const ElfW(Rela) *rel[2] = { NULL, NULL };
+    size_t rel_n[2] = { 0, 0 };
+    if (!exe_dyn) return 0;
+    /* (glibc has relocated the dynamic section's addresses in place; a loader that did not leaves them offsets) */
+#define DPTR(v) ((uintptr_t)(v) < exe_base ? exe_base + (uintptr_t)(v) : (uintptr_t)(v))
+    for (const ElfW(Dyn) *d = exe_dyn; d->d_tag != DT_NULL; d++)
+        switch (d->d_tag) {
+        case DT_SYMTAB: sym = (const ElfW(Sym) *)DPTR(d->d_un.d_ptr); break;
+        case DT_STRTAB: str = (const char *)DPTR(d->d_un.d_ptr); break;
+        case DT_JMPREL: rel[0] = (const ElfW(Rela) *)DPTR(d->d_un.d_ptr); break;
+        case DT_PLTRELSZ: rel_n[0] = d->d_un.d_val / sizeof(ElfW(Rela)); break;
+        case DT_RELA: rel[1] = (const ElfW(Rela) *)DPTR(d->d_un.d_ptr); break;
+        case DT_RELASZ: rel_n[1] = d->d_un.d_val / sizeof(ElfW(Rela)); break;
+        }
+#undef DPTR
+    if (!sym || !str) return 0;
+    long page = sysconf(_SC_PAGESIZE);
+    int n = 0;
+    for (int t = 0; t < 2; t++)
+        for (size_t k = 0; rel[t] && k < rel_n[t]; k++) {
+            const ElfW(Rela) *r = &rel[t][k];
+            if (!GOT_SLOT(ELF64_R_TYPE(r->r_info)) || !ELF64_R_SYM(r->r_info) || r->r_addend) continue;
+            if (strcmp(str + sym[ELF64_R_SYM(r->r_info)].st_name, name)) continue;
+            void **slot = (void **)(exe_base + r->r_offset);
+            uintptr_t pg = (uintptr_t)slot & ~(uintptr_t)(page - 1);
+            if (mprotect((void *)pg, (size_t)page, PROT_READ | PROT_WRITE)) continue;
+            *slot = ours;
+            if ((uintptr_t)slot >= exe_relro_lo && (uintptr_t)slot < exe_relro_hi) mprotect((void *)pg, (size_t)page, PROT_READ);
+            n++;
+        }
+    return n;
+}
+/* the program's dlsym: OpenGL ES's and Vulkan's ways in watched, the rest as it was */
+static void *my_dlsym(void *h, const char *n)
+{
+    void *f = dlsym(h, n);
+    if (!f || !n || !game_on) return f;
+    if (!strcmp(n, "vkGetInstanceProcAddr")) {
+        r_GIPA = (PFN_vkGetInstanceProcAddr)f;
+        lg("Vulkan: vkGetInstanceProcAddr wrapped");
+        return (void *)my_GIPA;
+    }
+    if (!strcmp(n, "eglGetProcAddress")) { real_egpa = (void *(*)(const char *))f; lg("OpenGL ES: eglGetProcAddress wrapped"); return (void *)my_egpa; }
+    if (!strcmp(n, "eglSwapBuffers")) { real_eglSwap = (unsigned (*)(void *, void *))f; lg("OpenGL ES: eglSwapBuffers wrapped"); return (void *)my_eglSwapBuffers; }
+    if (n[0] == 'g' && n[1] == 'l') { gl_lib = h; return gl_wrap_proc(n, f); }
+    return f;
+}
+#endif
 
 /* =================================================================== input */
 typedef int (*PollEvent_t)(void *);
@@ -3362,14 +3717,21 @@ static int remap(float *x, float *y, int is_down, int is_up)
         lg("%s at %.0f,%.0f -> %s %.0f,%.0f", is_down ? "press" : "release", ox, oy, res == 2 ? "dropped" : res ? "moved to" : "kept", *x, *y);
     return res;
 }
-__declspec(dllexport) int SDL_PollEvent(void *ev)
+static int poll_event(void *ev)
 {
     if (!real_PollEvent) {
+#ifdef _WIN32
         HMODULE s = GetModuleHandleA("SDL2_real.dll");
         if (!s) s = LoadLibraryA("SDL2_real.dll");
         real_PollEvent = (PollEvent_t)GetProcAddress(s, "SDL_PollEvent");
         real_GetWindowFromID = (GetWindowFromID_t)GetProcAddress(s, "SDL_GetWindowFromID");
         real_GetWindowSize = (GetWindowSize_t)GetProcAddress(s, "SDL_GetWindowSize");
+#else
+        /* (the program's SDL: we define none of SDL's names, so the first found is its own) */
+        real_PollEvent = (PollEvent_t)dlsym(RTLD_DEFAULT, "SDL_PollEvent");
+        real_GetWindowFromID = (GetWindowFromID_t)dlsym(RTLD_DEFAULT, "SDL_GetWindowFromID");
+        real_GetWindowSize = (GetWindowSize_t)dlsym(RTLD_DEFAULT, "SDL_GetWindowSize");
+#endif
     }
     for (;;) {
         int r = real_PollEvent(ev);
@@ -3411,8 +3773,13 @@ __declspec(dllexport) int SDL_PollEvent(void *ev)
         if (res != 2) return r;
     }
 }
+#ifdef _WIN32
+/* (the program's SDL_PollEvent: SDL2.dll's name, which the program imports from us) */
+USUMFIX_EXPORT int SDL_PollEvent(void *ev) { return poll_event(ev); }
+#endif
 
 /* ================================================================== set up */
+#ifdef _WIN32
 static void patch_iat(HMODULE mod, const char *dll, const char *fn, void *hook, void **orig)
 {
     BYTE *base = (BYTE *)mod;
@@ -3435,8 +3802,16 @@ static void patch_iat(HMODULE mod, const char *dll, const char *fn, void *hook, 
         }
     }
 }
+#endif
 /* which game: this folder's name is its title id (FullDex makes 3ds\<title id>); else the dump rom.txt names */
 static int is_usum_id(unsigned long long id) { return id == 0x00040000001B5000ULL || id == 0x00040000001B5100ULL; }
+/* X and Y, and the ROM hacks made from them with title ids of their own (X Legacy, Y Legacy: FullDex plays them from a
+   copy carrying X's or Y's id, in a folder named after their own) */
+static int is_xy_id(unsigned long long id)
+{
+    return id == 0x0004000000055D00ULL || id == 0x0004000000055E00ULL || id == 0x000400000E4C3100ULL || id == 0x000400000E4C3200ULL;
+}
+static int game_of(unsigned long long id) { return is_usum_id(id) ? 1 : is_xy_id(id) ? 2 : 0; }
 static int detect_game(void)
 {
     char d[MAX_PATH]; strcpy(d, here);
@@ -3445,7 +3820,7 @@ static int detect_game(void)
     const char *base = strrchr(d, '\\'); const char *b2 = strrchr(d, '/');
     if (b2 > base) base = b2;
     base = base ? base + 1 : d;
-    if (strlen(base) == 16) { unsigned long long id = strtoull(base, NULL, 16); if (is_usum_id(id)) return 1; }
+    if (strlen(base) == 16) { unsigned long long id = strtoull(base, NULL, 16); if (game_of(id)) return game_of(id); }
     FILE *f = fopen(path_here("rom.txt"), "r");
     char p[1024] = "";
     if (f) { if (!fgets(p, sizeof p, f)) p[0] = 0; fclose(f); }
@@ -3458,7 +3833,7 @@ static int detect_game(void)
         fclose(g);
         if (got == sizeof h && !memcmp(h + 0x100, "NCSD", 4)) {
             unsigned long long id = 0; for (int i = 7; i >= 0; i--) id = id << 8 | h[0x108 + i];
-            if (is_usum_id(id)) return 1;
+            if (game_of(id)) return game_of(id);
         }
     }
     return 0;
@@ -3467,12 +3842,20 @@ static int detect_game(void)
 static float ui_scale = 1;
 static void read_battle_size(void)
 {
+#ifdef _WIN32
     static FILETIME seen;
     WIN32_FILE_ATTRIBUTE_DATA fa;
-    if (!GetFileAttributesExA(path_here("config\\settings.toml"), GetFileExInfoStandard, &fa)) return;
+    if (!GetFileAttributesExA(path_here("config/settings.toml"), GetFileExInfoStandard, &fa)) return;
     if (!CompareFileTime(&fa.ftLastWriteTime, &seen)) return;
     seen = fa.ftLastWriteTime;
-    FILE *f = fopen(path_here("config\\settings.toml"), "rb");
+#else
+    static struct timespec seen;
+    struct stat st;
+    if (stat(path_here("config/settings.toml"), &st) != 0) return;
+    if (st.st_mtim.tv_sec == seen.tv_sec && st.st_mtim.tv_nsec == seen.tv_nsec) return;
+    seen = st.st_mtim;
+#endif
+    FILE *f = fopen(path_here("config/settings.toml"), "rb");
     if (!f) return;
     char line[256];
     while (fgets(line, sizeof line, f)) {
@@ -3488,7 +3871,7 @@ static void read_battle_size(void)
 /* the add-on works with the whole bottom screen in a box (Battle Buttons: Whole screen) */
 static void want_whole_screen(void)
 {
-    const char *p = path_here("config\\settings.toml");
+    const char *p = path_here("config/settings.toml");
     FILE *f = fopen(p, "rb");
     if (!f) return;
     char buf[16384]; size_t n = fread(buf, 1, sizeof buf - 1, f); fclose(f); buf[n] = 0;
@@ -3500,29 +3883,59 @@ static void want_whole_screen(void)
     if (f) { fwrite(buf, 1, strlen(buf), f); fclose(f); lg("Battle Buttons set to Whole screen for the add-on"); }
 }
 
+/* the set-up, once here (the program's folder) is known */
+static void start(void)
+{
+    InitializeCriticalSection(&log_cs);
+    InitializeCriticalSection(&lay_cs);
+    InitializeCriticalSection(&vk_cs);
+    InitializeCriticalSection(&dl_cs); dl_cs_ok = 1;
+    debug_on = file_here("usumfix_debug.txt");
+    game_on = detect_game();
+#ifndef _WIN32
+    /* (Linux: X and Y's X menu only, so far. Ultra Sun and Ultra Moon's battle screen and X menu stay the Windows
+       program's until they have been tried with the Linux one: here their games are left alone, settings and all.) */
+    if (game_on == 1) game_on = 0;
+#endif
+    game_xy = game_on == 2;
+    for (int i = 0; i < NCOMP; i++) for (int k = 0; k < U_N; k++) comp[i].u[k].loc = -1;
+    atlas_make();
+    if (game_on == 1 && !file_here("usumfix_off.txt")) want_whole_screen();
+}
+static const char *game_name(void) { return game_on == 1 ? "Ultra Sun / Ultra Moon" : game_on == 2 ? "X / Y (the X menu only)" : "another game (left alone)"; }
+#ifdef _WIN32
 BOOL WINAPI DllMain(HINSTANCE h, DWORD reason, LPVOID r)
 {
     (void)h; (void)r;
     if (reason == DLL_PROCESS_ATTACH) {
-        InitializeCriticalSection(&log_cs);
-        InitializeCriticalSection(&lay_cs);
-        InitializeCriticalSection(&vk_cs);
-        InitializeCriticalSection(&dl_cs); dl_cs_ok = 1;
         GetModuleFileNameA(NULL, here, MAX_PATH);
         char *s = strrchr(here, '\\'); if (s) s[1] = 0; else here[0] = 0;
-        debug_on = file_here("usumfix_debug.txt");
-        game_on = detect_game();
-        for (int i = 0; i < NCOMP; i++) for (int k = 0; k < U_N; k++) comp[i].u[k].loc = -1;
-        atlas_make();
+        start();
         HMODULE exe = GetModuleHandleA(NULL);
         patch_iat(exe, "OPENGL32.dll", "wglGetProcAddress", (void *)my_wglGetProcAddress, (void **)&real_wglGPA);
         patch_iat(exe, "GDI32.dll", "SwapBuffers", (void *)my_SwapBuffers, (void **)&real_Swap);
         patch_iat(exe, "kernel32.dll", "GetProcAddress", (void *)my_GetProcAddress, (void **)&real_GPA);
         patch_iat(exe, "KERNEL32.dll", "GetProcAddress", (void *)my_GetProcAddress, (void **)&real_GPA);
         if (!real_GPA) real_GPA = (GPA_t)GetProcAddress;
-        if (game_on && !file_here("usumfix_off.txt")) want_whole_screen();
-        lg("usumfix loaded in %s: %s; OpenGL %s, Vulkan %s", here, game_on ? "Ultra Sun / Ultra Moon" : "another game (left alone)",
+        lg("usumfix loaded in %s: %s; OpenGL %s, Vulkan %s", here, game_name(),
            real_wglGPA ? "watched" : "not used", real_GPA ? "watched" : "not used");
     }
     return TRUE;
 }
+#else
+/* (Linux: loaded with LD_PRELOAD, in front of the program's libraries; in a program that is not a game's, such as one
+   the program starts, nothing is done) */
+__attribute__((constructor)) static void usumfix_load(void)
+{
+    ssize_t n = readlink("/proc/self/exe", here, MAX_PATH - 1);
+    here[n > 0 ? n : 0] = 0;
+    char *s = strrchr(here, '/'); if (s) s[1] = 0; else here[0] = 0;
+    start();
+    if (!game_on) return;
+    dl_iterate_phdr(exe_seg, NULL);
+    int nd = got_hook("dlsym", (void *)my_dlsym), np = got_hook("SDL_PollEvent", (void *)poll_event);
+    lg("usumfix loaded in %s: %s; the program's dlsym %s, its SDL_PollEvent %s", here, game_name(),
+       nd ? "watched" : "NOT FOUND", np ? "watched" : "NOT FOUND");
+    if (!nd) game_on = game_xy = 0;   /* (without it nothing of the program's drawing is ours to see) */
+}
+#endif

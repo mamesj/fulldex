@@ -32,8 +32,9 @@ guide see [`README.md`](../README.md); the rules every change follows are at the
 Common: Linux or WSL2 (Ubuntu 24.04), Git, CMake, Ninja, Python 3, curl, SDL2 development
 headers, libpng, zlib.
 
-- Windows target: MinGW-w64 (`g++-mingw-w64-x86-64-posix`); with `SSR_3DS_WIN_DIR`, Ultra Sun and
-  Ultra Moon's add-on also needs `glslang-tools` and `libvulkan-dev` (left out with a note without them)
+- Windows target: MinGW-w64 (`g++-mingw-w64-x86-64-posix`); with `SSR_3DS_WIN_DIR` (or
+  `SSR_3DS_LINUX_KIT` for Linux), the 3DS program's add-on also needs `glslang-tools` and
+  `libvulkan-dev` (left out with a note without them)
 - Linux AppImage: `zsync`, Python Pillow (`python3-pil`); `appimagetool` is fetched by the script
 - Linux ARM64: `g++-aarch64-linux-gnu`, `patchelf`
 - Android: Android SDK with `build-tools;34.0.0`, `platforms;android-34`,
@@ -128,9 +129,10 @@ Optional environment variables:
 - `FULLDEX_GOOGLE_CLIENT_FILE=<file>`: the Google sign-in client, two lines; **never commit it**
 - `SSR_3DS_LINUX_KIT=<folder>` (x86_64) and `SSR_3DS_WIN_DIR=<folder>` (Windows): the Omega
   Ruby / Alpha Sapphire program placed in `3ds/program/`; the games' dumps are not part of it.
-  On Windows, Ultra Sun and Ultra Moon's add-on (`tools/pc/usum-addon`, single-screen battle
-  buttons and X menu) is built and put in front of the program's `SDL2.dll`, which becomes
-  `SDL2_real.dll`
+  The 3DS program's add-on (`tools/pc/usum-addon`: Ultra Sun and Ultra Moon's single-screen
+  battle buttons and X menu, X and Y's X menu) is built with it: on Windows put in front of the
+  program's `SDL2.dll`, which becomes `SDL2_real.dll`; on Linux as `usumfix.so`, which the
+  launcher loads with `LD_PRELOAD`
 
 ### GBA games
 
@@ -310,9 +312,12 @@ release APK's `lib/arm64-v8a/libmain.so` or supply your own: never commit them.
   program runs its `--prepare` step once from the player's dump and then launches it. That
   program accepts only the six games' own title IDs, so a ROM hack with a title ID of its own
   (X Legacy, Y Legacy) is prepared and played from a copy in its folder (`game.3ds`) that
-  carries its game's ID; `tests/test_n3ds_hacks.py` covers it with synthetic dumps. On
-  Windows, `tools/pc/usum-addon` is an `SDL2.dll` in front of that program's own for Ultra Sun
-  and Ultra Moon's one-screen layout (its `README.txt` has how it works and how it is built).
+  carries its game's ID; `tests/test_n3ds_hacks.py` covers it with synthetic dumps.
+  `tools/pc/usum-addon` draws parts of that program's one-screen layout anew (Ultra Sun and Ultra
+  Moon's battle buttons and X menu on Windows, X and Y's X menu on Windows and Linux): an
+  `SDL2.dll` in front of the program's own on Windows, `usumfix.so` loaded with `LD_PRELOAD` on
+  Linux (`tests/test_n3ds_addon_play.py` covers the launch); its `README.txt` has how it works and
+  how it is built.
 
 ## Coding notes
 
