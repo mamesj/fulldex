@@ -653,6 +653,20 @@ Use This Folder	Utiliser ce dossier
 # 3DS: Put On My Switch, Put On My Phone
 Put On My Switch	Mettre sur ma Switch
 Put On My Phone	Mettre sur mon téléphone
+# 3DS: Put On My iPhone
+Put On My iPhone	Mettre sur mon iPhone
+Copy To Your iPhone	Copier sur l'iPhone
+Building {} For Your iPhone	Création de {} pour ton iPhone
+Adding it to FullDex for iPhone	Ajout à FullDex pour iPhone
+{} For Your iPhone Is Ready	{} pour ton iPhone est prêt
+It is in the folder that opens: {}, FullDex for iPhone and iPad with the game built in.	Il est dans le dossier qui s'ouvre : {}, FullDex pour iPhone et iPad avec le jeu intégré.
+Install it on your iPhone or iPad the way you installed FullDex, over the one you have: your games and saves stay.	Installe-le sur ton iPhone ou iPad comme tu as installé FullDex, par-dessus celui que tu as : tes jeux et sauvegardes restent.
+Then {} runs at full speed.	Ensuite, {} tourne à pleine vitesse.
+Couldn't find FullDex for iPhone. Download the iPhone version of FullDex (the .ipa file) to this PC's Downloads folder and try again.	FullDex pour iPhone introuvable. Télécharge la version iPhone de FullDex (le fichier .ipa) dans le dossier Téléchargements de ce PC et réessaie.
+This FullDex for iPhone has no 3DS games yet. Download the newer one to this PC's Downloads folder and try again.	Ce FullDex pour iPhone n'a pas encore les jeux 3DS. Télécharge le plus récent dans le dossier Téléchargements de ce PC et réessaie.
+Couldn't add it to FullDex for iPhone. Try again; if it fails again, please report it with this PC's log.	Impossible de l'ajouter à FullDex pour iPhone. Réessaie ; si ça échoue encore, signale-le avec le journal de ce PC.
+{} IS READY FOR YOUR IPHONE	{} EST PRÊT POUR TON IPHONE
+MAKING {} FOR YOUR IPHONE: THE GAME'S OPTIONS SHOW HOW IT IS GOING	CRÉATION DE {} POUR TON IPHONE : LES OPTIONS DU JEU MONTRENT OÙ ÇA EN EST
 Pick Where It Goes	Choisis où ça va
 Build	Créer
 Copy To Your Phone	Copier sur le téléphone

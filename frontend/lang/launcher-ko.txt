@@ -653,6 +653,20 @@ Use This Folder	이 폴더 사용
 # 3DS: Put On My Switch, Put On My Phone
 Put On My Switch	내 Switch에 넣기
 Put On My Phone	내 휴대폰에 넣기
+# 3DS: Put On My iPhone
+Put On My iPhone	내 iPhone에 넣기
+Copy To Your iPhone	iPhone에 복사
+Building {} For Your iPhone	iPhone용 {} 만드는 중
+Adding it to FullDex for iPhone	iPhone용 FullDex에 넣는 중
+{} For Your iPhone Is Ready	iPhone용 {} 준비 완료
+It is in the folder that opens: {}, FullDex for iPhone and iPad with the game built in.	열리는 폴더에 있습니다: {}, 게임이 들어간 iPhone·iPad용 FullDex입니다.
+Install it on your iPhone or iPad the way you installed FullDex, over the one you have: your games and saves stay.	FullDex를 설치했던 방법 그대로 지금 있는 FullDex 위에 iPhone이나 iPad에 설치하세요. 게임과 세이브는 그대로 남습니다.
+Then {} runs at full speed.	그러면 {}이(가) 최고 속도로 실행됩니다.
+Couldn't find FullDex for iPhone. Download the iPhone version of FullDex (the .ipa file) to this PC's Downloads folder and try again.	iPhone용 FullDex를 찾지 못했습니다. iPhone용 FullDex(.ipa 파일)를 이 PC의 다운로드 폴더에 받은 뒤 다시 시도하세요.
+This FullDex for iPhone has no 3DS games yet. Download the newer one to this PC's Downloads folder and try again.	이 iPhone용 FullDex에는 아직 3DS 게임이 없습니다. 최신 버전을 이 PC의 다운로드 폴더에 받은 뒤 다시 시도하세요.
+Couldn't add it to FullDex for iPhone. Try again; if it fails again, please report it with this PC's log.	iPhone용 FullDex에 넣지 못했습니다. 다시 시도하고, 또 실패하면 이 PC의 로그와 함께 알려 주세요.
+{} IS READY FOR YOUR IPHONE	iPhone용 {} 준비 완료
+MAKING {} FOR YOUR IPHONE: THE GAME'S OPTIONS SHOW HOW IT IS GOING	iPhone용 {} 만드는 중: 게임 옵션에서 진행 상황을 볼 수 있습니다
 Pick Where It Goes	넣을 곳 고르기
 Build	만들기
 Copy To Your Phone	휴대폰에 복사

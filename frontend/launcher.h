@@ -328,15 +328,15 @@ inline int PopupBase() { return 8; } // (Android's phone home, or the desktop's 
 #else
 inline int PopupBase() { return 7; }
 #endif
-// (Windows: a 3DS game's menu also has Put On My Switch and Put On My Phone after Play, items 8 and 9;
+// (Windows: a 3DS game's menu also has Put On My Switch, Put On My Phone and Put On My iPhone after Play, items 8 to 10;
 // set as the menu is drawn, for the game it is drawn for.)
 inline bool& Popup3ds() { static bool b = false; return b; }
-inline int PopupCount() { return PopupBase() + (Popup3ds() ? 2 : 0); }
+inline int PopupCount() { return PopupBase() + (Popup3ds() ? 3 : 0); }
 // The game's menu in the order shown: Play, Manage Saves, Add To Home, Rename, Change Picture, Add To
 // Tab, Remove Game (row -> what it is, PopupLabel's numbers).
 inline int PopupItem(int row)
 {
-    if (Popup3ds()) { if (row == 1 || row == 2) return row + 7; if (row > 2) row -= 2; }
+    if (Popup3ds()) { if (row >= 1 && row <= 3) return row + 7; if (row > 3) row -= 3; }
     static const int order[] = { 0, 4, 1, 7, 2, 3, 5, 6 };
     return row >= 0 && row < PopupBase() ? (PopupBase() == 8 ? order[row] : order[row < 3 ? row : row + 1]) : row;
 }
@@ -344,6 +344,7 @@ inline std::string PopupLabel(const Game& g, int i)
 {
     if (i == 8) return "Put On My Switch";
     if (i == 9) return "Put On My Phone";
+    if (i == 10) return "Put On My iPhone";
     static const char* n[] = { "Play", "", "Rename", "Change Picture", "Manage Saves", "Add To Tab", "Remove Game", "Add To Phone Home Screen" };
 #ifdef __ANDROID__
     // (A 3DS game inside the app: its game code, from a PC's FullDex Builder or built on the phone.)
@@ -8006,7 +8007,7 @@ inline void DrawGlass(Canvas& c, const std::vector<Game>& games, const View& v, 
         // (from the Game Options button the menu sits under it, so the game need not be in the list shown)
         if (k >= 0 || (Focus().banner == 2 && !PhoneLook()))
         {
-            static const int icons[] = { Glass::I_PLAY, Glass::I_POKEBALL, Glass::I_SPARKLE, Glass::I_WINDOW, Glass::I_SAVE, Glass::I_LAYERS, Glass::I_BACK, Glass::I_GLOBE, Glass::I_PAD, Glass::I_SCREENS };
+            static const int icons[] = { Glass::I_PLAY, Glass::I_POKEBALL, Glass::I_SPARKLE, Glass::I_WINDOW, Glass::I_SAVE, Glass::I_LAYERS, Glass::I_BACK, Glass::I_GLOBE, Glass::I_PAD, Glass::I_SCREENS, Glass::I_SCREENS };
             const Game& g = games[mg];
 #ifdef _WIN32 // (SSR_N3DS_PC is set by n3ds.h, after this)
             Popup3ds() = g.platform == N3DS && !g.comingSoon;

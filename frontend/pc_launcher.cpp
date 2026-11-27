@@ -1852,9 +1852,9 @@ int PickGame(Folders& fo, std::vector<Launcher::Game>& games, int selected, bool
                 const bool valid = selected >= 0 && selected < (int)games.size();
 #if defined(SSR_N3DS_PC) && defined(_WIN32)
                 // (A 3DS game: Put On My Switch, Put On My Phone, the dialog that walks through it.)
-                if ((item == 8 || item == 9) && valid && games[selected].platform == Launcher::N3DS)
+                if ((item == 8 || item == 9 || item == 10) && valid && games[selected].platform == Launcher::N3DS)
                 {
-                    N3ds::SetupOpenAndGo(fo.dir, games[selected], item == 8 ? 1 : 2);
+                    N3ds::SetupOpenAndGo(fo.dir, games[selected], item == 8 ? 1 : item == 9 ? 2 : 3);
                     F.dialog = 21; F.drow = 0;
                     N3ds::SetupFill(F);
                     return;
