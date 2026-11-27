@@ -1,6 +1,10 @@
 # Changelog
 
 
+## FullDex 1.9 (not released yet)
+
+- **Pokémon X Legacy and Y Legacy** (3DS ROM hacks with a title ID of their own; Windows and Linux). A decrypted `.3ds` of either in your ROMs folder is listed in the 3DS and Romhacks tabs beside Pokémon X and Y, with a save of its own (`hack-<file name>.sav`), and plays in the One screen layout like the games. The 3DS program plays only the six games' own title IDs, so the first launch copies the dump into the hack's own folder with its game's title ID (about 1.7 GB, once; your file is not changed), then builds the game code as for the games. A new version of the hack is copied again by itself, and its game code is built again only when the code itself changed. Put On My Switch and Put On My Phone aren't offered for them yet, and the Switch and Android lists say why they don't list them. Known issue: the 3DS program's Companion reads X and Y's memory, which the Legacy games keep 16 bytes further on, so its Party, Party Strip, Bag and Pokédex show the wrong Pokémon and items until the 3DS program itself is updated; Location and the Mini Map are right.
+
 ## FullDex 1.8 (not released yet)
 
 - **Repel Prompt** (DS and GBA games; Settings > Display, on to start). When a Repel wears off and the Bag has another, FullDex Nav opens on its Repel app: A uses the strongest one, B closes it. In the GBA games the watch waits until you close the game's "REPEL's effect wore off..." text. Black 2 and White 2 already ask by themselves, so nothing changes there.

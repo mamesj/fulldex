@@ -10,6 +10,8 @@
 //     once from the dump ("Pokemon ORAS.exe" --prepare, 5 to 15 minutes) and the game then plays.
 //   Linux (x86_64): the same, with the Linux program (pokemon-oras, title.so) in 3ds/program beside
 //     FullDex's own program (inside the AppImage too); each game's folder in FullDex's data folder.
+// ROM hacks with a title id of their own (Pokemon X Legacy and Y Legacy) play on Windows and Linux in a
+// folder of their own, from a copy of the dump that carries their game's title id (see Hack, below).
 #pragma once
 #include <algorithm>
 #include <chrono>
@@ -21,6 +23,7 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <mutex>
 #include <string>
@@ -44,6 +47,7 @@
 #include "launcher.h"
 #include "runtime_kit.h"
 #include "runtime_diagnostics.h"
+#include "sha256.h" // (a ROM hack's copy: its extended header's hash made again)
 #if defined(_WIN32) || (defined(__linux__) && !defined(__ANDROID__) && !defined(__SWITCH__))
 #define SSR_N3DS_PC 1 // (the 3DS games' own program beside FullDex: Windows and Linux)
 #endif
@@ -65,6 +69,7 @@ inline const Title* ById(const std::string& id)
         if (id == t.id) return &t;
     return nullptr;
 }
+// (The title id the games' program plays it as: its game's, for a ROM hack too, whose copy carries it.)
 inline std::string IdOf(const Launcher::Game& g)
 {
     for (const Title& t : kTitles)
@@ -161,6 +166,69 @@ inline bool MarkDecrypted(const std::string& path)
     fclose(f);
     return ok;
 }
+// A ROM hack with a title id of its own: a dump whose first partition's product code (CTR-P-EKJA) is one of
+// the games above but whose title id is not that game's (Pokemon X Legacy: EKJA, 000400000E4C3100; Y Legacy:
+// EK2A, 000400000E4C3200). The games' program plays only their own title ids, so on a PC a hack plays from a
+// copy that carries its game's (MakeHackCopy), in a folder of its own, with a save of its own. Its name is the
+// English title in the dump's icon (SMDH), POKEMON X LEGACY, else its file's name (HackName, as a DS hack's).
+struct Hack { std::string id, name; };
+inline uint32_t U32At(const unsigned char* p) { return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24; }
+inline std::string IconTitle(FILE* f, long at, const unsigned char* n)
+{
+    // (The ExeFS's "icon" file: the SMDH, whose titles are 16 of 0x200 bytes from 0x8, English the second;
+    // its short title, 0x40 UTF-16 letters, made capitals as the list's names are, its e with an accent an E: POKEMON.)
+    const long exefs = at + (long)U32At(n + 0x1A0) * 0x200;
+    unsigned char ex[0x200] = {};
+    if (U32At(n + 0x1A0) == 0 || fseek(f, exefs, SEEK_SET) != 0 || fread(ex, 1, sizeof ex, f) != sizeof ex) return "";
+    for (int i = 0; i < 10; i++)
+    {
+        if (memcmp(ex + i * 16, "icon\0\0\0\0", 8) != 0) continue;
+        unsigned char smdh[0x8 + 0x200 * 2] = {};
+        if (U32At(ex + i * 16 + 12) < sizeof smdh || fseek(f, exefs + 0x200 + (long)U32At(ex + i * 16 + 8), SEEK_SET) != 0 ||
+            fread(smdh, 1, sizeof smdh, f) != sizeof smdh || memcmp(smdh, "SMDH", 4) != 0)
+            return "";
+        std::string name;
+        for (int c = 0; c < 0x40; c++)
+        {
+            const unsigned ch = smdh[0x208 + 2 * c] | smdh[0x209 + 2 * c] << 8;
+            if (ch == 0) break;
+            const char a = ch == 0xE9 || ch == 0xC9 ? 'E' : ch < 0x80 && isprint((int)ch) ? (char)toupper((int)ch) : ' ';
+            if (a != ' ' || (!name.empty() && name.back() != ' ')) name += a;
+        }
+        while (!name.empty() && name.back() == ' ') name.pop_back();
+        return name;
+    }
+    return "";
+}
+inline const Title* HackOf(const std::string& path, const std::string& titleId, Hack& hack)
+{
+    // (An application's title id, 00040000..., that is not one of the six.)
+    if (titleId.size() != 16 || titleId.compare(0, 8, "00040000") != 0 || ById(titleId)) return nullptr;
+#ifdef _WIN32
+    FILE* f = _wfopen(std::filesystem::u8path(path).wstring().c_str(), L"rb");
+#else
+    FILE* f = fopen(path.c_str(), "rb");
+#endif
+    if (!f) return nullptr;
+    unsigned char h[0x200] = {}, n[0x200] = {};
+    bool ok = fread(h, 1, sizeof h, f) == sizeof h && memcmp(h + 0x100, "NCSD", 4) == 0;
+    const long at = ok ? (long)U32At(h + 0x120) * 0x200 : 0;
+    ok = ok && at > 0 && fseek(f, at, SEEK_SET) == 0 && fread(n, 1, sizeof n, f) == sizeof n && memcmp(n + 0x100, "NCCH", 4) == 0;
+    const Title* base = nullptr;
+    if (ok && memcmp(n + 0x150, "CTR-P-", 6) == 0)
+        for (const Title& t : kTitles)
+            if (memcmp(n + 0x156, t.code, 4) == 0) base = &t;
+    if (base)
+    {
+        hack.id = titleId;
+        // (Its title is read only from a dump marked decrypted: an encrypted one's ExeFS is ciphertext.)
+        hack.name = n[0x18F] & 4 ? IconTitle(f, at, n) : "";
+        if (hack.name.empty() || hack.name == base->name) hack.name = Launcher::HackName(path);
+    }
+    fclose(f);
+    return base;
+}
+
 // Why a 3DS file with the ROMs is not in the list (#155), said once on the list: the one that matters most (an
 // Omega Ruby or Alpha Sapphire that cannot be played before another game, or a file that is no dump).
 inline std::string& SkipNote() { static std::string s; return s; }
@@ -204,21 +272,32 @@ inline bool RenameCci(std::string& path)
 }
 // (path: a .cci dump is renamed to .3ds first, and path is then its new name; not with rename false,
 // for a file FullDex was opened with, which a shortcut may name.)
-inline const Title* Check(std::string& path, bool rename = true)
+// (hack: where a ROM hack with a title id of its own plays (Windows and Linux), it is returned as its game's
+// title, with its id and name in *hack; elsewhere it is not listed, and the list says why. A game's own dump
+// leaves *hack empty.)
+inline const Title* Check(std::string& path, bool rename = true, Hack* hack = nullptr)
 {
     static const char* const kCia = "A .CIA IS NOT PLAYED: THE 3DS GAMES NEED A .3DS DUMP OF THE CARTRIDGE";
+    if (hack) *hack = Hack{};
     if (EndsWith(path, ".cia")) { Skip(path, kCia, 2); return nullptr; }
     if (EndsWith(path, ".cci") && !(rename && RenameCci(path))) { Skip(path, DumpCrypt(path) < 0 && LooksLikeCia(path) ? kCia : "RENAME IT TO .3DS", 2); return nullptr; }
     if (!EndsWith(path, ".3ds")) return nullptr;
     const int crypt = DumpCrypt(path);
     if (crypt < 0) { Skip(path, LooksLikeCia(path) ? kCia : "NOT A 3DS CARTRIDGE DUMP", LooksLikeCia(path) ? 2 : 1); return nullptr; }
-    const Title* t = ById(DumpTitle(path));
-    if (!t) { Skip(path, "NOT A 3DS GAME FULLDEX PLAYS (X, Y, OMEGA RUBY, ALPHA SAPPHIRE, ULTRA SUN, ULTRA MOON)"); return nullptr; }
+    const std::string id = DumpTitle(path);
+    const Title* t = ById(id);
+    Hack h;
+    const Title* base = t ? nullptr : HackOf(path, id, h);
+    if (!t && !base) { Skip(path, "NOT A 3DS GAME FULLDEX PLAYS (X, Y, OMEGA RUBY, ALPHA SAPPHIRE, ULTRA SUN, ULTRA MOON)"); return nullptr; }
     if (crypt == 1) { Skip(path, "ENCRYPTED: DECRYPT IT FIRST (GODMODE9 ON YOUR 3DS)", 3); return nullptr; }
+    if (base && !hack) { Skip(path, "A ROM HACK: 3DS ROM HACKS PLAY ON WINDOWS AND LINUX FOR NOW", 2); return nullptr; }
+    if (base) { *hack = h; return base; }
     return t;
 }
 
-inline Launcher::Game Make(const Title& t, const std::string& rom, const std::string& folder)
+// (A ROM hack's folder is named after its own title id: 3ds/000400000E4C3100 beside its game's 3ds/0004000000055D00.)
+inline std::string FolderId(const Title& t, const Hack* hack) { return hack && !hack->id.empty() ? hack->id : t.id; }
+inline Launcher::Game Make(const Title& t, const std::string& rom, const std::string& folder, const Hack* hack = nullptr)
 {
     Launcher::Game g;
     g.platform = Launcher::N3DS;
@@ -227,6 +306,12 @@ inline Launcher::Game Make(const Title& t, const std::string& rom, const std::st
     g.folder = folder;
     g.name = t.name;
     g.known = true;
+    if (hack && !hack->id.empty())
+    {
+        g.hack = true;
+        g.hackId = hack->id;
+        g.name = hack->name;
+    }
     return g;
 }
 
@@ -241,6 +326,8 @@ inline std::string SaveName(const std::string& code)
 {
     return code == "EKJA" ? "pokemonx.sav" : code == "EK2A" ? "pokemony.sav" : code == "ECLA" ? "alphasapphire.sav" : code == "A2AA" ? "ultrasun.sav" : code == "A2BA" ? "ultramoon.sav" : "omegaruby.sav";
 }
+// (A ROM hack's save is its own, named after its file as a DS hack's is: hack-pokemon-x-legacy.sav.)
+inline std::string SaveName(const Launcher::Game& g) { return g.hack ? Launcher::HackSave(g.rom) : SaveName(g.code); }
 // The game's folder in /switch on a Switch (the FullDex Builder's), and its program's name.
 inline std::string SwitchFolder(const std::string& code)
 {
@@ -390,10 +477,11 @@ inline bool& ProgramHere() { static bool b = false; return b; }
 // games this program cannot play here go (a platform without the 3DS programs).
 inline void DropPlaceholders(std::vector<Launcher::Game>& games)
 {
-    // (The real games' codes first: the loop below moves the games it keeps out of the list.)
+    // (The real games' codes first: the loop below moves the games it keeps out of the list. A ROM hack
+    // does not take its game's place: X Legacy found, Pokemon X's tile stays.)
     std::set<std::string> realCodes;
     for (const Launcher::Game& o : games)
-        if (!o.comingSoon && o.platform == Launcher::N3DS) realCodes.insert(o.code);
+        if (!o.comingSoon && o.platform == Launcher::N3DS && !o.hack) realCodes.insert(o.code);
     std::vector<Launcher::Game> keep;
     for (Launcher::Game& g : games)
     {
@@ -587,9 +675,176 @@ inline std::string Exe(const std::string& folder) { return folder + "/pokemon-or
 inline const char* kTitleLib = "title.so";
 #endif
 inline bool HaveProgram(const std::string& appDir) { std::error_code ec; return std::filesystem::is_regular_file(W(Exe(ProgramDir(appDir))), ec); }
-inline bool Prepared(const Launcher::Game& g) { std::error_code ec; return std::filesystem::is_regular_file(W(g.folder + "/" + kTitleLib), ec); }
 
-// Windows and Linux: the dumps (.3ds) in the ROM folders, each its folder 3ds/<title id> in FullDex's folder.
+// A ROM hack's copy, game.3ds in its folder: the player's dump with its game's title id where the program
+// reads it (RetitleDump); the player's own dump is never written to. Beside it, hack-source.txt: the size and
+// time of the dump it was made from, then the fingerprint of the game code in it (the SHA-256 of the ExeFS
+// header, which holds the code's own hash); and game-code.txt, the fingerprint of the code the game's code was
+// built from. A new version of the hack (its file changed) is copied again, and its code built again only when
+// the code itself changed.
+inline std::string HackCopy(const Launcher::Game& g) { return g.folder + "/game.3ds"; }
+// (The dump the program is given: a hack's copy, else the player's own.)
+inline std::string PlayRom(const Launcher::Game& g) { return g.hack ? HackCopy(g) : g.rom; }
+inline FILE* OpenFile(const std::string& path, const char* mode)
+{
+#ifdef _WIN32
+    const std::wstring m(mode, mode + strlen(mode));
+    return _wfopen(std::filesystem::u8path(path).wstring().c_str(), m.c_str());
+#else
+    return fopen(path.c_str(), mode);
+#endif
+}
+inline std::vector<std::string> ReadLines(const std::string& path)
+{
+    std::vector<std::string> lines;
+    FILE* f = OpenFile(path, "rb");
+    if (!f) return lines;
+    std::string l;
+    for (int c; (c = fgetc(f)) != EOF;)
+    {
+        if (c == '\n') { lines.push_back(l); l.clear(); }
+        else if (c != '\r') l += (char)c;
+    }
+    if (!l.empty()) lines.push_back(l);
+    fclose(f);
+    return lines;
+}
+inline bool WriteLines(const std::string& path, const std::vector<std::string>& lines)
+{
+    FILE* f = OpenFile(path, "wb");
+    if (!f) return false;
+    bool ok = true;
+    for (const std::string& l : lines) ok &= fprintf(f, "%s\n", l.c_str()) > 0;
+    return fclose(f) == 0 && ok;
+}
+// (A file's size and time, as one line: "" if it is not there.)
+inline std::string FileStamp(const std::string& path)
+{
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    const fs::path p = W(path);
+    const uintmax_t size = fs::file_size(p, ec);
+    if (ec) return "";
+    const auto when = fs::last_write_time(p, ec);
+    if (ec) return "";
+    return std::to_string(size) + " " + std::to_string((long long)when.time_since_epoch().count());
+}
+// The fingerprint of a dump's game code: the SHA-256 of its first partition's ExeFS header, as hex; "" if unread.
+inline std::string CodePrint(const std::string& path)
+{
+    FILE* f = OpenFile(path, "rb");
+    if (!f) return "";
+    unsigned char h[0x200] = {}, n[0x200] = {}, ex[0x200] = {};
+    bool ok = fread(h, 1, sizeof h, f) == sizeof h && memcmp(h + 0x100, "NCSD", 4) == 0;
+    const long at = ok ? (long)U32At(h + 0x120) * 0x200 : 0;
+    ok = ok && at > 0 && fseek(f, at, SEEK_SET) == 0 && fread(n, 1, sizeof n, f) == sizeof n && memcmp(n + 0x100, "NCCH", 4) == 0;
+    ok = ok && U32At(n + 0x1A0) != 0 && fseek(f, at + (long)U32At(n + 0x1A0) * 0x200, SEEK_SET) == 0 && fread(ex, 1, sizeof ex, f) == sizeof ex;
+    fclose(f);
+    if (!ok) return "";
+    Sha256 s;
+    s.Add(ex, sizeof ex);
+    return s.Hex();
+}
+// The dump at path made to carry the title id id (16 hex digits): the NCSD header's media id (0x108) and its
+// first partition's (0x190); that partition's NCCH header: its partition id (0x108) and program id (0x118); its
+// extended header: the jump id (0x1C8), the access control's program id (0x200) and the access descriptor's
+// (0x600); and the NCCH header's hash of the extended header's first 0x400 bytes (0x160), made again. Only a
+// decrypted dump (marked so, as MarkDecrypted leaves it): an encrypted one's extended header is ciphertext.
+inline bool RetitleDump(const std::string& path, const std::string& id)
+{
+    if (id.size() != 16) return false;
+    const unsigned long long v = strtoull(id.c_str(), nullptr, 16);
+    unsigned char le[8];
+    for (int i = 0; i < 8; i++) le[i] = (unsigned char)(v >> (8 * i));
+    FILE* f = OpenFile(path, "r+b");
+    if (!f) return false;
+    unsigned char h[0x200] = {}, n[0x200] = {}, ex[0x400] = {};
+    bool ok = fread(h, 1, sizeof h, f) == sizeof h && memcmp(h + 0x100, "NCSD", 4) == 0;
+    const long at = ok ? (long)U32At(h + 0x120) * 0x200 : 0;
+    ok = ok && at > 0 && fseek(f, at, SEEK_SET) == 0 && fread(n, 1, sizeof n, f) == sizeof n && memcmp(n + 0x100, "NCCH", 4) == 0 &&
+         (n[0x18F] & 4) && U32At(n + 0x180) == 0x400;
+    auto put = [&](long off) { return fseek(f, off, SEEK_SET) == 0 && fwrite(le, 1, 8, f) == 8; };
+    ok = ok && put(0x108) && put(0x190) && put(at + 0x108) && put(at + 0x118) && put(at + 0x200 + 0x1C8) && put(at + 0x200 + 0x200) && put(at + 0x200 + 0x600);
+    ok = ok && fflush(f) == 0 && fseek(f, at + 0x200, SEEK_SET) == 0 && fread(ex, 1, sizeof ex, f) == sizeof ex;
+    if (ok)
+    {
+        Sha256 s;
+        s.Add(ex, sizeof ex);
+        unsigned char d[32];
+        s.Digest(d);
+        ok = fseek(f, at + 0x160, SEEK_SET) == 0 && fwrite(d, 1, sizeof d, f) == sizeof d;
+    }
+    return fclose(f) == 0 && ok;
+}
+// Whether the hack's copy is there and made from its dump as it is now (its size and time).
+inline bool HackCopyFresh(const Launcher::Game& g)
+{
+    const std::vector<std::string> src = ReadLines(g.folder + "/hack-source.txt");
+    return IsFile(HackCopy(g)) && src.size() >= 2 && !src[0].empty() && src[0] == FileStamp(g.rom);
+}
+// The copy made (or made again): progress(done, total) in bytes as it goes; why, when it could not be.
+inline bool MakeHackCopy(const Launcher::Game& g, const std::function<void(uint64_t, uint64_t)>& progress, std::string& why)
+{
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    fs::create_directories(W(g.folder), ec);
+    const std::string stamp = FileStamp(g.rom);
+    const uintmax_t size = fs::file_size(W(g.rom), ec);
+    if (stamp.empty() || ec) { why = "COULDN'T READ THE DUMP"; return false; }
+    // (An older copy goes first: room for one copy is what it needs.)
+    fs::remove(W(g.folder + "/hack-source.txt"), ec);
+    fs::remove(W(HackCopy(g)), ec);
+    const std::string part = HackCopy(g) + ".part";
+    const fs::space_info room = fs::space(W(g.folder), ec);
+    if (!ec && room.available < size + (64u << 20))
+    {
+        char gb[16];
+        snprintf(gb, sizeof gb, "%.1f", (double)(size + (64u << 20)) / (1024.0 * 1024 * 1024));
+        why = std::string("NOT ENOUGH SPACE: ITS COPY NEEDS ") + gb + " GB FREE";
+        return false;
+    }
+    FILE* in = OpenFile(g.rom, "rb");
+    FILE* out = in ? OpenFile(part, "wb") : nullptr;
+    bool ok = in && out;
+    std::vector<unsigned char> buf(8u << 20);
+    uint64_t done = 0;
+    while (ok)
+    {
+        const size_t got = fread(buf.data(), 1, buf.size(), in);
+        if (got == 0) { ok = !ferror(in); break; }
+        ok = fwrite(buf.data(), 1, got, out) == got;
+        done += got;
+        if (progress) progress(done, size);
+    }
+    if (in) fclose(in);
+    if (out && fclose(out) != 0) ok = false;
+    ok = ok && done == size;
+    // (Its own marker as a decrypted dump, if the player's lacks it, then the title id.)
+    if (ok) MarkDecrypted(part);
+    if (ok && !RetitleDump(part, IdOf(g))) { why = "COULDN'T MAKE ITS COPY (IS THE DUMP DECRYPTED?)"; ok = false; }
+    else if (!ok) why = "COULDN'T COPY THE DUMP";
+    if (ok) fs::rename(W(part), W(HackCopy(g)), ec);
+    if (ok && ec) { why = "COULDN'T COPY THE DUMP"; ok = false; }
+    if (!ok) { fs::remove(W(part), ec); return false; }
+    WriteLines(g.folder + "/hack-source.txt", { stamp, CodePrint(HackCopy(g)), g.rom });
+    fprintf(stderr, "[3ds] %s: its copy made in %s, as %s\n", g.name.c_str(), g.folder.c_str(), IdOf(g).c_str());
+    return true;
+}
+// (A hack's game code is current when it was built from the code its copy has now.)
+inline bool HackCodeBuilt(const Launcher::Game& g)
+{
+    const std::vector<std::string> src = ReadLines(g.folder + "/hack-source.txt"), built = ReadLines(g.folder + "/game-code.txt");
+    return src.size() >= 2 && !src[1].empty() && !built.empty() && built[0] == src[1];
+}
+inline bool Prepared(const Launcher::Game& g)
+{
+    std::error_code ec;
+    if (!std::filesystem::is_regular_file(W(g.folder + "/" + kTitleLib), ec)) return false;
+    return !g.hack || (HackCopyFresh(g) && HackCodeBuilt(g));
+}
+
+// Windows and Linux: the dumps (.3ds) in the ROM folders, each its folder 3ds/<title id> in FullDex's folder
+// (a ROM hack's, 3ds/<its own title id>).
 inline void AddPc(const std::vector<std::string>& romDirs, const std::string& appDir, std::vector<Launcher::Game>& games)
 {
     ProgramHere() = HaveProgram(appDir);
@@ -601,7 +856,8 @@ inline void AddPc(const std::vector<std::string>& romDirs, const std::string& ap
         {
             if (!it->is_regular_file(ec)) continue;
             std::string path = it->path().u8string();
-            const Title* t = Check(path);
+            Hack hack;
+            const Title* t = Check(path, true, &hack);
             if (!t) continue;
             if (!ProgramHere())
             {
@@ -610,11 +866,13 @@ inline void AddPc(const std::vector<std::string>& romDirs, const std::string& ap
 #endif
                 continue;
             }
+            // (One tile a folder: a game's dump found twice is listed once; a hack beside its game is its own.)
+            const std::string folder = appDir + "/3ds/" + FolderId(*t, &hack);
             bool dup = false;
-            for (const Launcher::Game& o : games) dup |= o.platform == Launcher::N3DS && o.code == t->code;
+            for (const Launcher::Game& o : games) dup |= o.platform == Launcher::N3DS && o.folder == folder;
             if (dup) continue;
-            games.push_back(Make(*t, path, appDir + "/3ds/" + t->id));
-            fprintf(stderr, "[3ds] %s: %s\n", t->name, path.c_str());
+            games.push_back(Make(*t, path, folder, &hack));
+            fprintf(stderr, "[3ds] %s: %s\n", games.back().name.c_str(), path.c_str());
         }
     }
 }
@@ -660,11 +918,12 @@ inline bool MakeFolder(const std::string& appDir, const Launcher::Game& g)
     FILE* f = fopen((g.folder + "/rom.txt").c_str(), "wb");
 #endif
     if (!f) { fprintf(stderr, "[3ds] cannot write %s/rom.txt\n", g.folder.c_str()); return false; }
-    fprintf(f, "%s\n", g.rom.c_str());
+    fprintf(f, "%s\n", PlayRom(g).c_str());
     fclose(f);
     // (The game's program checks the dump's "no encryption" marker, and some decrypted dumps lack
-    // it: set it here, when the game is about to be made or played, never during the list's scan.)
-    MarkDecrypted(g.rom);
+    // it: set it here, when the game is about to be made or played, never during the list's scan.
+    // A ROM hack's copy has it already: the player's own dump of a hack is not written to.)
+    if (!g.hack) MarkDecrypted(g.rom);
     return true;
 }
 
@@ -730,7 +989,39 @@ inline void StartPrepare(const std::string& appDir, const Launcher::Game& g)
             }
             else if (l.rfind("error ", 0) == 0) { p.failed = true; p.error = l.substr(6); }
         };
-        if (!MakeFolder(appDir, g)) fail("COULDN'T MAKE ITS FOLDER");
+        // (A ROM hack: its copy first, made again when its dump changed (a new version); its game's code is
+        // built again only when the code in it changed, so a hack whose data alone changed is ready at once.)
+        std::string copyFailed;
+        bool built = false;
+        if (g.hack)
+        {
+            if (!HackCopyFresh(g))
+            {
+                {
+                    std::lock_guard<std::mutex> l(p.m);
+                    p.step = "COPYING THE DUMP";
+                }
+                MakeHackCopy(g, [&](uint64_t a, uint64_t b) {
+                    std::lock_guard<std::mutex> l(p.m);
+                    p.done = (int)(a >> 20);
+                    p.total = (int)(b >> 20);
+                }, copyFailed);
+                std::lock_guard<std::mutex> l(p.m);
+                p.done = p.total = 0;
+            }
+            built = copyFailed.empty() && Prepared(g);
+            if (copyFailed.empty() && !built)
+            {
+                // (Code built from an older version is not kept: nothing can start the game with it.)
+                std::error_code ec;
+                std::filesystem::remove(W(g.folder + "/" + kTitleLib), ec);
+                std::filesystem::remove(W(g.folder + "/game-code.txt"), ec);
+                std::filesystem::remove(W(g.folder + "/title.hints"), ec);
+            }
+        }
+        if (!copyFailed.empty()) fail(copyFailed);
+        else if (built) fprintf(stderr, "[3ds] prepare: %s: its game code is already built from this code\n", g.name.c_str());
+        else if (!MakeFolder(appDir, g)) fail("COULDN'T MAKE ITS FOLDER");
 #ifndef _WIN32
         else
         {
@@ -739,7 +1030,7 @@ inline void StartPrepare(const std::string& appDir, const Launcher::Game& g)
             if (pipe(fd) != 0) fail("COULDN'T START IT");
             else
             {
-                const std::string exe = Exe(g.folder), rom = g.rom, dir = g.folder;
+                const std::string exe = Exe(g.folder), rom = PlayRom(g), dir = g.folder;
                 const pid_t pid = fork();
                 if (pid == 0)
                 {
@@ -794,7 +1085,7 @@ inline void StartPrepare(const std::string& appDir, const Launcher::Game& g)
             si.hStdError = wr;
             si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
             PROCESS_INFORMATION pi {};
-            std::wstring cmd = L"\"" + W(Exe(g.folder)) + L"\" --prepare \"" + W(g.rom) + L"\"";
+            std::wstring cmd = L"\"" + W(Exe(g.folder)) + L"\" --prepare \"" + W(PlayRom(g)) + L"\"";
             const BOOL ok = CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, TRUE, CREATE_NO_WINDOW, nullptr, W(g.folder).c_str(), &si, &pi);
             CloseHandle(wr);
             if (!ok) fail("COULDN'T START IT");
@@ -820,6 +1111,18 @@ inline void StartPrepare(const std::string& appDir, const Launcher::Game& g)
             CloseHandle(rd);
         }
 #endif
+        bool ok;
+        {
+            std::lock_guard<std::mutex> l(p.m);
+            ok = !p.failed;
+        }
+        // (A hack's code built: from the code its copy has now.)
+        if (ok && g.hack && !built)
+        {
+            const std::vector<std::string> src = ReadLines(g.folder + "/hack-source.txt");
+            std::error_code ec;
+            if (src.size() >= 2 && std::filesystem::is_regular_file(W(g.folder + "/" + kTitleLib), ec)) WriteLines(g.folder + "/game-code.txt", { src[1] });
+        }
         {
             std::lock_guard<std::mutex> l(p.m);
             p.finished = true;
@@ -882,6 +1185,8 @@ inline void Ack() { Prep& p = P(); std::lock_guard<std::mutex> l(p.m); p.told = 
 // Plays it (its window, until it quits); "Restart game" (exit code 3) starts it again.
 inline int Play(const std::string& appDir, const Launcher::Game& g)
 {
+    // (A ROM hack plays only from its copy, with the code built from it: never code of another version.)
+    if (g.hack && !Prepared(g)) { fprintf(stderr, "[3ds] %s: not prepared from its dump as it is now\n", g.name.c_str()); return -1; }
     if (!MakeFolder(appDir, g)) return -1; // (rom.txt says where the dump is now)
 #ifndef _WIN32
     for (;;)

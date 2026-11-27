@@ -307,7 +307,10 @@ release APK's `lib/arm64-v8a/libmain.so` or supply your own: never commit them.
   The client file and users' tokens never enter the repository.
 - RetroAchievements use rcheevos (vendored under `frontend/thirdparty/rcheevos`).
 - The 3DS games use a separate program under `3ds/program/` (`frontend/n3ds.h`); the PC
-  program runs its `--prepare` step once from the player's dump and then launches it. On
+  program runs its `--prepare` step once from the player's dump and then launches it. That
+  program accepts only the six games' own title IDs, so a ROM hack with a title ID of its own
+  (X Legacy, Y Legacy) is prepared and played from a copy in its folder (`game.3ds`) that
+  carries its game's ID; `tests/test_n3ds_hacks.py` covers it with synthetic dumps. On
   Windows, `tools/pc/usum-addon` is an `SDL2.dll` in front of that program's own for Ultra Sun
   and Ultra Moon's one-screen layout (its `README.txt` has how it works and how it is built).
 
