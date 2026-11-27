@@ -628,7 +628,7 @@ inline void AddPc(const std::vector<std::string>& romDirs, const std::string& ap
             if (!t) continue;
             if (!ProgramHere())
             {
-#if defined(_WIN32) || defined(__x86_64__) || defined(__APPLE__)
+#if defined(_WIN32) || (defined(__x86_64__) && !defined(__APPLE__)) || (defined(__APPLE__) && defined(__aarch64__))
                 Skip(path, "THE 3DS FOLDER FROM THE FULLDEX DOWNLOAD IS MISSING BESIDE THE PROGRAM", 3);
 #endif
                 continue;
