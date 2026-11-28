@@ -3397,16 +3397,25 @@ int main(int argc, char** argv)
         };
         const bool megaButton = !pt.on && blue(40, 166) && blue(128, 166) && edge(174, 166) && edge(177, 166) &&
                                 megaFace(186, 166) && megaFace(238, 166);
+        // (HeartGold and SoulSilver: a button along the bottom, the move list's CANCEL bar or the commands' RUN, has
+        // its outline across row 153, above its blue (dark grey, or mid grey while a press flashes it). The touch
+        // screen's own background can be that blue too: in the Elite Four's Will's room it is blue all over
+        // (65, 121, 154), and between the choices, with no buttons on it, it was taken for the move's targets and
+        // shown whole beside the battle the whole time, and for the move list before that.)
+        auto bar = [&](int x) { return blue(x, 166) && (pt.on || edge(x, 153)); };
         // A move's targets in a double battle (HeartGold, SoulSilver and the hacks built on them, as Heartfelt
         // Gold): the same CANCEL bar along the bottom as the move list, over buttons of one colour (the
         // Pokémon: the other side's orange, those the move cannot reach grey) where a move's button is white
-        // at the top. It was taken for the move list, and the strip showed those buttons cut and one of them
-        // as chosen, a move that hits both of the other side's Pokémon among them. It is shown whole, as a card
-        // (battle-menu, below). (A pressed button flashes white for a few frames.)
+        // where its name is. It was taken for the move list, and the strip showed those buttons cut and one of
+        // them as chosen, a move that hits both of the other side's Pokémon among them. It is shown whole, as a
+        // card (battle-menu, below). (The first button's name area, left of the name and above and below its
+        // letters, is read: the background above the button is the room's own colour, white in a building, blue in
+        // Will's room, and was not a move's. A pressed button flashes white for a few frames.)
         auto light = [&](int x, int y) { int r, g, bl; rgb(x, y, r, g, bl); return r > 200 && g > 200 && bl > 200; };
-        const bool targets = !pt.on && !cmd && blue(40, 166) && blue(128, 166) && !light(64, 20) && !light(64, 30);
+        const bool moveFace = light(16, 34) && light(16, 46);
+        const bool targets = !pt.on && !cmd && bar(40) && bar(128) && !moveFace;
         const bool moves = pt.dp ? dpShown && ptPanel == 3
-                                 : !cmd && !targets && ptPanel != 4 && blue(40, 166) && blue(128, 166) && (blue(216, 166) || megaButton);
+                                 : !cmd && !targets && ptPanel != 4 && bar(40) && bar(128) && (blue(216, 166) || megaButton);
         battleMega = moves && megaButton;
         // The Yes / No panel (battle-yesno, below): red above blue. It is read above the labels,
         // whose letters can be where it was read before ("Switch Pokemon" has one at (128, 64): in
@@ -3415,9 +3424,9 @@ int main(int argc, char** argv)
         // frames, in a grey outline, the other unchanged.
         auto lit = [&](int x, int y) { int r, g, bl; rgb(x, y, r, g, bl); return r > 160 && g > 160 && bl > 160; };
         const bool yes = red(128, 50) || red(128, 64), no = blue(128, 124) || blue(128, 136);
-        const bool yesNo = !pt.dp && !blue(128, 166) && !orange(40, 160) &&
+        const bool yesNo = !pt.dp && !bar(128) && !orange(40, 160) &&
                            ((yes && no) || (yes && lit(128, 124) && edge(128, 112)) || (no && lit(128, 50) && edge(128, 40)));
-        const bool idle = AutoFocus::Blank(screens[1].pixels) || (!blue(128, 166) && !red(128, 60));
+        const bool idle = AutoFocus::Blank(screens[1].pixels) || (!bar(128) && !red(128, 60));
         battleUnknown = (cmd || moves || idle || yesNo) ? 0 : battleUnknown + 1;
         // (Another of Platinum's panels, known for what it is: the touch screen shown at once.)
         if (ptPanel == 4 && !cmd && !moves && !AutoFocus::Blank(screens[1].pixels)) battleUnknown = std::max(battleUnknown, 20);
