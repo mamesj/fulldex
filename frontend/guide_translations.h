@@ -8,7 +8,7 @@
 #include "ui_lang_codes.h"
 namespace GuideText {
 // The menus' language, set from UiLang::lang where the Guide is made (a language is found by UiLang::Id, not by a bare position).
-inline int& Lang() { static int l = 0; return l; }
+inline int& Lang() { static int l = UiLang::En; return l; }
 inline const std::unordered_map<std::string, std::string>* Table(int lang) {
     if (lang == UiLang::Es) {
         static const std::unordered_map<std::string, std::string> t = {
@@ -3171,7 +3171,7 @@ inline const std::unordered_map<std::string, std::string>* Table(int lang) {
 }
 // s in the menus' language, or as it is.
 inline std::string Tr(const std::string& s) {
-    const auto* t = Lang() ? Table(Lang()) : nullptr;
+    const auto* t = !UiLang::IsEnglish(Lang()) ? Table(Lang()) : nullptr;
     if (!t) return s;
     const auto it = t->find(s);
     return it == t->end() ? s : it->second;

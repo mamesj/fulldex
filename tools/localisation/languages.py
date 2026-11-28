@@ -10,5 +10,6 @@ def load():
     if len(set(codes)) != len(codes): raise SystemExit('languages.json: a language code is repeated')
     return langs
 def codes(): return [l['code'] for l in load()]
+def flagged(key): return [l['code'] for l in load() if l.get(key)]  # (the languages with a property on in languages.json)
 def others(): return codes()[1:]  # (every language but English: the ones with a catalogue)
 def ident(code): return code[:1].upper() + code[1:]  # (the C++ name of a language: "pt" -> Pt)

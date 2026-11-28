@@ -15,7 +15,12 @@ def render():
     unknown = sorted(set(tables) - set(known))
     if unknown: sys.exit(f'companion_translations.json has tables for {unknown}, which languages.json does not list')
     codes = [c for c in known if c in tables]
-    keys = set(tables[codes[0]])
+    missing = [f for f in languages.flagged('companion') if f not in tables]
+    if missing: sys.exit(f'languages.json says {missing} have Companion text (companion: true), but companion_translations.json has no table for them')
+    for c in codes:
+        if c not in languages.flagged('companion'):
+            print(f'note: {c} has a Companion table but companion is false in languages.json, so its text is never shown', file=sys.stderr)
+    keys = set(tables[codes[0]]) if codes else set()
     for c in codes:
         if set(tables[c]) != keys: sys.exit(f'{c}: not the same keys as {codes[0]}')
         for k, v in tables[c].items():

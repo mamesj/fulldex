@@ -22,7 +22,7 @@ def render():
              '// The Guide in the menus\' languages (UiLang::lang). Names in capitals stay', '// in English: the Guide is for the English games.',
              '#include <initializer_list>', '#include <string>', '#include <unordered_map>', '#include "ui_lang_codes.h"', 'namespace GuideText {',
              '// The menus\' language, set from UiLang::lang where the Guide is made (a language is found by UiLang::Id, not by a bare position).',
-             'inline int& Lang() { static int l = 0; return l; }',
+             'inline int& Lang() { static int l = UiLang::En; return l; }',
              'inline const std::unordered_map<std::string, std::string>* Table(int lang) {']
     for l in langs:
         lines.append(f'    if (lang == UiLang::{languages.ident(l)}) {{')
@@ -35,7 +35,7 @@ def render():
     lines += ['    return nullptr;', '}',
               '// s in the menus\' language, or as it is.',
               'inline std::string Tr(const std::string& s) {',
-              '    const auto* t = Lang() ? Table(Lang()) : nullptr;',
+              '    const auto* t = !UiLang::IsEnglish(Lang()) ? Table(Lang()) : nullptr;',
               '    if (!t) return s;',
               '    const auto it = t->find(s);',
               '    return it == t->end() ? s : it->second;',

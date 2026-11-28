@@ -17,6 +17,8 @@ class LanguageRegistryTests(unittest.TestCase):
     def test_companion_tables_are_languages_of_the_registry(self):
         tables = json.loads((ROOT / 'localisation/companion_translations.json').read_text(encoding='utf-8'))['tables']
         self.assertTrue(set(tables) <= set(registry()[1:]))
+        flagged = [l['code'] for l in json.loads((ROOT / 'localisation/languages.json').read_text(encoding='utf-8'))['languages'] if l.get('companion')]
+        self.assertTrue(set(flagged) <= set(tables), 'a companion: true language has no companion table')
     def test_header_codes_follow_the_registry(self):
         source = (ROOT / 'frontend/ui_lang_codes.h').read_text(encoding='utf-8')
         codes = re.findall(r'"([a-z]+)"', re.search(r'Codes\[CodeCount\]\s*=\s*\{([^}]*)\}', source).group(1))
@@ -25,5 +27,6 @@ class LanguageRegistryTests(unittest.TestCase):
         for name in ('ui_translations.h', 'guide_translations.h', 'ui_lang_codes.h', 'companion_translations.h'):
             text = (ROOT / 'frontend' / name).read_text(encoding='utf-8')
             self.assertIsNone(re.search(r'\b(lang|language)\s*==\s*\d', text), name)
+            self.assertIsNone(re.search(r'\bLang\(\)\s*\?|\bstatic int l\s*=\s*\d|\blang(uage)?\s*\?', text), name + ': English tested as a bare 0')
 if __name__ == '__main__':
     unittest.main()

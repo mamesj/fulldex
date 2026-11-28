@@ -435,6 +435,8 @@ python3 tests/native_smoke.py --build-dir /tmp/ssrecomp-smoke
 # Generated translation headers must match localisation/*.json
 python3 tools/localisation/generate_translations.py --check
 python3 tools/localisation/generate_guide_translations.py --check
+python3 tools/localisation/generate_companion_translations.py --check
+python3 tools/localisation/generate_languages.py --check
 
 # PC all-games (one of windows | linux | linux-arm64 | both)
 tools/pc/build_all.sh linux "<path-to-soulsilver-us.nds>"
