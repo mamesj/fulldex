@@ -59,7 +59,7 @@ inline std::string Sentence(const std::string& s)
             size_t k = j;
             while (k < s.size() && s[k] == ' ') k++;
             const size_t b = out.find_last_not_of(' ');
-            kept = UiLang::lang == 0 || (k < s.size() && (s[k] == ':' || s[k] == '/')) || (b != std::string::npos && out[b] == '/');
+            kept = UiLang::IsEnglish(UiLang::lang) || (k < s.size() && (s[k] == ':' || s[k] == '/')) || (b != std::string::npos && out[b] == '/');
         }
         // (The games' and hacks' names, and plurals of the names kept in capitals, as they are written.)
         static const char* const names[][2] = { { "RUBY", "Ruby" }, { "SAPPHIRE", "Sapphire" }, { "EMERALD", "Emerald" }, { "FIRERED", "FireRed" },

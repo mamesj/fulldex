@@ -8,11 +8,11 @@ static void Save(const Canvas& c,const std::string& name) {
     for(auto p:c.px) {char rgb[]={char(p>>16),char(p>>8),char(p)};f.write(rgb,3);}
 }
 int main(int argc,char** argv) {
-    UiLang::SetSystem("de-DE");UiLang::Set("auto");assert(UiLang::lang==4);
-    UiLang::Set("ja_JP");assert(UiLang::lang==5);UiLang::SetSystem("fr");assert(UiLang::lang==5);
-    UiLang::Set("auto");assert(UiLang::lang==3);UiLang::SetSystem("unsupported");assert(UiLang::lang==0);
-    const auto& keys=UiTranslations::Table(1);
-    for(int lang=1;lang<UiLang::CodeCount;++lang) {
+    UiLang::SetSystem("de-DE");UiLang::Set("auto");assert(UiLang::lang==UiLang::De);
+    UiLang::Set("ja_JP");assert(UiLang::lang==UiLang::Ja);UiLang::SetSystem("fr");assert(UiLang::lang==UiLang::Ja);
+    UiLang::Set("auto");assert(UiLang::lang==UiLang::Fr);UiLang::SetSystem("unsupported");assert(UiLang::lang==UiLang::En);
+    const auto& keys=UiTranslations::Table(UiLang::Es);
+    for(int lang=0;lang<UiLang::CodeCount;++lang) {if(UiLang::IsEnglish(lang))continue;
         const auto& table=UiTranslations::Table(lang);assert(table.size()==keys.size());
         for(const auto& entry:keys)assert(table.count(entry.first));
         for(const auto& entry:table) for(size_t at=0;at<entry.second.size();) {
@@ -25,8 +25,8 @@ int main(int argc,char** argv) {
         assert(UiLang::Tr("NAME_NOT_A_TRANSLATION")=="NAME_NOT_A_TRANSLATION");
         const auto hint=UiLang::Tr("A: PLAY    B: BACK");
         assert(hint==std::string("A: ")+UiLang::Tr("PLAY")+"    B: "+UiLang::Tr("BACK"));
-        if(lang) {const auto actions=UiLang::Tr("ENTER: SELECT    ESC: BACK");assert(actions.find(": SELECT")==std::string::npos && actions.find(": BACK")==std::string::npos);}
-        if(lang)assert(UiLang::Tr("3 ON")==std::string("3 ")+UiLang::Tr("ON"));
+        if(!UiLang::IsEnglish(lang)) {const auto actions=UiLang::Tr("ENTER: SELECT    ESC: BACK");assert(actions.find(": SELECT")==std::string::npos && actions.find(": BACK")==std::string::npos);}
+        if(!UiLang::IsEnglish(lang))assert(UiLang::Tr("3 ON")==std::string("3 ")+UiLang::Tr("ON"));
         for(const auto& entry:UiTranslations::Table(lang)) for(int width:{72,156,288})
             for(const auto& line:UiLang::Wrap(entry.second,width))assert(UiLang::Units(line)<=width);
         const auto settings=Launcher::SettingsList();bool found=false;

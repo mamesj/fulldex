@@ -1,0 +1,13 @@
+{
+  "_comment": "The menus' languages, in the order the app indexes them (the order of the settings menu too). The one place a language is added or moved: run tools/localisation/generate_languages.py, then the two catalogue generators. tall: written in tall letters (Japanese, Korean). companion: the Companion pages have their own text. omega_nx: the omega-nx game has a menu in this language.",
+  "languages": [
+    {"code": "en", "name": "ENGLISH",   "tall": false, "companion": false, "omega_nx": true},
+    {"code": "es", "name": "ESPAÑOL",   "tall": false, "companion": true,  "omega_nx": true},
+    {"code": "it", "name": "ITALIANO",  "tall": false, "companion": true,  "omega_nx": true},
+    {"code": "fr", "name": "FRANÇAIS",  "tall": false, "companion": true,  "omega_nx": true},
+    {"code": "de", "name": "DEUTSCH",   "tall": false, "companion": true,  "omega_nx": true},
+    {"code": "pt", "name": "PORTUGUÊS", "tall": false, "companion": false, "omega_nx": false},
+    {"code": "ja", "name": "日本語",     "tall": true,  "companion": false, "omega_nx": true},
+    {"code": "ko", "name": "한국어",     "tall": true,  "companion": false, "omega_nx": true}
+  ]
+}

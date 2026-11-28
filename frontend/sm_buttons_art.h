@@ -52,12 +52,9 @@ inline void Ensure(int lang)
     {
         // (The menus' own word in Spanish, Italian, French and German, where they have one.)
         std::string word = english[b];
-        if (lang >= 1 && lang <= 4)
+        if (UiLang::HasCompanionText(lang))
         {
-            const int keep = UiLang::lang;
-            UiLang::lang = lang;
-            const std::string t = UiLang::Tr(b == SmButtons::POKEMON ? "POKEMON" : english[b]);
-            UiLang::lang = keep;
+            const std::string t = UiLang::Tr(lang, b == SmButtons::POKEMON ? "POKEMON" : english[b]);
             if (!t.empty() && t != (b == SmButtons::POKEMON ? "POKEMON" : english[b])) word = t;
         }
         const float scale = stbtt_ScaleForPixelHeight(&font, sizes[b]);

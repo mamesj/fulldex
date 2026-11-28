@@ -13,12 +13,7 @@
 #include "stb_truetype.h"
 #include "ui_clean_font_data.h"
 #include "launcher_cjk.h"
-#ifndef UI_TITLE_LANG_DEFINED
-#define UI_TITLE_LANG_DEFINED
-// (The menu language for title case: 0 is English. Outside English a lone Y, E, O or U between
-// words is "and"/"or", so it is written small, not kept as the Y button.)
-inline int& UiTitleLang() { static int l = 0; return l; }
-#endif
+#include "ui_title_lang.h"
 
 namespace CleanFont
 {
@@ -249,7 +244,7 @@ inline std::string Title(const std::string& s)
             while (core > 0 && (word[core - 1] == '?' || word[core - 1] == '!' || word[core - 1] == '.' || word[core - 1] == ',' || word[core - 1] == ';')) core--;
             bool kept = false;
             for (const char* k : keep) if (word.compare(0, core, k) == 0 && std::char_traits<char>::length(k) == core) kept = true;
-            if (UiTitleLang() != 0 && !firstWord && (word == "Y" || word == "E" || word == "O" || word == "U") && j < s.size() && s[j] == ' ') kept = false;
+            if (UiTitleLang() != UiLang::En && !firstWord && (word == "Y" || word == "E" || word == "O" || word == "U") && j < s.size() && s[j] == ' ') kept = false;
             bool digits = false;
             for (char ch : word) if (ch >= '0' && ch <= '9') digits = true;
             if (word == "POKEMON") word = "Pokémon";
@@ -261,7 +256,7 @@ inline std::string Title(const std::string& s)
             {
                 bool isSmall = false;
                 for (const char* k : small) if (word == k) isSmall = true;
-                if (UiTitleLang() == 0 && (word == "E" || word == "O" || word == "U")) isSmall = false;
+                if (UiTitleLang() == UiLang::En && (word == "E" || word == "O" || word == "U")) isSmall = false;
                 std::string w;
                 bool first = true;
                 for (size_t k = 0; k < word.size();)

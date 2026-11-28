@@ -370,7 +370,7 @@ struct Menu
     // CLEAN text (on: Noto Sans, ui_clean_font.h, in title case) or the pixel font (the Retro look).
     // Japanese and Korean menus keep the pixel font, which has their letters.
     static inline bool Clean = true;
-    static bool UseClean() { return Clean && ((UiLang::lang != 5 && UiLang::lang != 6) || CleanFont::Cjk()); }
+    static bool UseClean() { return Clean && (!UiLang::IsTall(UiLang::lang) || CleanFont::Cjk()); }
     static int Px(int scale, bool big = false) { return (big ? 14 : 12) * scale; }
     static int TW(const std::string& s, int scale, bool big = false)
     {
@@ -771,7 +771,7 @@ struct Menu
         // in the language's table.)
         auto shownValue = [](const MenuItem& item) { return item.info ? item.value : "< " + UiLang::Tr(item.value) + " >"; };
         int boxW = (boxUnits > 0 ? boxUnits : 190) * scale;
-        if (UiLang::lang)
+        if (!UiLang::IsEnglish(UiLang::lang))
             for (const auto& item : items)
                 boxW = std::max(boxW, TW(item.label, scale) + (item.value.empty() ? 0 : TW(shownValue(item), scale)) + 20 * scale);
         if (boxW > c.w - 8) boxW = c.w - 8;
