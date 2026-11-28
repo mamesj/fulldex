@@ -1,14 +1,5 @@
 {
   "note": "The Guide's text (frontend/companion_guides.h, companion_black_bosses.h, the GUIDE page in main.cpp) in the menus' languages. Keys are the English text as written in the source. Names in capitals (places, POKeMON, items, moves, types) stay in English: the Guide is for the English games, whose screens show them so.",
-  "languages": [
-    "es",
-    "it",
-    "fr",
-    "de",
-    "pt",
-    "ja",
-    "ko"
-  ],
   "tables": {
     "es": {
       "Where do I start?": "¿Por dónde empiezo?",

@@ -47,7 +47,7 @@ inline std::string NextChoice(int direction) {
     const auto& values=Choices();size_t index=0;for(size_t i=0;i<values.size();++i)if(values[i].first==choice)index=i;
     return values[(index+values.size()+(direction<0?-1:1))%values.size()].first;
 }
-inline bool Tall() { return lang==Ja || lang==Ko; }
+inline bool Tall() { return IsTall(lang); }
 inline int LineUnits() { return Tall()?14:9; }
 inline void Set(const std::string& code) {
     const auto normal=Normalise(code);choice="auto";

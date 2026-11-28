@@ -329,10 +329,9 @@ inline bool CopySave(const std::string& from, const std::vector<unsigned char>& 
 // The game's program keeps the same copy itself as it plays (omega-nx savefile.rs: written when the game saves,
 // taken in at its start when newer), in <FullDex>/saves unless OMEGA_NX_SAVE names the file: told the saves
 // folder FullDex uses, so the two keep one copy, a saves folder of the player's own included.
-// The game's menu in FullDex's language (omega-nx lang.rs): FULLDEX_LANG, en es it fr de ja ko.
-// omega-nx has no pt catalogue yet, so a Portuguese menu falls back to en here (by code, not by
-// position) until omega-nx itself gains a pt translation.
-inline const char* MenuLanguage() { return UiLang::lang >= 0 && UiLang::lang < UiLang::CodeCount && UiLang::lang != UiLang::Pt ? UiLang::Codes[UiLang::lang] : "en"; }
+// The game's menu in FullDex's language (omega-nx lang.rs): FULLDEX_LANG. A language omega-nx has no
+// catalogue for (omega_nx: false in localisation/languages.json, pt today) falls back to en here.
+inline const char* MenuLanguage() { return UiLang::lang >= 0 && UiLang::lang < UiLang::CodeCount && UiLang::HasOmegaNx(UiLang::lang) ? UiLang::Codes[UiLang::lang] : "en"; }
 inline void TellSave(const std::string& copy)
 {
 #ifdef _WIN32

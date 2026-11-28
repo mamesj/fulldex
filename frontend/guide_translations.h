@@ -5,19 +5,12 @@
 #include <initializer_list>
 #include <string>
 #include <unordered_map>
+#include "ui_lang_codes.h"
 namespace GuideText {
-// The menus' language, set from UiLang::lang where the Guide is made (this header needs nothing else).
+// The menus' language, set from UiLang::lang where the Guide is made (a language is found by UiLang::Id, not by a bare position).
 inline int& Lang() { static int l = 0; return l; }
-// (A language is found by its code, not by a bare position: the order of the languages can change without
-// breaking this. Same order as UiLang::Codes in ui_lang_codes.h; tests/test_language_order.py checks it.)
-inline constexpr const char* Codes[] = {"en", "es", "it", "fr", "de", "pt", "ja", "ko"};
-constexpr bool SameCode(const char* a, const char* b) { while (*a && *a == *b) { ++a; ++b; } return *a == *b; }
-constexpr int IndexOf(const char* code) {
-    for (int i = 0; i < int(sizeof(Codes) / sizeof(Codes[0])); ++i) if (SameCode(Codes[i], code)) return i;
-    return -1;
-}
 inline const std::unordered_map<std::string, std::string>* Table(int lang) {
-    if (lang == IndexOf("es")) {
+    if (lang == UiLang::Es) {
         static const std::unordered_map<std::string, std::string> t = {
             {"A REPEL keeps wild POKeMON weaker than your first POKeMON away for a number of steps; SUPER REPEL and MAX REPEL last longer.", "Un REPEL aleja durante unos pasos a los POKeMON salvajes más débiles que tu primer POKeMON; SUPER REPEL y MAX REPEL duran más."},
             {"A Wi-Fi event.", "Un evento Wi-Fi."},
@@ -468,7 +461,7 @@ inline const std::unordered_map<std::string, std::string>* Table(int lang) {
         };
         return &t;
     }
-    if (lang == IndexOf("it")) {
+    if (lang == UiLang::It) {
         static const std::unordered_map<std::string, std::string> t = {
             {"A REPEL keeps wild POKeMON weaker than your first POKeMON away for a number of steps; SUPER REPEL and MAX REPEL last longer.", "Un REPEL tiene lontani per un certo numero di passi i POKeMON selvatici più deboli del tuo primo POKeMON; SUPER REPEL e MAX REPEL durano di più."},
             {"A Wi-Fi event.", "Un evento Wi-Fi."},
@@ -919,7 +912,7 @@ inline const std::unordered_map<std::string, std::string>* Table(int lang) {
         };
         return &t;
     }
-    if (lang == IndexOf("fr")) {
+    if (lang == UiLang::Fr) {
         static const std::unordered_map<std::string, std::string> t = {
             {"A REPEL keeps wild POKeMON weaker than your first POKeMON away for a number of steps; SUPER REPEL and MAX REPEL last longer.", "Un REPEL éloigne pendant un certain nombre de pas les POKeMON sauvages plus faibles que ton premier POKeMON ; SUPER REPEL et MAX REPEL durent plus longtemps."},
             {"A Wi-Fi event.", "Un événement Wi-Fi."},
@@ -1370,7 +1363,7 @@ inline const std::unordered_map<std::string, std::string>* Table(int lang) {
         };
         return &t;
     }
-    if (lang == IndexOf("de")) {
+    if (lang == UiLang::De) {
         static const std::unordered_map<std::string, std::string> t = {
             {"A REPEL keeps wild POKeMON weaker than your first POKeMON away for a number of steps; SUPER REPEL and MAX REPEL last longer.", "Ein REPEL hält wilde POKeMON, die schwächer als dein erstes POKeMON sind, eine Zahl von Schritten fern; SUPER REPEL und MAX REPEL halten länger."},
             {"A Wi-Fi event.", "Ein WLAN-Event."},
@@ -1821,7 +1814,7 @@ inline const std::unordered_map<std::string, std::string>* Table(int lang) {
         };
         return &t;
     }
-    if (lang == IndexOf("pt")) {
+    if (lang == UiLang::Pt) {
         static const std::unordered_map<std::string, std::string> t = {
             {"A REPEL keeps wild POKeMON weaker than your first POKeMON away for a number of steps; SUPER REPEL and MAX REPEL last longer.", "Um REPEL afasta por um número de passos os POKeMON selvagens mais fracos que seu primeiro POKeMON; SUPER REPEL e MAX REPEL duram mais."},
             {"A Wi-Fi event.", "Um evento Wi-Fi."},
@@ -2272,7 +2265,7 @@ inline const std::unordered_map<std::string, std::string>* Table(int lang) {
         };
         return &t;
     }
-    if (lang == IndexOf("ja")) {
+    if (lang == UiLang::Ja) {
         static const std::unordered_map<std::string, std::string> t = {
             {"A REPEL keeps wild POKeMON weaker than your first POKeMON away for a number of steps; SUPER REPEL and MAX REPEL last longer.", "REPELは一定の歩数、先頭のPOKeMONより弱い野生のPOKeMONを遠ざける。SUPER REPELとMAX REPELはもっと長く効く。"},
             {"A Wi-Fi event.", "Wi-Fiのイベント。"},
@@ -2723,7 +2716,7 @@ inline const std::unordered_map<std::string, std::string>* Table(int lang) {
         };
         return &t;
     }
-    if (lang == IndexOf("ko")) {
+    if (lang == UiLang::Ko) {
         static const std::unordered_map<std::string, std::string> t = {
             {"A REPEL keeps wild POKeMON weaker than your first POKeMON away for a number of steps; SUPER REPEL and MAX REPEL last longer.", "REPEL은 일정 걸음 동안 선두 POKeMON보다 약한 야생 POKeMON을 멀리합니다. SUPER REPEL과 MAX REPEL은 더 오래갑니다."},
             {"A Wi-Fi event.", "Wi-Fi 이벤트."},

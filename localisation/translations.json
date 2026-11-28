@@ -1,14 +1,4 @@
 {
-  "languages": [
-    "en",
-    "es",
-    "it",
-    "fr",
-    "de",
-    "pt",
-    "ja",
-    "ko"
-  ],
   "tables": {
     "es": {
       " (NEXT START)": " (PRÓXIMO INICIO)",
