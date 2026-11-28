@@ -13,7 +13,7 @@ widescreen, 60 fps, up to 4K on a PC and 720p on the Switch.** No more squinting
 **3DS (beta):** Omega Ruby, Alpha Sapphire, X, Y, Ultra Sun and Ultra Moon on Windows, Linux (and the Steam Deck), Android and Switch; Mac being tested, iPhone and iPad later.<br>
 Which languages: [Supported games](#supported-games).
 
-![FullDex: Black 2, White 2, Black, White, SoulSilver, HeartGold, Platinum, Diamond and Pearl, and the GBA games Emerald, Ruby, Sapphire, FireRed, LeafGreen and Ultra Violet, in widescreen at 60 fps on a PC, a Mac, a Steam Deck, an Android phone and a Nintendo Switch; RetroAchievements, cheats, save states and your own colour and background built in](docs/screenshots/trailer-3.gif)
+![FullDex at 60 fps: Groudon in Omega Ruby, a wild Gastrodon in Ultra Moon, a wild Graveler in X, then Black 2, HeartGold, Platinum and FireRed walking into wild battles, each on one wide screen](docs/screenshots/hero-1-8.gif)
 
 ## Downloads
 
