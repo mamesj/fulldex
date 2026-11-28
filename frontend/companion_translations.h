@@ -3,9 +3,10 @@
 // Based on PokeDaisy by Lidor Itzhari - https://github.com/lidor30/pokedaisy
 #include <string>
 #include <unordered_map>
+#include "ui_lang_codes.h"
 namespace UiLang {
 inline std::string CompanionTranslation(int language,const std::string& text) {
-    if(language==1) {
+    if(language==Es) {
         static const std::unordered_map<std::string,std::string> table={
             {"SHINY ALERT","AVISO VARIOCOLOR"},
             {"ITEM POPUPS","AVISOS DE OBJETOS"},
@@ -1358,7 +1359,7 @@ inline std::string CompanionTranslation(int language,const std::string& text) {
             {"♂ ONLY","SOLO ♂"},
         };auto found=table.find(text);return found==table.end()?text:found->second;
     }
-    if(language==2) {
+    if(language==It) {
         static const std::unordered_map<std::string,std::string> table={
             {"SHINY ALERT","AVVISO CROMATICO"},
             {"ITEM POPUPS","AVVISI STRUMENTI"},
@@ -2711,7 +2712,7 @@ inline std::string CompanionTranslation(int language,const std::string& text) {
             {"♂ ONLY","SOLO ♂"},
         };auto found=table.find(text);return found==table.end()?text:found->second;
     }
-    if(language==3) {
+    if(language==Fr) {
         static const std::unordered_map<std::string,std::string> table={
             {"SHINY ALERT","ALERTE CHROMA"},
             {"ITEM POPUPS","ALERTES D'OBJETS"},
@@ -4064,7 +4065,7 @@ inline std::string CompanionTranslation(int language,const std::string& text) {
             {"♂ ONLY","♂ SEULEMENT"},
         };auto found=table.find(text);return found==table.end()?text:found->second;
     }
-    if(language==4) {
+    if(language==De) {
         static const std::unordered_map<std::string,std::string> table={
             {"SHINY ALERT","SCHILLERND-ALARM"},
             {"ITEM POPUPS","GEGENSTANDS-HINWEISE"},
@@ -5417,7 +5418,7 @@ inline std::string CompanionTranslation(int language,const std::string& text) {
             {"♂ ONLY","NUR ♂"},
         };auto found=table.find(text);return found==table.end()?text:found->second;
     }
-    if(language==5) {
+    if(language==Pt) {
         static const std::unordered_map<std::string,std::string> table={
             {"SHINY ALERT","ALERTA SHINY"},
             {"ITEM POPUPS","AVISOS DE ITENS"},

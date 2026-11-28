@@ -54,7 +54,7 @@ inline Table& For(int lang)
 {
     static Table tables[UiLang::CodeCount];
     static bool made[UiLang::CodeCount] = {};
-    if (lang < 0 || lang >= UiLang::CodeCount) lang = 0;
+    if (lang < 0 || lang >= UiLang::CodeCount) lang = UiLang::En;
     Table& t = tables[lang];
     if (!made[lang])
     {
@@ -158,7 +158,7 @@ inline std::string Look(Table& t, const std::string& s, int depth)
 inline std::string Tr(const std::string& s)
 {
     const int lang = UiLang::lang;
-    if (lang == 0 || s.empty()) return s;
+    if (UiLang::IsEnglish(lang) || s.empty()) return s;
     Table& t = For(lang);
     if (t.exact.empty() && t.patterns.empty()) return s;
     const auto m = t.memo.find(s);

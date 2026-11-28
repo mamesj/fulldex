@@ -52,7 +52,7 @@ inline void Ensure(int lang)
     {
         // (The menus' own word in Spanish, Italian, French and German, where they have one.)
         std::string word = english[b];
-        if (lang >= 1 && lang <= 4)
+        if (UiLang::HasCompanionText(lang))
         {
             const int keep = UiLang::lang;
             UiLang::lang = lang;

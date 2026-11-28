@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
         UiLang::Set(language);
         for (const auto& prefix : language == std::string("it") ? UiLang::ItalianPrefixes() : UiLang::SpanishPrefixes()) {
             const auto text = prefix.first + "PLAYER42";
-            assert(UiLang::Tr(text) == (UiLang::lang ? prefix.second + "PLAYER42" : text));
+            assert(UiLang::Tr(text) == (!UiLang::IsEnglish(UiLang::lang) ? prefix.second + "PLAYER42" : text));
         }
         for (auto size : {std::pair<int,int>{1280,720}, {720,1280}, {320,240}}) {
             Canvas c; c.Resize(size.first,size.second);

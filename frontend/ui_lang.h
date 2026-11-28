@@ -13,21 +13,20 @@
 #include <cstdint>
 #include "ui_translations.h"
 #include "ui_font.h"
+#include "ui_lang_codes.h"
 #include "companion_translations.h"
 #ifndef UI_TITLE_LANG_DEFINED
 #define UI_TITLE_LANG_DEFINED
-// (The menu language for title case: 0 is English. Outside English a lone Y, E, O or U between
+// (The menu language for title case, a position in UiLang::Codes; English is UiLang::En. Outside English a lone Y, E, O or U between
 // words is "and"/"or", so it is written small, not kept as the Y button.)
-inline int& UiTitleLang() { static int l = 0; return l; }
+inline int& UiTitleLang() { static int l = UiLang::En; return l; }
 #endif
 
 namespace UiLang
 {
-inline int lang = 0; // English, Spanish, Italian, French, German, Japanese, Korean, Portuguese
-inline int system = 0;
+inline int lang = En; // a position in Codes[] (ui_lang_codes.h)
+inline int system = En;
 inline std::string choice = "auto";
-inline const char* Codes[] = {"en","es","it","fr","de","ja","ko","pt"};
-inline constexpr int CodeCount = sizeof(Codes) / sizeof(Codes[0]); // kept in sync with Codes[] above; add a new language there and this follows.
 inline std::string Normalise(std::string code) {
     for(char& c:code) if(c>='A'&&c<='Z') c+=32;
     const auto end=code.find_first_of("_-"); if(end!=std::string::npos)code.resize(end);
@@ -36,17 +35,19 @@ inline std::string Normalise(std::string code) {
 inline int Language(const std::string& code) {
     const auto normal=Normalise(code);
     const auto it=std::find(std::begin(Codes),std::end(Codes),normal);
-    return it==std::end(Codes)?0:int(it-std::begin(Codes));
+    return it==std::end(Codes)?En:int(it-std::begin(Codes));
 }
+// The choices the settings menu cycles through: AUTO, then every language in Codes[] order.
 inline const std::vector<std::pair<std::string,std::string>>& Choices() {
-    static const std::vector<std::pair<std::string,std::string>> values={{"auto","AUTO"},{"en","ENGLISH"},{"es","ESPAÑOL"},{"it","ITALIANO"},{"fr","FRANÇAIS"},{"de","DEUTSCH"},{"ja","日本語"},{"ko","한국어"},{"pt","PORTUGUÊS"}};return values;
+    static const auto values=[]{std::vector<std::pair<std::string,std::string>> v{{"auto","AUTO"}};for(int i=0;i<CodeCount;++i)v.push_back({Codes[i],Names[i]});return v;}();
+    return values;
 }
 inline std::string ChoiceName() { for(const auto& value:Choices())if(value.first==choice)return value.second;return "AUTO"; }
 inline std::string NextChoice(int direction) {
     const auto& values=Choices();size_t index=0;for(size_t i=0;i<values.size();++i)if(values[i].first==choice)index=i;
     return values[(index+values.size()+(direction<0?-1:1))%values.size()].first;
 }
-inline bool Tall() { return lang==5 || lang==6; }
+inline bool Tall() { return lang==Ja || lang==Ko; }
 inline int LineUnits() { return Tall()?14:9; }
 inline void Set(const std::string& code) {
     const auto normal=Normalise(code);choice="auto";
@@ -110,8 +111,8 @@ inline int Characters(const std::string& text)
 }
 
 // Compatibility accessors use the canonical generated catalogue as well.
-inline const std::unordered_map<std::string,std::string>& Spanish() { return UiTranslations::Table(1); }
-inline const std::unordered_map<std::string,std::string>& Italian() { return UiTranslations::Table(2); }
+inline const std::unordered_map<std::string,std::string>& Spanish() { return UiTranslations::Table(Es); }
+inline const std::unordered_map<std::string,std::string>& Italian() { return UiTranslations::Table(It); }
 inline std::vector<std::pair<std::string,std::string>> Prefixes(int language) {
     std::vector<std::pair<std::string,std::string>> out;const auto& table=UiTranslations::Table(language);
     for(const char* key:{"RETROACHIEVEMENTS: LOGGED IN AS ","RETROACHIEVEMENTS: LOGIN FAILED: ","RETROACHIEVEMENTS: COULD NOT LOAD: ","USRCHEAT.DAT HAS NO ENTRY FOR THIS GAME CODE: ","ACHIEVEMENT: ","SETTINGS: ","FOLDER: ","LOADED: ","FAILED: ","UNLOCKED ","SO FAR ","VERSION ","FIND: ","SAVE IN ","NEW IN ","ZOOM ","OBTAINED "}) {
@@ -119,8 +120,8 @@ inline std::vector<std::pair<std::string,std::string>> Prefixes(int language) {
     }
     return out;
 }
-inline const std::vector<std::pair<std::string,std::string>>& SpanishPrefixes() { static const auto values=Prefixes(1);return values; }
-inline const std::vector<std::pair<std::string,std::string>>& ItalianPrefixes() { static const auto values=Prefixes(2);return values; }
+inline const std::vector<std::pair<std::string,std::string>>& SpanishPrefixes() { static const auto values=Prefixes(Es);return values; }
+inline const std::vector<std::pair<std::string,std::string>>& ItalianPrefixes() { static const auto values=Prefixes(It);return values; }
 
 // Translate whole messages first, then known dynamic prefixes and controller hint columns.
 // A word written in capitals in lower case from byte `from` on: A-Z and the accented capitals of
@@ -143,7 +144,7 @@ inline void LowerLatin(std::string& w, size_t from)
     }
 }
 inline std::string Tr(const std::string& s) {
-    if(!lang||s.empty())return s;
+    if(IsEnglish(lang)||s.empty())return s;
     const auto& table=UiTranslations::Table(lang);
     auto direct=[&](const std::string& key)->const std::string* {auto it=table.find(key);return it==table.end()?nullptr:&it->second;};
     const auto actionColon=s.find(": ");
@@ -181,7 +182,7 @@ inline std::string Tr(const std::string& s) {
         if(rest.rfind(" OF ",0)==0)if(const auto* value=direct(" OF "))return s.substr(0,digits)+*value+rest.substr(4);
     }
     // Companion pages (PokeDaisy) keep their own es/it/fr/de text; ja/ko/pt fall back to English.
-    return lang <= 4 ? CompanionTranslation(lang, s) : s;
+    return HasCompanionText(lang) ? CompanionTranslation(lang, s) : s;
 }
 // A template in the menus' language with its {0}, {1}... filled in ("Holding {0}": "Lleva {0}").
 inline std::string F(const std::string& tmpl, std::initializer_list<std::string> args)

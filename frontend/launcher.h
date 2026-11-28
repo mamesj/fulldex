@@ -8986,7 +8986,7 @@ inline std::string SettingSentence(const std::string& s)
         if (w == "CON" && out.size() >= 4 && out.compare(out.size() - 4, 4, "Joy-") == 0) { w = "Con"; kept = true; }
         // (Y: the button in English; in the other languages the Spanish "y" (and) is far more
         // often meant, so there only as the button, as A below: "Y el menú", not "Y el menÚ".)
-        if (w == "Y" && UiLang::lang == 0) kept = true;
+        if (w == "Y" && UiLang::IsEnglish(UiLang::lang)) kept = true;
         else if (w == "A" || w == "Y")
         {
             // (The button: before ":" or "/", before PLAYS / BUTTON, after "/" or THE.)
