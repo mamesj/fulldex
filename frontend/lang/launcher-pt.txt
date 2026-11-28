@@ -1,0 +1,779 @@
+# Fulldex launcher: Português. One line each: the English, a tab, the Português. {} stands for a name or number.
+Game Options	Opções do jogo
+A theme of your own.	Um tema só seu.
+Apply	Aplicar
+Delete	Excluir
+Close	Fechar
+Show In Folder	Mostrar na pasta
+Favourites First	Favoritos primeiro
+Recently Played	Jogados recentemente
+Original	Original
+Your Theme's Name	Nome do seu tema
+The Other Player's Code	Código do outro jogador
+Tab Name	Nome da aba
+Part Of A Game's Name	Parte do nome de um jogo
+The Game's Own Name	Nome próprio do jogo
+Join	Entrar
+Make Tab	Criar aba
+Search	Buscar
+Save	Salvar
+Add To Tab	Adicionar à aba
+You have no tabs of your own yet. Make one and this game goes in it.	Você ainda não tem abas próprias. Crie uma e este jogo vai para ela.
+Choose a tab to put this game in, or to take it out.	Escolha uma aba para colocar este jogo ou para tirá-lo.
+New Tab	Nova aba
+A tab of your own. Deleting it keeps its games.	Uma aba só sua. Ao excluí-la, os jogos dela são mantidos.
+Rename Tab	Renomear aba
+Move Left	Mover para a esquerda
+Move Right	Mover para a direita
+Hide Tab	Ocultar aba
+Delete Tab	Excluir aba
+A built-in tab: it can be moved or hidden, never deleted. + shows a hidden one again.	Uma aba padrão: pode ser movida ou ocultada, mas nunca excluída. O + mostra de novo uma oculta.
+Tabs	Abas
+Make a new tab, or show one you hid.	Crie uma nova aba ou mostre uma que você ocultou.
+Show A Hidden Tab	Mostrar uma aba oculta
+Cancel	Cancelar
+It goes back where it was.	Ela volta para onde estava.
+Off	Desligado
+On	Ligado
+Party	Equipe
+Box {}	Caixa {}
+First Free Place	Primeira vaga livre
+Next Box	Próxima caixa
+Previous Box	Caixa anterior
+Cancel Swap	Cancelar troca
+Swap	Trocar
+Swap And Evolve	Trocar e evoluir
+Move To {}	Mover para {}
+Move And Evolve	Mover e evoluir
+Swap With One In {}	Trocar com um da {}
+Swap With	Trocar com
+Now choose the Pokémon in {}	Agora escolha o Pokémon da {}
+Could not swap them. {}	Não foi possível trocá-los. {}
+Could not move it. {}	Não foi possível movê-lo. {}
+It could not be written: {}	Não foi possível gravar: {}
+Traded! {}	Troca feita! {}
+Sent. The save was backed up first.	Enviado. Antes, foi feito um backup do save.
+Done: {}	Pronto: {}
+Done.	Pronto.
+A Trainer	Um treinador
+Open A Room	Abrir uma sala
+Join A Room	Entrar em uma sala
+Make An Online Code	Criar um código online
+Enter An Online Code	Digitar um código online
+Stop	Parar
+Close The Room	Fechar a sala
+Join {}	Entrar em {}
+Stop Looking	Parar de procurar
+Accept The Gift	Aceitar o presente
+Accept The Trade	Aceitar a troca
+Not Yet	Ainda não
+Take Back My Offer	Retirar minha oferta
+Leave	Sair
+Offer For A Trade	Oferecer para troca
+Send As A Gift	Enviar como presente
+Online trades are not set up in this build of Fulldex.	As trocas online não estão configuradas nesta versão do Fulldex.
+It cannot be sent. {}	Não foi possível enviá-lo. {}
+Game Art	Arte do jogo
+Your Picture	Sua imagem
+Custom	Personalizado
+Theme	Tema
+Delete {}	Excluir {}
+Sign In With Google	Entrar com o Google
+Sync All Now	Sincronizar tudo agora
+Sign Out	Sair da conta
+Keep This Device's	Manter o deste dispositivo
+Keep The Cloud's	Manter o da nuvem
+Sync Now	Sincronizar agora
+Cloud saves are not set up.	Os saves na nuvem não estão configurados.
+Could not reach {}	Não foi possível acessar {}
+Synced.	Sincronizado.
+This build of Fulldex has no Google sign-in built in.	Esta versão do Fulldex não tem login do Google incluído.
+Could not reach Google. Check the internet connection and try again.	Não foi possível acessar o Google. Verifique a conexão com a internet e tente de novo.
+Signed in. Syncing your saves...	Login feito. Sincronizando seus saves...
+Sign-in was turned down on the phone.	O login foi recusado no celular.
+The code ran out. Choose Sign In again for a new one.	O código expirou. Escolha Entrar de novo para receber outro.
+Sign-in did not work. Try again.	O login não funcionou. Tente de novo.
+Sign-in cancelled.	Login cancelado.
+Asking Google for a code...	Pedindo um código ao Google...
+Signed out. Your saves stay here, and in your Drive.	Você saiu da conta. Seus saves ficam aqui e no seu Drive.
+Could not save the cloud settings.	Não foi possível salvar as configurações da nuvem.
+Syncing...	Sincronizando...
+Not Synced Yet	Ainda não sincronizado
+Only Here	Só aqui
+Up To Date	Em dia
+Sent Up	Enviado
+Brought Down	Baixado
+No Save Yet	Ainda sem save
+Changed On Both	Alterado nos dois
+Could Not Reach	Sem acesso
+Enjoying Fulldex?	Curtindo o Fulldex?
+You've played for over 20 hours. Fulldex is free, made by one dude in his spare time: if it's given you some good hours, consider buying me a beer. Scan the code with your phone. Cheers, James	Você jogou por mais de 20 horas. O Fulldex é gratuito, feito por um cara só nas horas vagas: se ele te deu boas horas de diversão, considere me pagar uma cerveja. Escaneie o código com o celular. Valeu, James
+Done	Pronto
+Buy Me A Beer	Pague uma cerveja
+Maybe Later	Talvez depois
+Quit Fulldex?	Sair do Fulldex?
+Are you sure you want to quit?	Tem certeza de que quer sair?
+Quit	Sair
+Support Fulldex	Apoie o Fulldex
+Thank you! Which would you like to open in your browser?	Obrigado! Qual você quer abrir no navegador?
+What's new in this update	Novidades desta atualização
+Updates	Atualizações
+Move Pokémon	Mover Pokémon
+Cloud Saves	Saves na nuvem
+Trade	Troca
+Settings	Configurações
+Theme Editor	Editor de temas
+My Themes	Meus temas
+Theme Library	Biblioteca de temas
+Launcher	Launcher
+About	Sobre
+Hidden	Oculto
+Not Playable	Não jogável
+Ready	Pronto
+No ROMs found yet. Put your ROMs in the roms folder beside Fulldex.	Nenhuma ROM encontrada ainda. Coloque suas ROMs na pasta roms ao lado do Fulldex.
+Size	Tamanho
+Found	Encontrado
+None Yet	Nenhum ainda
+Game Code	Código do jogo
+Save File	Arquivo de save
+File	Arquivo
+Folder	Pasta
+Show In List Again	Mostrar na lista de novo
+Hide From List	Ocultar da lista
+Open Folder	Abrir pasta
+Not Linked	Não vinculado
+Same Wi-Fi	Mesmo Wi-Fi
+Room {}	Sala {}
+Waiting	Aguardando
+Looking For Rooms	Procurando salas
+Linked With {}	Vinculado com {}
+Code {}	Código {}
+Waiting Online	Aguardando online
+Game	Jogo
+Link	Vínculo
+Egg	Ovo
+Lv {}	Nv. {}
+Sending	Enviando
+Offered	Oferecido
+Nothing yet	Nada ainda
+Trade with a friend, or send Pokémon to another of your own devices, on the same Wi-Fi.	Troque com um amigo ou envie Pokémon para outro dispositivo seu, no mesmo Wi-Fi.
+Same Wi-Fi: one device chooses Open A Room, the other Join A Room. Online: one makes a code, the other enters it. Then each offers a Pokémon, or sends one as a gift.	Mesmo Wi-Fi: um dispositivo escolhe Abrir uma sala e o outro Entrar em uma sala. Online: um cria um código e o outro o digita. Depois, cada um oferece um Pokémon ou envia um de presente.
+Your code:	Seu código:
+The other player chooses Hub, Trade, Enter An Online Code, and types it. Share it on Discord or in a message. It works for a few minutes.	O outro jogador escolhe Hub, Troca, Digitar um código online e o digita. Compartilhe-o no Discord ou em uma mensagem. Ele vale por alguns minutos.
+This device: {}	Este dispositivo: {}
+Looking for rooms on this network. Open one on the other device.	Procurando salas nesta rede. Abra uma no outro dispositivo.
+Rooms on this network are listed below: choose one to join.	As salas desta rede estão listadas abaixo: escolha uma para entrar.
+Waiting for {}	Aguardando {}
+Their game can't take it: {}	O jogo deles não aceita: {}
+Your game can't take it: {}	O seu jogo não aceita: {}
+You Send	Você envia
+You Offer	Você oferece
+You said yes. {}	Você disse sim. {}
+Leave the link to change the game.	Saia do vínculo para trocar de jogo.
+The game to trade from and into.	O jogo de origem e de destino da troca.
+Next Box and Previous Box go through its boxes; Party shows the Pokémon with you.	Próxima caixa e Caixa anterior percorrem as caixas; Equipe mostra os Pokémon que estão com você.
+Link with the other device first: the Link row above.	Primeiro vincule com o outro dispositivo: a linha Vínculo acima.
+Offer it for a trade (one each way, both say yes), or send it as a gift.	Ofereça para troca (um para cada lado, os dois dizem sim) ou envie de presente.
+No Picture	Sem imagem
+Page {} Of {}	Página {} de {}
+No Themes Yet	Nenhum tema ainda
+Save This Look on My Themes makes one.	Salvar este visual em Meus temas cria um.
+Press A to apply it or delete it.	Aperte A para aplicá-lo ou excluí-lo.
+Choose it to apply it, show its file, or delete it.	Escolha-o para aplicá-lo, mostrar o arquivo ou excluí-lo.
+Colours, pictures, blur and the rest of the launcher's look	Cores, imagens, desfoque e o resto do visual do launcher
+Save this look, switch between your looks, share them as files	Salve este visual, alterne entre seus visuais e compartilhe-os como arquivos
+Theme Gallery	Galeria de temas
+Themes other players have shared, ready to try	Temas que outros jogadores compartilharam, prontos para testar
+Soon	Em breve
+Change the launcher's look: the accent, the panels, the sidebar and the top bar, the buttons, the background, its blur and dim, and the glass's grain. Each can be a colour or a picture.	Mude o visual do launcher: o destaque, os painéis, a barra lateral e a barra superior, os botões, o plano de fundo, seu desfoque e escurecimento e o granulado do vidro. Cada um pode ser uma cor ou uma imagem.
+Keep the look you have now as a theme, with its pictures, and switch between your themes. Each is one .zip file you can send to a friend.	Guarde o visual atual como um tema, com suas imagens, e alterne entre seus temas. Cada um é um arquivo .zip que você pode enviar a um amigo.
+Save This Look	Salvar este visual
+Keep the look you have now as a theme	Guarde o visual atual como um tema
+Import A Theme	Importar um tema
+From the themes folder on the SD card	Da pasta de temas no cartão SD
+A .zip theme someone sent you	Um tema .zip que alguém te enviou
+All your saved themes, as pictures	Todos os seus temas salvos, como imagens
+Keeps your accent, panels, bars, buttons, background, blur, dim and grain, with their pictures (up to 4K), as one .zip in the themes folder, with a picture of your Home screen wearing it.	Guarda seu destaque, painéis, barras, botões, plano de fundo, desfoque, escurecimento e granulado, com suas imagens (até 4K), em um .zip na pasta de temas, com uma imagem da sua tela inicial usando-o.
+You name it next. A theme can be up to 20 MB.	Em seguida você dá um nome a ele. Um tema pode ter até 20 MB.
+Put .zip themes in /switch/pokemon-ds-wide/themes/ on the SD card and they show in this list.	Coloque temas .zip em /switch/pokemon-ds-wide/themes/ no cartão SD e eles aparecem nesta lista.
+Choose a .zip theme someone sent you. It is copied into your themes folder and shows in this list.	Escolha um tema .zip que alguém te enviou. Ele é copiado para a sua pasta de temas e aparece nesta lista.
+All your saved themes as pictures of Home wearing them, a page at a time. Choose one to apply it.	Todos os seus temas salvos como imagens da tela inicial usando-os, uma página por vez. Escolha um para aplicá-lo.
+No themes yet: Save This Look makes one.	Nenhum tema ainda: Salvar este visual cria um.
+Accent	Destaque
+Panels	Painéis
+Sidebar	Barra lateral
+Top Bar	Barra superior
+Buttons	Botões
+Background	Plano de fundo
+Grain	Granulado
+Cloud Badges	Ícones de nuvem
+The frame round what is chosen, and its glow	A moldura ao redor do item escolhido e seu brilho
+The glass panels: a colour or a picture, see-through to solid	Os painéis de vidro: uma cor ou uma imagem, de transparente a sólido
+The bar down the left: a colour or a picture	A barra da esquerda: uma cor ou uma imagem
+The bar along the top: a colour or a picture	A barra do topo: uma cor ou uma imagem
+Play, Continue, the chosen tab and the button marks at the bottom	Jogar, Continuar, a aba escolhida e os ícones dos botões na parte de baixo
+Game art, your own picture or a colour; its blur and dim	Arte do jogo, sua própria imagem ou uma cor; seu desfoque e escurecimento
+The fine speckle in the glass panels	O granulado fino nos painéis de vidro
+A cloud on the cards of games whose saves sync	Uma nuvem nos cartões dos jogos cujos saves sincronizam
+Picture	Imagem
+The fine speckle in the frosted glass panels: 0% makes them smooth, 25% is as they were, 100% is four times as strong.	O granulado fino nos painéis de vidro fosco: 0% os deixa lisos, 25% é como eram, 100% é quatro vezes mais forte.
+Show	Mostrar
+Preset	Predefinição
+Hue	Matiz
+Saturation	Saturação
+Brightness	Brilho
+Opacity {}	Opacidade {}
+Blur {}	Desfoque {}
+Dim {}	Escurecimento {}
+Grain {}	Granulado {}
+None	Nenhum
+Up and down choose a row, left and right change it.	Para cima e para baixo escolhem uma linha; esquerda e direita alteram.
+Arrows choose and change, or click.	As setas escolhem e alteram, ou clique.
+The colour of the frame round what is chosen, and its glow, on every page of the launcher.	A cor da moldura ao redor do item escolhido e seu brilho, em todas as páginas do launcher.
+A colour or a picture over every glass panel. Opacity sets how much: low lets the background through, 100% makes them solid.	Uma cor ou uma imagem sobre cada painel de vidro. A opacidade define quanto: baixa deixa o plano de fundo aparecer, 100% os deixa sólidos.
+A colour or a picture for the sidebar, see-through to solid.	Uma cor ou uma imagem para a barra lateral, de transparente a sólido.
+A colour or a picture for the bar along the top, see-through to solid.	Uma cor ou uma imagem para a barra do topo, de transparente a sólido.
+Used for Play and Continue, the chosen tab, and the button marks along the bottom (Choose, Back and the rest). Their words and marks turn dark or light to stay readable.	Usado em Jogar e Continuar, na aba escolhida e nos ícones dos botões na parte de baixo (Escolher, Voltar e os demais). Os textos e ícones ficam escuros ou claros para continuarem legíveis.
+Game Art: the chosen game's picture. Your Picture: one of your own. Colour: one colour. Plain: a calm blue. Its page also sets how blurred and how dim it is.	Arte do jogo: a imagem do jogo escolhido. Sua imagem: uma sua. Cor: uma cor só. Liso: um azul tranquilo. A página dele também define o desfoque e o escurecimento.
+The fine speckle in the frosted glass panels: 0% makes them smooth, 25% is as they were.	O granulado fino nos painéis de vidro fosco: 0% os deixa lisos, 25% é como eram.
+With Cloud Saves on, a cloud shows in the corner of each game whose save syncs. Amber: it changed on two devices and needs a choice.	Com os saves na nuvem ligados, uma nuvem aparece no canto de cada jogo cujo save sincroniza. Âmbar: mudou em dois dispositivos e precisa de uma escolha.
+Press A to change it.	Aperte A para alterá-lo.
+Press A to open its page.	Aperte A para abrir a página dele.
+Choose it to change it.	Escolha-o para alterá-lo.
+Choose it to open its page.	Escolha-o para abrir a página dele.
+Keep your saves the same on every device	Mantenha seus saves iguais em todos os dispositivos
+Signing In	Entrando
+Syncing	Sincronizando
+With a friend online or on the same Wi-Fi, or to another of your devices	Com um amigo online ou no mesmo Wi-Fi, ou para outro dispositivo seu
+Linked	Vinculado
+Room Open	Sala aberta
+Looking	Procurando
+Fulldex Discord	Discord do Fulldex
+Find people to trade with, get help and hear what's coming	Encontre pessoas para trocar, peça ajuda e saiba o que vem por aí
+Between your own games, as a trade would	Entre os seus próprios jogos, como em uma troca
+Saved To	Salvo em
+This Device	Este dispositivo
+Saves sync when a game starts and when it closes, and the DS games after each save too. Open it to sync now, see each game, or choose which save to keep.	Os saves sincronizam quando um jogo abre e quando fecha, e os jogos de DS também depois de cada save. Abra para sincronizar agora, ver cada jogo ou escolher qual save manter.
+Keep your saves the same on every device: play on your PC, then carry on on the Switch.	Mantenha seus saves iguais em todos os dispositivos: jogue no PC e continue no Switch.
+Open it to sign in with Google. Your saves go to your own Drive, in a folder called Fulldex Cloud Saves.	Abra para entrar com o Google. Seus saves vão para o seu próprio Drive, em uma pasta chamada Fulldex Cloud Saves.
+Trade with a friend, online or on the same Wi-Fi, or send Pokémon to another of your own devices: a PC and a Switch, say.	Troque com um amigo, online ou no mesmo Wi-Fi, ou envie Pokémon para outro dispositivo seu: um PC e um Switch, por exemplo.
+Trades follow the real games' rules: one each way, both say yes, and those that evolve by trading evolve, Karrablast and Shelmet too. Each save is backed up before it is written.	As trocas seguem as regras dos jogos de verdade: um para cada lado, os dois dizem sim, e os que evoluem por troca evoluem, Karrablast e Shelmet também. Cada save recebe um backup antes de ser gravado.
+Join the Fulldex Discord: find someone to trade with, get help with a game, report a bug and see what's coming next.	Entre no Discord do Fulldex: encontre alguém para trocar, peça ajuda com um jogo, relate um bug e veja o que vem por aí.
+Scan the code with your phone's camera.	Escaneie o código com a câmera do celular.
+Choose it to open Discord in your browser, or scan the code with your phone.	Escolha para abrir o Discord no navegador ou escaneie o código com o celular.
+Move a Pokémon from one of your games to another, as a trade between them would.	Mova um Pokémon de um dos seus jogos para outro, como uma troca entre eles faria.
+They can go to a newer game, never an older one. Fulldex says first what one would lose on the way, and backs up both saves before it writes them.	Eles podem ir para um jogo mais novo, nunca para um mais antigo. O Fulldex avisa antes o que se perderia no caminho e faz backup dos dois saves antes de gravá-los.
+Games With A Save	Jogos com save
+That game's save could not be read.	Não foi possível ler o save desse jogo.
+Choose two different games.	Escolha dois jogos diferentes.
+From	De
+To	Para
+Swap In	Trocar por
+Put In	Colocar em
+Swapping {}	Trocando {}
+Can Swap, Evolves	Pode trocar, evolui
+Can Swap	Pode trocar
+Can Move, Evolves	Pode mover, evolui
+Can Move	Pode mover
+Can't Swap	Não pode trocar
+Can't Move	Não pode mover
+Take From	Tirar de
+Send To	Enviar para
+This save could not be read. {}	Não foi possível ler este save. {}
+Trainer	Treinador
+Generation	Geração
+Pokémon can be looked at in this game but not moved in or out yet.	Os Pokémon deste jogo podem ser vistos, mas ainda não podem entrar nem sair.
+Choose the game to take Pokémon from.	Escolha o jogo de onde tirar os Pokémon.
+Choose the game to send them to. They can go to a newer game, never an older one, as in the real games.	Escolha o jogo para onde enviá-los. Eles podem ir para um jogo mais novo, nunca para um mais antigo, como nos jogos de verdade.
+Choose the box in {}	Escolha a caixa em {}
+Where it goes in {}	Onde ele vai em {}
+Level	Nível
+Swap For {}	Trocar por {}
+To {}	Para {}
+They can swap, and keep everything.	Eles podem trocar e mantêm tudo.
+It can move, and keeps everything.	Ele pode ser movido e mantém tudo.
+They can swap, but on the way:	Eles podem trocar, mas no caminho:
+It can move, but on the way:	Ele pode ser movido, mas no caminho:
+It can't go to that game.	Ele não pode ir para esse jogo.
+Moving Pokémon is not in this build of Fulldex.	Mover Pokémon não está nesta versão do Fulldex.
+Chosen	Escolhido
+Account	Conta
+On your phone or computer, go to	No celular ou no computador, acesse
+Fulldex is waiting for you to say yes. It only sees the saves it puts in your Drive.	O Fulldex está esperando você dizer sim. Ele só vê os saves que coloca no seu Drive.
+Saves go to your own Google Drive, in a folder called Fulldex Cloud Saves. Fulldex sees only the files it made there.	Os saves vão para o seu próprio Google Drive, em uma pasta chamada Fulldex Cloud Saves. O Fulldex só vê os arquivos que ele criou lá.
+If a save changed on two devices, Fulldex asks which one to keep, and puts the other in the backups.	Se um save mudou em dois dispositivos, o Fulldex pergunta qual manter e coloca o outro nos backups.
+Synced Folder	Pasta sincronizada
+Choose a game in the list to sync it on its own, or to choose which save to keep.	Escolha um jogo na lista para sincronizá-lo sozinho ou para escolher qual save manter.
+Cloud saves are off. Sign in on the Cloud Saves row first.	Os saves na nuvem estão desligados. Entre primeiro na linha Saves na nuvem.
+Not synced yet. Choose Sync Now to send it up, or bring down a newer one.	Ainda não sincronizado. Escolha Sincronizar agora para enviá-lo ou baixar um mais novo.
+This save is the same here and in the cloud.	Este save é o mesmo aqui e na nuvem.
+This save was sent up to the cloud.	Este save foi enviado para a nuvem.
+There is no save for this game yet, here or in the cloud.	Ainda não há save deste jogo, nem aqui nem na nuvem.
+Could not reach the cloud. The save here is kept, and syncs next time.	Não foi possível acessar a nuvem. O save daqui é mantido e sincroniza na próxima vez.
+Unknown	Desconhecido
+Not Checked Yet	Ainda não verificado
+This Version: {}	Esta versão: {}
+Checking...	Verificando...
+Fulldex Is Up To Date	O Fulldex está em dia
+Version {}	Versão {}
+A New Version Is Ready	Há uma nova versão pronta
+You Have {}	Você tem a {}
+Downloading...	Baixando...
+New: {}	Nova: {}
+Installed	Instalada
+The new version starts when you close the list	A nova versão inicia quando você fecha a lista
+Could Not Check	Não foi possível verificar
+Check For Updates	Verificar atualizações
+Fulldex looks for a new version on GitHub	O Fulldex procura uma nova versão no GitHub
+What's New	Novidades
+The changes in each version are listed on its release page on GitHub.	As mudanças de cada versão estão listadas na página de lançamento dela no GitHub.
+Your ROMs, saves and settings stay when Fulldex updates.	Suas ROMs, saves e configurações são mantidos quando o Fulldex atualiza.
+The version before is kept, in case you need to go back.	A versão anterior é mantida, caso você precise voltar.
+On this device, Open Download takes you to the release page to get it.	Neste dispositivo, Abrir download leva você à página de lançamento para baixá-la.
+The rest, and the downloads, are on the release page.	O restante e os downloads estão na página de lançamento.
+Working...	Trabalhando...
+Install Now	Instalar agora
+Open Download	Abrir download
+Check Now	Verificar agora
+Release Page	Página de lançamento
+Fulldex checks once each time it starts. Your ROMs, saves and settings stay when it updates, and the version before is kept.	O Fulldex verifica uma vez a cada vez que inicia. Suas ROMs, saves e configurações são mantidos quando ele atualiza, e a versão anterior é guardada.
+Fulldex checks once each time it starts.	O Fulldex verifica uma vez a cada vez que inicia.
+Support	Apoio
+Credits	Créditos
+Report A Bug	Relatar um bug
+Found something wrong? Copy the details, then paste them into Discord or a GitHub issue. Say which game, which device, and what happened just before.	Achou algo errado? Copie os detalhes e cole no Discord ou em uma issue do GitHub. Diga qual jogo, qual dispositivo e o que aconteceu logo antes.
+A screenshot helps too. Nothing is sent until you paste it.	Uma captura de tela também ajuda. Nada é enviado até você colar.
+Version, device, settings and the last 200 lines of game.log	Versão, dispositivo, configurações e as últimas 200 linhas do game.log
+Open the GitHub issues page	Abrir a página de issues do GitHub
+DIAGNOSTICS COPIED	DIAGNÓSTICO COPIADO
+SAVED TO diagnostics.txt	SALVO EM diagnostics.txt
+COULD NOT SAVE DIAGNOSTICS	NÃO FOI POSSÍVEL SALVAR O DIAGNÓSTICO
+Paste it into your report.	Cole-o no seu relatório.
+Attach diagnostics.txt to your report.	Anexe o diagnostics.txt ao seu relatório.
+Licences	Licenças
+Website	Site
+Fulldex doesn't include any games. Play with ROMs from games you own.	O Fulldex não inclui nenhum jogo. Jogue com ROMs de jogos que você possui.
+Open it on your phone or PC	Abra no celular ou no PC
+Choose it to open it in your browser	Escolha para abrir no navegador
+Hi, I'm James, AKA Mamesj, the mind behind Fulldex. I'm just a dude who wanted to play some Pokémon and got a bit carried away.	Oi, eu sou o James, também conhecido como Mamesj, a mente por trás do Fulldex. Sou só um cara que queria jogar um pouco de Pokémon e se empolgou.
+Fulldex is free and always will be. If it's given you some good hours, a coffee or a beer is always appreciated, never expected.	O Fulldex é gratuito e sempre será. Se ele te deu boas horas de diversão, um café ou uma cerveja é sempre bem-vindo, nunca esperado.
+Scan a code with your phone's camera.	Escaneie um código com a câmera do celular.
+Choose Support to open Buy Me A Coffee, or scan a code with your phone.	Escolha Apoio para abrir o Buy Me A Coffee ou escaneie um código com o celular.
+Credits And Acknowledgements	Créditos e agradecimentos
+The single-screen and widescreen view Fulldex grew from	A visão de tela única e widescreen da qual o Fulldex surgiu
+The DS emulation	A emulação de DS
+Companion readers and text decoders	Leitores do Companion e decodificadores de texto
+Function names from their decompilations	Nomes de funções vindos das decompilações
+The built-in DS cheats, via libretro-database	As trapaças de DS embutidas, via libretro-database
+How the HOME Menu icons are made	Como os ícones do Menu HOME são feitos
+Cheats menu ideas (PR #16)	Ideias para o menu de trapaças (PR #16)
+Everyone who reported bugs and helped test	Todos que relataram bugs e ajudaram a testar
+Thank you	Obrigado
+Copy Diagnostics	Copiar diagnóstico
+Not affiliated with or endorsed by Nintendo, Game Freak, The Pokémon Company or the melonDS project. Pokémon is a trademark of its owners. The full licence texts are on the GitHub page.	Sem afiliação nem aprovação da Nintendo, da Game Freak, da The Pokémon Company ou do projeto melonDS. Pokémon é marca registrada de seus donos. Os textos completos das licenças estão na página do GitHub.
+Downloads, the latest changes and the full instructions are on the GitHub page.	Os downloads, as últimas mudanças e as instruções completas estão na página do GitHub.
+Tips are welcome but never expected: see Support, at the top of this page.	Gorjetas são bem-vindas, mas nunca esperadas: veja Apoio, no topo desta página.
+Coming Soon	Em breve
+Continue	Continuar
+Play	Jogar
+Continue Playing	Continuar jogando
+Ready To Play	Pronto para jogar
+Cloud Save: Changed On Both	Save na nuvem: alterado nos dois
+Cloud Save	Save na nuvem
+Save Found	Save encontrado
+New Game	Novo jogo
+Your Games	Seus jogos
+Results For "{}"	Resultados para "{}"
+No Games Match "{}"	Nenhum jogo corresponde a "{}"
+Add Games To This Tab From A Game's Menu (A On A Game)	Adicione jogos a esta aba pelo menu de um jogo (A em um jogo)
+Add Games To Home From A Game's Menu (A On A Game)	Adicione jogos ao Início pelo menu de um jogo (A em um jogo)
+No Romhacks Yet	Nenhum romhack ainda
+Sort: {}	Ordem: {}
+Remove {}	Remover {}
+Remove From List hides it here and keeps the ROM in your folder. Your saves are never deleted.	Remover da lista o oculta aqui e mantém a ROM na sua pasta. Seus saves nunca são excluídos.
+Remove From List	Remover da lista
+Delete ROM File	Excluir arquivo da ROM
+Delete The ROM File?	Excluir o arquivo da ROM?
+This deletes {}	Isto exclui {}
+Change Picture	Trocar imagem
+Pictures stay on this device. Only use pictures you have permission to use.	As imagens ficam neste dispositivo. Use apenas imagens que você tem permissão para usar.
+Import A Picture	Importar uma imagem
+Find Artwork Online	Buscar arte na internet
+Plain Card	Cartão liso
+Restore Original	Restaurar original
+Rename {}	Renomear {}
+Type a new name. Leave it empty to go back to the game's own name.	Digite um novo nome. Deixe vazio para voltar ao nome original do jogo.
+Home	Início
+All	Todos
+Romhacks	Romhacks
+Plain	Liso
+Colour	Cor
+Choose	Escolher
+Back	Voltar
+Sort	Ordenar
+Favourite	Favorito
+Rename	Renomear
+Manage Saves	Gerenciar saves
+Add To Home	Adicionar ao Início
+Remove Game	Remover jogo
+Choose a theme	Escolha um tema
+COULD NOT SAVE THE TABS	NÃO FOI POSSÍVEL SALVAR AS ABAS
+TAKEN OUT OF {}	REMOVIDO DE {}
+ADDED TO {}	ADICIONADO A {}
+TAB SHOWN AGAIN	ABA EXIBIDA DE NOVO
+AS FAR LEFT AS IT GOES	O MAIS À ESQUERDA POSSÍVEL
+AS FAR RIGHT AS IT GOES	O MAIS À DIREITA POSSÍVEL
+ONE TAB MUST STAY SHOWN	UMA ABA PRECISA FICAR VISÍVEL
+TAB HIDDEN. + SHOWS IT AGAIN	ABA OCULTA. O + A MOSTRA DE NOVO
+TAB DELETED. ITS GAMES ARE KEPT	ABA EXCLUÍDA. OS JOGOS DELA FORAM MANTIDOS
+TAB MADE	ABA CRIADA
+SEARCH CLEARED	BUSCA LIMPA
+TAB RENAMED	ABA RENOMEADA
+THE THEME GALLERY IS COMING SOON	A GALERIA DE TEMAS CHEGA EM BREVE
+TYPE A NAME FOR THE THEME (LETTERS AND NUMBERS)	DIGITE UM NOME PARA O TEMA (LETRAS E NÚMEROS)
+SAVING...	SALVANDO...
+OVER 20 MB: USE SMALLER PICTURES	MAIS DE 20 MB: USE IMAGENS MENORES
+COULD NOT SAVE THE THEME	NÃO FOI POSSÍVEL SALVAR O TEMA
+SAVED: {}	SALVO: {}
+COULD NOT READ THAT THEME	NÃO FOI POSSÍVEL LER ESSE TEMA
+THAT IS NOT A FULLDEX THEME	ESSE NÃO É UM TEMA DO FULLDEX
+THEME ON: {}	TEMA ATIVO: {}
+COULD NOT COPY THE THEME	NÃO FOI POSSÍVEL COPIAR O TEMA
+IMPORTED: {}	IMPORTADO: {}
+COULD NOT DELETE IT	NÃO FOI POSSÍVEL EXCLUIR
+DELETED: {}	EXCLUÍDO: {}
+ADDED TO HOME	ADICIONADO AO INÍCIO
+REMOVED FROM HOME	REMOVIDO DO INÍCIO
+COULD NOT SAVE HOME	NÃO FOI POSSÍVEL SALVAR O INÍCIO
+COULD NOT SAVE THE LIST	NÃO FOI POSSÍVEL SALVAR A LISTA
+BACK IN THE LIST	DE VOLTA NA LISTA
+HIDDEN FROM THE LIST	OCULTO DA LISTA
+COULD NOT USE THAT PICTURE	NÃO FOI POSSÍVEL USAR ESSA IMAGEM
+{}: COMING SOON	{}: EM BREVE
+THIS GAME'S SAVES CANNOT BE MANAGED HERE YET	OS SAVES DESTE JOGO AINDA NÃO PODEM SER GERENCIADOS AQUI
+THIS DOWNLOAD DOES NOT HAVE THIS GAME	ESTE DOWNLOAD NÃO TEM ESTE JOGO
+THIS GAME IS NOT ONE THAT THIS PLAYS	ESTE JOGO NÃO É UM DOS QUE ESTE PROGRAMA EXECUTA
+REMOVED FROM THE LIST. THE ROM IS STILL IN YOUR FOLDER	REMOVIDO DA LISTA. A ROM CONTINUA NA SUA PASTA
+COULD NOT DELETE THE ROM FILE	NÃO FOI POSSÍVEL EXCLUIR O ARQUIVO DA ROM
+ROM FILE DELETED. ITS SAVES ARE KEPT	ARQUIVO DA ROM EXCLUÍDO. OS SAVES DELE FORAM MANTIDOS
+SAVES FOLDER OPENED	PASTA DE SAVES ABERTA
+SAVE RESTORED. THE ONE BEFORE IS KEPT AS A .BEFORE-RESTORE COPY	SAVE RESTAURADO. O ANTERIOR FOI MANTIDO COMO CÓPIA .BEFORE-RESTORE
+THAT PICTURE COULD NOT BE READ: PNG OR JPG ONLY	NÃO FOI POSSÍVEL LER ESSA IMAGEM: SÓ PNG OU JPG
+PICTURE CHANGED	IMAGEM ALTERADA
+COULD NOT KEEP THE PICTURE	NÃO FOI POSSÍVEL GUARDAR A IMAGEM
+OPENED IN YOUR BROWSER: SAVE A PICTURE, THEN IMPORT IT HERE	ABERTO NO NAVEGADOR: SALVE UMA IMAGEM E IMPORTE-A AQUI
+COULD NOT SAVE THE PICTURE	NÃO FOI POSSÍVEL SALVAR A IMAGEM
+ORIGINAL PICTURE BACK	IMAGEM ORIGINAL DE VOLTA
+COULD NOT SAVE THE NAME	NÃO FOI POSSÍVEL SALVAR O NOME
+NAME RESET	NOME RESTAURADO
+RENAMED	RENOMEADO
+OPEN THE DOWNLOAD IN YOUR BROWSER	ABRA O DOWNLOAD NO NAVEGADOR
+REMOVED FROM THE LIST. THE ROM IS STILL ON THE SD CARD	REMOVIDO DA LISTA. A ROM CONTINUA NO CARTÃO SD
+FIND ARTWORK ON YOUR PHONE OR PC	BUSQUE ARTE NO CELULAR OU NO PC
+SCAN THE CODE WITH YOUR PHONE	ESCANEIE O CÓDIGO COM O CELULAR
+COULD NOT SAVE THE SETTINGS	NÃO FOI POSSÍVEL SALVAR AS CONFIGURAÇÕES
+{#} Games	{} jogos
+{#} Game	{} jogo
+{#} Saves	{} saves
+{#} Save	{} save
+{#} Themes	{} temas
+{#} Theme	{} tema
+{#} of {#} up to date	{} de {} em dia
+{#} of {#}	{} de {}
+Clear	Limpar
+Dark	Escuro
+White	Branco
+Red	Vermelho
+Blue	Azul
+Green	Verde
+Purple	Roxo
+Gold	Dourado
+Pink	Rosa
+Teal	Azul-petróleo
+Default Look	Visual padrão
+Frosted glass over the game's art, as Fulldex starts	Vidro fosco sobre a arte do jogo, como o Fulldex inicia
+Go back to frosted glass over the game's art, as Fulldex starts? Your themes stay in the library: save this look first to keep it.	Voltar ao vidro fosco sobre a arte do jogo, como o Fulldex inicia? Seus temas ficam na biblioteca: salve este visual antes para guardá-lo.
+Use The Default Look	Usar o visual padrão
+Puts back the look Fulldex starts with: frosted glass over the chosen game's art, white highlights, the usual blur and dim.	Restaura o visual com que o Fulldex inicia: vidro fosco sobre a arte do jogo escolhido, destaques brancos, o desfoque e o escurecimento de sempre.
+Your saved themes and pictures stay. Save This Look first if you want to come back to the look you have now.	Seus temas e imagens salvos ficam. Salve este visual antes se quiser voltar ao visual atual.
+THE DEFAULT LOOK IS BACK	O VISUAL PADRÃO VOLTOU
+Font	Fonte
+Text Size	Tamanho do texto
+The letters everywhere in the launcher	As letras em todo o launcher
+How big the writing is	O tamanho da escrita
+How big the writing is in the launcher, from 85% to 120%. Each font is already sized to fill a line as the others do.	O tamanho da escrita no launcher, de 85% a 120%. Cada fonte já tem o tamanho certo para preencher uma linha como as outras.
+The letters everywhere in the launcher: 30 to choose from, clean, rounded, bold, retro, fun, handwritten and easy to read. The pause menu keeps its own.	As letras em todo o launcher: 30 para escolher, limpas, arredondadas, em negrito, retrô, divertidas, manuscritas e fáceis de ler. O menu de pausa mantém a sua.
+How big the writing is in the launcher, from 85% to 120%.	O tamanho da escrita no launcher, de 85% a 120%.
+Size {}	Tamanho {}
+In Use	Em uso
+Clean	Limpa
+Rounded	Arredondada
+Bold	Negrito
+Retro	Retrô
+Fun	Divertida
+Handwritten	Manuscrita
+Easy To Read	Fácil de ler
+Serif	Serifada
+Press A to use a font. B goes back to the Theme Editor.	Aperte A para usar uma fonte. B volta ao Editor de temas.
+Choose a font to use it. Back goes to the Theme Editor.	Escolha uma fonte para usá-la. Voltar leva ao Editor de temas.
+FONT: {}	FONTE: {}
+Enter A Theme Code	Digitar um código de tema
+Share A Theme	Compartilhar um tema
+Share	Compartilhar
+Try It	Experimentar
+Keep	Manter
+Go Back	Voltar
+Keep This Theme?	Manter este tema?
+Choose a theme to try it on. You keep it or go back.	Escolha um tema para experimentá-lo. Você o mantém ou volta.
+LOADING...	CARREGANDO...
+NO GALLERY ADDRESS IS SET UP IN THIS BUILD	NENHUM ENDEREÇO DE GALERIA ESTÁ CONFIGURADO NESTA VERSÃO
+COULD NOT REACH THE GALLERY	NÃO FOI POSSÍVEL ACESSAR A GALERIA
+NOTHING SHARED YET. BE THE FIRST: SHARE A THEME	NADA COMPARTILHADO AINDA. SEJA O PRIMEIRO: COMPARTILHE UM TEMA
+A CODE IS 8 LETTERS AND NUMBERS, LIKE K7QM-X2RD	UM CÓDIGO TEM 8 LETRAS E NÚMEROS, COMO K7QM-X2RD
+THAT CODE DOES NOT WORK	ESSE CÓDIGO NÃO FUNCIONA
+THAT THEME IS WAITING TO BE APPROVED. TRY AGAIN LATER.	ESSE TEMA ESTÁ AGUARDANDO APROVAÇÃO. TENTE DE NOVO MAIS TARDE.
+THAT THEME WAS NOT APPROVED	ESSE TEMA NÃO FOI APROVADO
+THAT THEME WAS TAKEN DOWN	ESSE TEMA FOI REMOVIDO
+THE GALLERY GAVE AN ANSWER IT SHOULD NOT	A GALERIA DEU UMA RESPOSTA INESPERADA
+COULD NOT SAVE IT	NÃO FOI POSSÍVEL SALVAR
+TRYING: {}	EXPERIMENTANDO: {}
+BACK TO YOUR OWN LOOK	DE VOLTA AO SEU VISUAL
+KEPT IN MY THEMES: {}	MANTIDO EM MEUS TEMAS: {}
+SHARING...	COMPARTILHANDO...
+SHARED. YOUR CODE: {}. IT SHOWS FOR EVERYONE ONCE APPROVED.	COMPARTILHADO. SEU CÓDIGO: {}. APARECE PARA TODOS DEPOIS DE APROVADO.
+TOO MANY SHARES FOR NOW. TRY AGAIN LATER.	COMPARTILHAMENTOS DEMAIS POR ENQUANTO. TENTE DE NOVO MAIS TARDE.
+NOT ACCEPTED: {}	NÃO ACEITO: {}
+THE GALLERY DID NOT TAKE IT ({})	A GALERIA NÃO ACEITOU ({})
+SAVE A THEME FIRST: LAUNCHER, MY THEMES, SAVE THIS LOOK	SALVE UM TEMA ANTES: LAUNCHER, MEUS TEMAS, SALVAR ESTE VISUAL
+Pick one of your themes. It is looked at before it shows for others. Share only pictures that are yours.	Escolha um dos seus temas. Ele é analisado antes de aparecer para os outros. Compartilhe apenas imagens que sejam suas.
+By {}. Try It puts it on your launcher; then you keep it or go back.	Por {}. Experimentar o coloca no seu launcher; depois você o mantém ou volta.
+{} is on. Keep it in My Themes, or go back to your own look.	{} está ativo. Mantenha-o em Meus temas ou volte ao seu próprio visual.
+THEME CODE	CÓDIGO DO TEMA
+A Theme Code	Um código de tema
+Get It	Obter
+Online	Online
+Browse themes other players have shared, try one on before you keep it, enter a theme code from a friend, or share one of your own.	Veja temas que outros jogadores compartilharam, experimente um antes de mantê-lo, digite um código de tema de um amigo ou compartilhe um seu.
+The launcher's fonts	As fontes do launcher
+Each font's copyright notice and the full licence text are in FONT-LICENSES.txt, in the fonts folder of the download and on the GitHub page.	O aviso de direitos autorais de cada fonte e o texto completo da licença estão em FONT-LICENSES.txt, na pasta fonts do download e na página do GitHub.
+Display	Tela
+Sound	Som
+Graphics	Gráficos
+Controls	Controles
+Optional Features	Recursos opcionais
+Release Notes	Notas de versão
+Game Save	Save do jogo
+Restore A Backup	Restaurar um backup
+Export Save	Exportar save
+Import Save	Importar save
+Play From Quick Save	Jogar a partir do save rápido
+Undo Delete	Desfazer exclusão
+Open Saves Folder	Abrir pasta de saves
+Delete Save	Excluir save
+Delete Slot	Excluir slot
+Save States	Estados salvos
+They stay on this device	Ficam neste dispositivo
+Healthy	Saudável
+Problem	Problema
+Synced	Sincronizado
+Different	Diferente
+Not Synced	Não sincronizado
+Not Reached	Sem acesso
+Cloud Off	Nuvem desligada
+A copy in the exports folder	Uma cópia na pasta de exportação
+A file you choose, or from the import folder	Um arquivo à sua escolha ou da pasta de importação
+From the import folder beside your saves	Da pasta de importação ao lado dos seus saves
+The slot deleted last comes back	O slot excluído por último volta
+None yet: the game makes it	Nenhum ainda: o jogo o cria
+None yet: one is made each time the game starts	Nenhum ainda: um é criado cada vez que o jogo inicia
+Empty	Vazio
+A: play from it or delete it	A: jogar a partir dele ou excluí-lo
+Save to it from the game's menu	Salve nele pelo menu do jogo
+Choose a slot to play from it, or delete it. Save to the slots from the game's menu.	Escolha um slot para jogar a partir dele ou excluí-lo. Salve nos slots pelo menu do jogo.
+Fulldex backs up this save every time the game starts and before anything here changes it. Your ROM is never changed.	O Fulldex faz backup deste save toda vez que o jogo inicia e antes de qualquer alteração feita aqui. Sua ROM nunca é alterada.
+The GBA games keep one save state each, made and loaded from the game's menu. Save state slots are for the DS games.	Os jogos de GBA mantêm um estado salvo cada, criado e carregado pelo menu do jogo. Os slots de estado salvo são para os jogos de DS.
+3DS games have no save states: they save from the game's own menu. Save state slots are for the DS games.	Os jogos de 3DS não têm estados salvos: eles salvam pelo menu do próprio jogo. Os slots de estado salvo são para os jogos de DS.
+Keep This One	Manter este
+Choose A File...	Escolher um arquivo...
+Restore Backup	Restaurar backup
+Play Anyway	Jogar mesmo assim
+This Save Has A Problem	Este save tem um problema
+Fulldex backs up this save every time the game starts, and before anything here changes it. Choose one to go back to it.	O Fulldex faz backup deste save toda vez que o jogo inicia e antes de qualquer alteração feita aqui. Escolha um para voltar a ele.
+Asks first. A backup is kept	Pergunta antes. Um backup é mantido
+Slot {}	Slot {}
+Play From Slot {}	Jogar a partir do slot {}
+Saved {}	Salvo {}
+SAVES FOLDER	PASTA DE SAVES
+BESIDE THE ROMS	AO LADO DAS ROMS
+COULD NOT CREATE THE PICTURE FOLDER	NÃO FOI POSSÍVEL CRIAR A PASTA DE IMAGENS
+COULD NOT KEEP THE SAVE FOLDER	NÃO FOI POSSÍVEL MANTER A PASTA DE SAVES
+COULD NOT OPEN THIS ROM	NÃO FOI POSSÍVEL ABRIR ESTA ROM
+COULD NOT SAVE THE PICTURE CHOICE	NÃO FOI POSSÍVEL SALVAR A IMAGEM ESCOLHIDA
+COULD NOT SAVE THE ROM FOLDER	NÃO FOI POSSÍVEL SALVAR A PASTA DE ROMS
+Choose A Picture	Escolher uma imagem
+Choose ROMs Folder	Escolher pasta de ROMs
+Choose the folder containing your ROMs	Escolha a pasta que contém suas ROMs
+Choose the folder for your saves (they are copied there)	Escolha a pasta para seus saves (eles são copiados para lá)
+DS GAMES: A RETRO LOOK OVER THE PICTURE. LCD GRID ADDS A FAINT PIXEL GRID. THE SAME CHOICE IS AVAILABLE IN THE GAME'S DISPLAY MENU.	JOGOS DE DS: UM VISUAL RETRÔ SOBRE A IMAGEM. A GRADE LCD ADICIONA UMA GRADE DE PIXELS SUTIL. A MESMA OPÇÃO ESTÁ NO MENU DE TELA DO JOGO.
+DS SCREEN FILTER	FILTRO DA TELA DO DS
+FAST FORWARD BUTTON	BOTÃO DE AVANÇO RÁPIDO
+FILE NOT IMPORTED	ARQUIVO NÃO IMPORTADO
+GBA GAMES: A FAINT GRID BETWEEN THE PIXELS. AUTO KEEPS YOUR EXISTING GBA SETTING. CHANGES IN THE GAME'S DISPLAY MENU ARE REMEMBERED HERE.	JOGOS DE GBA: UMA GRADE SUTIL ENTRE OS PIXELS. AUTO MANTÉM SUA CONFIGURAÇÃO ATUAL DE GBA. AS MUDANÇAS NO MENU DE TELA DO JOGO SÃO LEMBRADAS AQUI.
+GBA LCD EFFECT	EFEITO LCD DO GBA
+Grid Only	Só a grade
+HOLD	SEGURAR
+HOLD: RELEASE TO STOP. TOGGLE: PRESS ONCE TO START AND AGAIN TO STOP. APPLIES TO KEYBOARD, CONTROLLER AND ON-SCREEN FAST FORWARD.	SEGURAR: SOLTE PARA PARAR. ALTERNAR: APERTE UMA VEZ PARA COMEÇAR E OUTRA PARA PARAR. VALE PARA O TECLADO, O CONTROLE E O AVANÇO RÁPIDO NA TELA.
+HOLD: RELEASE TO STOP. TOGGLE: PRESS ONCE TO START AND AGAIN TO STOP. FOR THE KEYBOARD AND A CONTROLLER; THE >> BUTTON ON THE SCREEN IS ALWAYS A TAP ON, A TAP OFF.	SEGURAR: SOLTE PARA PARAR. ALTERNAR: APERTE UMA VEZ PARA COMEÇAR E OUTRA PARA PARAR. PARA O TECLADO E UM CONTROLE; O BOTÃO >> NA TELA É SEMPRE UM TOQUE PARA LIGAR E UM PARA DESLIGAR.
+LCD GRID	GRADE LCD
+LOAD	CARREGAR
+More Files	Mais arquivos
+More Folders	Mais pastas
+NOT FOR THIS VERSION OF THE GAME.	NÃO É PARA ESTA VERSÃO DO JOGO.
+No ROMs found yet. Choose the folder containing your ROMs.	Nenhuma ROM encontrada ainda. Escolha a pasta que contém suas ROMs.
+Parent Folder	Pasta superior
+Previous Files	Arquivos anteriores
+Previous Folders	Pastas anteriores
+QUIT GAME?	SAIR DO JOGO?
+RESET GAME?	REINICIAR O JOGO?
+ROM FOLDER CANNOT BE READ	NÃO É POSSÍVEL LER A PASTA DE ROMS
+ROM FOLDER CHANGED	PASTA DE ROMS ALTERADA
+ROM FOLDER IS NOT AVAILABLE	A PASTA DE ROMS NÃO ESTÁ DISPONÍVEL
+SCANLINES	SCANLINES
+THE WIDESCREEN PATCH DOESN'T FIT	O PATCH DE WIDESCREEN NÃO SE ENCAIXA
+TOGGLE	ALTERNAR
+Use This Folder	Usar esta pasta
+Put On My Switch	Colocar no meu Switch
+Put On My Phone	Colocar no meu celular
+Pick Where It Goes	Escolher onde vai
+Build	Compilar
+Copy To Your Phone	Copiar para o seu celular
+Put {} On Your Switch	Colocar {} no seu Switch
+Take the SD card out of your Switch and put it in this PC: FullDex finds it and does the rest. It uses your own dump and takes 5 to 10 minutes.	Tire o cartão SD do seu Switch e coloque-o neste PC: o FullDex o encontra e faz o resto. Ele usa o seu próprio dump e leva de 5 a 10 minutos.
+The first time, FullDex also downloads the Switch tools (about 90 MB).	Na primeira vez, o FullDex também baixa as ferramentas do Switch (cerca de 90 MB).
+No SD card found yet: put it in and it shows up here.	Nenhum cartão SD encontrado ainda: coloque-o e ele aparece aqui.
+SD Card ({})	Cartão SD ({})
+Save To A Folder Instead	Salvar em uma pasta
+Keep Using FullDex	Continuar usando o FullDex
+Open The Folder	Abrir a pasta
+Try Again	Tentar de novo
+Building {} For Your Switch	Compilando {} para o seu Switch
+Building {} For Your Phone	Compilando {} para o seu celular
+Leave the SD card in. You can keep using FullDex: the game's options show how it is going.	Deixe o cartão SD colocado. Você pode continuar usando o FullDex: as opções do jogo mostram como está indo.
+You can keep using FullDex: the game's options show how it is going.	Você pode continuar usando o FullDex: as opções do jogo mostram como está indo.
+Getting the Switch tools (once)	Baixando as ferramentas do Switch (uma vez)
+Getting the tools (once)	Baixando as ferramentas (uma vez)
+Building the game from your dump	Compilando o jogo a partir do seu dump
+Making the shaders	Criando os shaders
+Saving it in a folder	Salvando em uma pasta
+Copying it to the SD card ({})	Copiando para o cartão SD ({})
+About a minute left	Falta cerca de um minuto
+About {#} minutes left	Faltam cerca de {} minutos
+{} Is On Your SD Card	{} está no seu cartão SD
+{} Is Ready For Your Switch	{} está pronto para o seu Switch
+{} For Your Phone Is Ready	{} para o seu celular está pronto
+Now, on your Switch: put the SD card back in, open FullDex and pick {} in the 3DS Beta tab.	Agora, no seu Switch: coloque o cartão SD de volta, abra o FullDex e escolha {} na aba 3DS Beta.
+Also added {#} shaders your Switch found while you played, so those spots no longer stutter.	Também foram adicionados {} shaders que o seu Switch encontrou enquanto você jogava, então esses pontos não travam mais.
+Next time you put the card in this PC, Put On My Switch picks up any new shaders.	Da próxima vez que você colocar o cartão neste PC, Colocar no meu Switch pega os novos shaders.
+Copy the folder {} into /switch/ on your Switch's SD card (it has the game and your dump in it).	Copie a pasta {} para /switch/ no cartão SD do seu Switch (ela tem o jogo e o seu dump).
+Then open FullDex on your Switch and pick {} in the 3DS Beta tab.	Depois abra o FullDex no seu Switch e escolha {} na aba 3DS Beta.
+Copy {}.so to your phone (USB cable, Google Drive, anything).	Copie {}.so para o seu celular (cabo USB, Google Drive, qualquer meio).
+Then in FullDex on your phone, open {}'s Game Options and choose Use Game Code From PC.	Depois, no FullDex do seu celular, abra as Opções do jogo de {} e escolha Usar código do jogo do PC.
+Couldn't Finish	Não foi possível concluir
+Couldn't download the tools. Check the internet connection and try again.	Não foi possível baixar as ferramentas. Verifique a conexão com a internet e tente de novo.
+Couldn't unpack the tools.	Não foi possível descompactar as ferramentas.
+The tools download was not complete. Try again.	O download das ferramentas não foi concluído. Tente de novo.
+Couldn't put the tools in place.	Não foi possível colocar as ferramentas no lugar.
+Not enough space: it needs {} GB free and there is {} GB.	Espaço insuficiente: precisa de {} GB livres e há {} GB.
+Couldn't copy it. Is the SD card still in, and not locked?	Não foi possível copiar. O cartão SD ainda está colocado e sem trava?
+The tools are missing. Try again to download them.	Faltam as ferramentas. Tente baixá-las de novo.
+Building it didn't work. Try again; if it fails again, please report it with this PC's log.	A compilação não funcionou. Tente de novo; se falhar outra vez, relate com o log deste PC.
+Stopped. Nothing was finished.	Interrompido. Nada foi concluído.
+Nothing else on your SD card was changed.	Nada mais no seu cartão SD foi alterado.
+{} IS READY FOR YOUR PHONE	{} ESTÁ PRONTO PARA O SEU CELULAR
+COULDN'T FINISH {}: CHOOSE IT AGAIN IN THE GAME'S OPTIONS	NÃO FOI POSSÍVEL CONCLUIR {}: ESCOLHA DE NOVO NAS OPÇÕES DO JOGO
+Set Up {} On A Windows PC	Configurar {} em um PC com Windows
+The Switch can't build 3DS games itself. FullDex on a Windows PC does it in 5 to 10 minutes, from your own dump.	O Switch não consegue compilar jogos de 3DS sozinho. O FullDex em um PC com Windows faz isso em 5 a 10 minutos, a partir do seu próprio dump.
+1. Put this SD card in your PC.	1. Coloque este cartão SD no seu PC.
+2. In FullDex on the PC, open {}'s Game Options and choose Put On My Switch.	2. No FullDex do PC, abra as Opções do jogo de {} e escolha Colocar no meu Switch.
+3. Put the card back here: {} is ready to play.	3. Coloque o cartão de volta aqui: {} está pronto para jogar.
+OK	OK
+Needs A One-Time Setup	Precisa de uma configuração única
+Get {} Ready	Deixar {} pronto
+A one-time step so it runs at full speed.	Uma etapa única para rodar em velocidade total.
+A Windows PC does it in 5 to 10 minutes; this phone in about 25 (keep it plugged in, it gets warm).	Um PC com Windows faz isso em 5 a 10 minutos; este celular, em cerca de 25 (deixe-o carregando, ele esquenta).
+Until then it plays through an emulator: slower, and busy scenes can stutter.	Até lá, ele roda por um emulador: mais lento, e cenas movimentadas podem travar.
+With A Windows PC (Recommended)	Com um PC com Windows (recomendado)
+On This Phone (About 25 Minutes)	Neste celular (cerca de 25 minutos)
+Play Now With The Emulator	Jogar agora com o emulador
+Get {} Ready On A Windows PC	Deixar {} pronto em um PC com Windows
+1. In FullDex on your PC, open {}'s Game Options and choose Put On My Phone.	1. No FullDex do seu PC, abra as Opções do jogo de {} e escolha Colocar no meu celular.
+2. Copy the file it makes into your ROMs folder here.	2. Copie o arquivo que ele cria para a sua pasta de ROMs aqui.
+3. FullDex finds it by itself and {} runs at full speed.	3. O FullDex o encontra sozinho e {} roda em velocidade total.
+Copy {}.so to your phone, into the same folder as your ROMs (USB cable, Google Drive, anything).	Copie {}.so para o seu celular, na mesma pasta das suas ROMs (cabo USB, Google Drive, qualquer meio).
+FullDex on your phone finds it by itself and the game runs at full speed.	O FullDex do seu celular o encontra sozinho e o jogo roda em velocidade total.
+ADDING {} TO FULLDEX (ONE TIME, ABOUT 2 GB): THEN IT BUILDS	ADICIONANDO {} AO FULLDEX (UMA VEZ, CERCA DE 2 GB): DEPOIS ELE COMPILA
+{}: NOT A 3DS GAME FULLDEX PLAYS (X, Y, OMEGA RUBY, ALPHA SAPPHIRE, ULTRA SUN, ULTRA MOON)	{}: NÃO É UM JOGO DE 3DS QUE O FULLDEX EXECUTA (X, Y, OMEGA RUBY, ALPHA SAPPHIRE, ULTRA SUN, ULTRA MOON)
+THAT FILE IS NOT A 3DS GAME FULLDEX PLAYS	ESSE ARQUIVO NÃO É UM JOGO DE 3DS QUE O FULLDEX EXECUTA
+ADDING {} TO FULLDEX (ONE TIME, ABOUT 4 GB): THEN IT BUILDS	ADICIONANDO {} AO FULLDEX (UMA VEZ, CERCA DE 4 GB): DEPOIS ELE COMPILA
+ADDING {} TO FULLDEX (ONE TIME, ABOUT 2 GB): IT STARTS WHEN READY	ADICIONANDO {} AO FULLDEX (UMA VEZ, CERCA DE 2 GB): INICIA QUANDO ESTIVER PRONTO
+ADDING {} TO FULLDEX (ONE TIME, ABOUT 4 GB): IT STARTS WHEN READY	ADICIONANDO {} AO FULLDEX (UMA VEZ, CERCA DE 4 GB): INICIA QUANDO ESTIVER PRONTO
+Add ROM	Adicionar ROM
+{}: ADD YOUR .3DS DUMP TO YOUR ROMS FOLDER	{}: ADICIONE SEU DUMP .3DS À SUA PASTA DE ROMS
+ROMS FOLDER	PASTA DE ROMS
+WHERE FULLDEX LOOKS FOR YOUR ROMS, AND IN THE FOLDERS INSIDE IT.	ONDE O FULLDEX PROCURA SUAS ROMS, E NAS PASTAS DENTRO DELA.
+CHOOSE TO PICK ANOTHER FOLDER.	ESCOLHA PARA SELECIONAR OUTRA PASTA.
+THE ROMS PAGE HAS THIS TOO.	A PÁGINA DE ROMS TAMBÉM TEM ISSO.
+A FILE IS BLOCKED BY {}	UM ARQUIVO ESTÁ BLOQUEADO POR {}
+CANNOT CHECK {}	NÃO É POSSÍVEL VERIFICAR {}
+CANNOT COPY INTO LINKED PATH {}	NÃO É POSSÍVEL COPIAR PARA O CAMINHO VINCULADO {}
+CANNOT COPY LINKED PATH {}	NÃO É POSSÍVEL COPIAR O CAMINHO VINCULADO {}
+CANNOT COPY LINKED OR UNREADABLE PATH {}	NÃO É POSSÍVEL COPIAR O CAMINHO VINCULADO OU ILEGÍVEL {}
+CANNOT MAKE {}	NÃO É POSSÍVEL CRIAR {}
+CANNOT READ {}	NÃO É POSSÍVEL LER {}
+CANNOT READ THE CURRENT SAVES FOLDER	NÃO É POSSÍVEL LER A PASTA DE SAVES ATUAL
+CANNOT READ THE CURRENT FOLDER	NÃO É POSSÍVEL LER A PASTA ATUAL
+CANNOT RESOLVE THAT FOLDER	NÃO É POSSÍVEL RESOLVER ESSA PASTA
+CHOOSE A FOLDER OUTSIDE THE CURRENT FOLDER	ESCOLHA UMA PASTA FORA DA PASTA ATUAL
+COULD NOT COPY {}	NÃO FOI POSSÍVEL COPIAR {}
+NOT MOVED: CANNOT READ ALL CURRENT FILES	NÃO MOVIDO: NÃO É POSSÍVEL LER TODOS OS ARQUIVOS ATUAIS
+NOT MOVED: SOURCE AND DESTINATION ARE THE SAME FILE: {}	NÃO MOVIDO: ORIGEM E DESTINO SÃO O MESMO ARQUIVO: {}
+NO DESKTOP SHORTCUT FOR THIS GAME	SEM ATALHO NA ÁREA DE TRABALHO PARA ESTE JOGO
+COULD NOT REMOVE THE APP SHORTCUT	NÃO FOI POSSÍVEL REMOVER O ATALHO DO APLICATIVO
+COULD NOT REMOVE THE APPS MENU SHORTCUT	NÃO FOI POSSÍVEL REMOVER O ATALHO DO MENU DE APLICATIVOS
+COULD NOT REMOVE THE DESKTOP SHORTCUT	NÃO FOI POSSÍVEL REMOVER O ATALHO DA ÁREA DE TRABALHO
+COULD NOT REMOVE THE SHORTCUT	NÃO FOI POSSÍVEL REMOVER O ATALHO
+REMOVED FROM YOUR APPS MENU	REMOVIDO DO SEU MENU DE APLICATIVOS
+REMOVED FROM YOUR APPS MENU AND DESKTOP	REMOVIDO DO SEU MENU DE APLICATIVOS E DA ÁREA DE TRABALHO
+COULDN'T CHECK ITS PREPARATION RESULT	NÃO FOI POSSÍVEL VERIFICAR O RESULTADO DA PREPARAÇÃO
+COULDN'T READ ITS PREPARATION OUTPUT	NÃO FOI POSSÍVEL LER A SAÍDA DA PREPARAÇÃO
+CANNOT READ THE SAVE IN THE SYNC FOLDER	NÃO É POSSÍVEL LER O SAVE NA PASTA DE SINCRONIZAÇÃO
+CLOUD SAVES ARE STILL BUSY: THIS GAME WILL NOT SYNC THIS SESSION	OS SAVES NA NUVEM AINDA ESTÃO OCUPADOS: ESTE JOGO NÃO SINCRONIZA NESTA SESSÃO
+Welcome To FullDex	Bem-vindo ao FullDex
+A few quick questions to set FullDex up for this device. Every answer can be changed later in Settings.	Algumas perguntas rápidas para configurar o FullDex neste dispositivo. Qualquer resposta pode ser alterada depois em Configurações.
+Start	Começar
+Skip For Now	Pular por enquanto
+Your Screens	Suas telas
+Does this device have a second screen, like the AYN Thor or the Ayaneo Flip DS?	Este dispositivo tem uma segunda tela, como o AYN Thor ou o Ayaneo Flip DS?
+One Screen	Uma tela
+Two Screens	Duas telas
+The DS Screens	As telas do DS
+How should a DS game's two screens be shown?	Como as duas telas de um jogo de DS devem ser mostradas?
+One Widescreen Picture (Recommended)	Uma imagem widescreen (recomendado)
+Side By Side	Lado a lado
+One Above The Other	Uma sobre a outra
+Your Screen	Sua tela
+DS games can fill your screen, or keep the DS's own shape with bars at the sides.	Os jogos de DS podem preencher a sua tela ou manter o formato do próprio DS com barras nas laterais.
+Fill My Screen (Recommended)	Preencher minha tela (recomendado)
+Keep The DS Shape (4:3)	Manter o formato do DS (4:3)
+How You Play	Como você joga
+What will you mostly play with? With a controller, the right stick can move a cursor on the touch screen.	Com o que você vai jogar principalmente? Com um controle, o analógico direito pode mover um cursor na tela de toque.
+Touch Screen	Tela de toque
+Controller	Controle
+Keyboard And Mouse	Teclado e mouse
+Add Your Games	Adicione seus jogos
+Add ROMs	Adicionar ROMs
+Put your ROMs (.nds, .gba and .3ds files) in a folder on this device, then choose that folder. They show up here by themselves.	Coloque suas ROMs (arquivos .nds, .gba e .3ds) em uma pasta neste dispositivo e depois escolha essa pasta. Elas aparecem aqui sozinhas.
+Put your ROMs in the Files app: On My iPhone (or iPad) > Pokemon DS Widescreen > roms. They show up here by themselves.	Coloque suas ROMs no app Arquivos: No meu iPhone (ou iPad) > Pokemon DS Widescreen > roms. Elas aparecem aqui sozinhas.
+Put your ROMs in the roms folder beside FullDex on your SD card. They show up here by themselves.	Coloque suas ROMs na pasta roms ao lado do FullDex no seu cartão SD. Elas aparecem aqui sozinhas.
+Put your ROMs (.nds, .gba and .3ds files) in your ROMs folder, or choose another. They show up here by themselves.	Coloque suas ROMs (arquivos .nds, .gba e .3ds) na sua pasta de ROMs ou escolha outra. Elas aparecem aqui sozinhas.
+SET UP AGAIN	CONFIGURAR DE NOVO
+THE FIRST START'S QUESTIONS AGAIN: YOUR SCREENS, THE PICTURE'S SHAPE, HOW YOU PLAY AND WHERE YOUR ROMS GO.	AS PERGUNTAS DA PRIMEIRA INICIALIZAÇÃO DE NOVO: SUAS TELAS, O FORMATO DA IMAGEM, COMO VOCÊ JOGA E ONDE VÃO SUAS ROMS.
