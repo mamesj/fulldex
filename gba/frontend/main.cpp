@@ -331,6 +331,23 @@ struct Settings
         for (const auto& kv : values) s += kv.first + "=" + kv.second + "\n";
         Games::WriteFile(path, std::vector<uint8_t>(s.begin(), s.end()));
     }
+    // A setting written into the file by hand under another name (aspect=, as the DS games' settings and the
+    // menu call ASPECT RATIO, kept here as widescreen=): taken as that setting if its value is one of its
+    // own, and passed on to Fulldex's settings too (where the next game's start brings it back from)
+    void TakeAlias(const char* from, const char* to)
+    {
+        auto it = values.find(from);
+        if (it == values.end()) return;
+        const std::string v = it->second;
+        values.erase(it);
+        bool known = false;
+        for (const Setting& st : SettingsList())
+            if (std::string(st.key) == to)
+                for (const auto& o : st.values) known |= o.first == v;
+        if (known) values[to] = v;
+        Save();
+        if (known) ToHost(to);
+    }
     std::string Get(const char* key) const
     {
         auto it = values.find(key);
@@ -1008,6 +1025,7 @@ struct App
         Games::MakeDir(saves);
         Games::MakeDir(states);
         set.Load(data + "/gba-settings.ini");
+        set.TakeAlias("aspect", "widescreen");
         touchProfile.Load(data + "/touch-layout-gba.cfg");
         listCache = saves + "/gba-rom-list.txt";
     }
