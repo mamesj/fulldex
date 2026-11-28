@@ -236,6 +236,9 @@ struct ScreenImage
     const uint32_t* edge = nullptr;
     const uint16_t* edgeBlend = nullptr;
     const uint8_t* edgeFlat = nullptr;
+    // Where a row's edge pixel is a sprite over a background, that background's colour as the screen would show it
+    // without the sprite, top byte 0xFF (GPU2D::SoftRenderer::EdgeUnder); top byte 0 where not. May be null.
+    const uint32_t* edgeUnder = nullptr;
 };
 
 // The colour the edge fill continues on row `y` of a side (0 left, 1 right): the outermost of
@@ -472,10 +475,14 @@ inline void MergedPrepareInsetWindows(Scene& scene, const ScreenImage& top)
             const uint8_t flag = top.flags[y * 256 + x + dir * k];
             if (!(LayerClass(flag) & 0x0F)) continue;
             // (The same layer at the other side's edge: a band across the whole width scrolled by a pixel or
-            // more, as HeartGold's and SoulSilver's Fly sky, not a box with the world on both sides of it.)
+            // more, as HeartGold's and SoulSilver's Fly sky, not a box with the world on both sides of it.
+            // A box inset by a pixel on both sides, as the text box's 18th frame is, has the world in the
+            // other side's outermost column too: still a box.)
             const int ox = side ? 0 : 255, odir = side ? 1 : -1;
-            for (int j = 0; j <= 3; j++)
-                if (top.flags[y * 256 + ox + odir * j] == flag) return false;
+            const uint8_t otherOuter = LayerClass(top.flags[y * 256 + ox]);
+            if (otherOuter != LAYER_3D && otherOuter != LAYER_BACKDROP)
+                for (int j = 0; j <= 3; j++)
+                    if (top.flags[y * 256 + ox + odir * j] == flag) return false;
             return true;
         }
         return false;
@@ -530,15 +537,44 @@ inline void MergedPrepareEdgeWindows(Scene& scene, const ScreenImage* screens)
 // The column whose colour goes on beside the screen: the outermost one, or the next in when the
 // outermost is the 3D world alone and the 2D layer is flat from there (a background scrolled by
 // one pixel, as in the Fly animation's sky). The same choice as the one in GPU2D_Soft.cpp.
+// (Sprites crossing the 2D layer are passed over: the clouds over the band of HeartGold's field move cut-ins.)
 inline int MergedEdgeColumn(const ScreenImage& top, int sy, int side)
 {
     const int x = side ? 255 : 0, dir = side ? -1 : 1;
     if (!top.flags || LayerClass(top.flags[sy * 256 + x]) != LAYER_3D) return x;
-    const uint8_t flag = top.flags[sy * 256 + x + dir];
-    if (LayerClass(flag) == LAYER_3D) return x;
-    for (int k = 2; k < 9; k++)
-        if (top.flags[sy * 256 + x + dir * k] != flag) return x;
+    if (LayerClass(top.flags[sy * 256 + x + dir]) == LAYER_3D) return x;
+    uint8_t layer = 0;
+    for (int k = 1; k < 9; k++)
+    {
+        const uint8_t f = top.flags[sy * 256 + x + dir * k];
+        if (LayerClass(f) == LAYER_OBJ || f == layer) continue;
+        if (!layer && LayerClass(f) != LAYER_3D) layer = f;
+        else return x;
+    }
     return x + dir;
+}
+
+// Whether the sprite in row sy's edge column sx (MergedEdgeColumn) belongs to a figure or a small shape rather than
+// a fill: the run of rows through sy where that column is a sprite is less than 16 rows long (a cloud of the field
+// move cut-ins, an arm), or some row of it is not one colour across the 8 outer pixels (an outline, shading),
+// where a wipe or a flash is a large shape of one colour in every row.
+inline bool MergedEdgeFigure(const ScreenImage& top, int sy, int side, int sx)
+{
+    const int dir = side ? -1 : 1;
+    auto flatRow = [&](int y) {
+        const int i = y * 256 + sx;
+        for (int k = 1; k < 8; k++)
+            if (top.flags[i + dir * k] != top.flags[i] || ((top.pixels[i + dir * k] ^ top.pixels[i]) & 0xFFFFFF)) return false;
+        return true;
+    };
+    int rows = 0;
+    for (int step = -1; step <= 1; step += 2)
+        for (int y = step < 0 ? sy : sy + 1; y >= 0 && y < 192 && std::abs(y - sy) <= 64 && LayerClass(top.flags[y * 256 + sx]) == LAYER_OBJ; y += step)
+        {
+            if (!flatRow(y)) return true;
+            rows++;
+        }
+    return rows < 16;
 }
 
 inline EdgeContinuation MergedEdgeContinuation(const Scene& scene, const ScreenImage& top, int sy, int side, bool borrow = true)
@@ -575,6 +611,12 @@ inline EdgeContinuation MergedEdgeContinuation(const Scene& scene, const ScreenI
                     return c;
                 }
     }
+    // A figure over a background at the edge (a Gym Leader's arm or cape across the band of HeartGold's and
+    // SoulSilver's introductions): the background under it goes on beside the screen, as if the figure ended at the
+    // screen's side, where the DS cuts it off. Drawn out from the edge, the figure's own colours were streaks.
+    if (!scene.smartEdges && top.edgeUnder && top.flags && top.pixels && (top.edgeUnder[sy * 2 + side] >> 24) &&
+        !scene.edgeWindow[side][sy] && LayerClass(top.flags[sy * 256 + sx]) == LAYER_OBJ && MergedEdgeFigure(top, sy, side, sx))
+        return { top.edgeUnder[sy * 2 + side] & 0xFFFFFF, 16, 0 };
     // A sprite across the edge of a band that is continued from the next column in (the Fly sky's streaks in
     // HeartGold and SoulSilver, in the outermost column or the next): the row goes on as
     // the nearest band row without a sprite at its edge, where the band goes on both above and below it.
@@ -610,7 +652,9 @@ inline EdgeContinuation MergedEdgeContinuation(const Scene& scene, const ScreenI
     if (!scene.smartEdges || !top.edge || !top.edgeBlend || !top.edgeFlat)
     {
         // A sprite goes on only as a fill (a wipe, a flash): a snowflake or a rain drop on the
-        // edge column would otherwise become a line to the edge of the view (SoulSilver's snow).
+        // edge column would otherwise become a line to the edge of the view (SoulSilver's snow),
+        // and so would a cloud of the field move cut-ins left over the world (MergedEdgeFigure).
+        if (cls == LAYER_OBJ && top.pixels && MergedEdgeFigure(top, sy, side, sx)) return none;
         if (cls == LAYER_OBJ)
             for (int k = 1; k < 8; k++)
             {
@@ -800,18 +844,32 @@ inline void MergedNarrowBands(const Scene& scene, const ScreenImage& top, uint32
 // third or more of the top screen's left or right edge: the Surf and Fly cut-ins show a
 // snapshot of the world that way, which no continuation beside the screen would match.
 // (Tiled backgrounds, such as the sea beside a bridge, are scenery, not snapshots.)
-inline bool MergedEdgesArePicture(const Scene& scene, const ScreenImage screens[2])
+// under3D: a bitmap background is under the 3D layer and blended with it (main.cpp), so that where the 3D is
+// translucent the picture shows through it; an edge pixel of translucent 3D counts as the picture's too.
+// Heartfelt Gold's Elite Four introductions darken their snapshot of the world so.
+// In SoulSilver, HeartGold and the hacks made from them (no smartEdges), a picture in tiles covering the whole
+// screen with no 3D anywhere on it counts too, as the one Heartfelt Gold shows on entering Viridian Forest: its
+// rows' edges, a background that is not one colour across the 8 outer pixels, had become streaks. fading: such a
+// picture was there a moment ago (main.cpp); while it fades into the world, blended with it, it still counts.
+inline bool MergedEdgesArePicture(const Scene& scene, const ScreenImage screens[2], bool under3D = false, bool fading = false)
 {
     if (scene.items.empty() || scene.items[0].screen < 0) return false;
     const ScreenImage& top = screens[scene.items[0].screen];
     if (!top.flags || !top.edgeBlend || !top.edgeFlat) return false;
+    bool tiled = !scene.smartEdges;
+    for (int i = 0; i < 256 * 192 && tiled; i++) tiled = LayerClass(top.flags[i]) != LAYER_3D;
     for (int side = 0; side < 2; side++)
     {
         int rows = 0;
         for (int y = 0; y < 192; y++)
         {
-            const uint8_t cls = LayerClass(top.flags[y * 256 + (side ? 255 : 0)]);
-            if (!scene.items[0].Skips(side ? 255 : 0, y) && cls != LAYER_3D && !(cls & scene.items[0].drop) && top.edgeFlat[y * 2 + side] == 2 && !(top.edgeBlend[y * 2 + side] >> 8))
+            const uint8_t flag = top.flags[y * 256 + (side ? 255 : 0)], cls = LayerClass(flag);
+            const uint8_t flat = top.edgeFlat[y * 2 + side];
+            if (scene.items[0].Skips(side ? 255 : 0, y)) continue;
+            // (A 3D pixel's flag holds its alpha, 0 to 31.)
+            if (under3D && cls == LAYER_3D && (flag & 0x1F) < 31) rows++;
+            else if (cls != LAYER_3D && !(cls & scene.items[0].drop) && (!(top.edgeBlend[y * 2 + side] >> 8) || (tiled && fading)) &&
+                     (flat == 2 || (tiled && (cls & 0x0F) && !(flat & 1))))
                 rows++;
         }
         if (rows >= 64) return true;

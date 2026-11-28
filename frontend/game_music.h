@@ -14,8 +14,24 @@
 // So that a change of setting is heard at once (not at the game's next change of volume), the
 // sound processor's own players (SNDWork.players, 16 of 0x24 bytes, playerId at +1, extFader at
 // +6) are found in its memory and their volume is kept at ours every frame (Apply).
-// Layouts: NitroSDK, as in pret/pokediamond include/nitro/SND_command_shared.h, SND_seq_shared.h,
-// SND_work_shared.h and SND_SetPlayerVolume in arm9/lib/NitroSDK/src/SND_interface.c.
+//   - PAUSE_SEQ (player, 1 to pause, 0 to go on): the games pause their music for a jingle (a level
+//     up, an item; HeartGold also the route's music for a battle's own), and the sound driver lets go
+//     of every note the song was holding: after the jingle the song comes back a note at a time, its
+//     long notes only when they next start. With MUSIC THROUGH JINGLES (Duck) a music player's pause
+//     is sent as its volume at nothing instead, and the pause's end as the game's own volume again:
+//     the song plays on unheard under the jingle and is whole the moment it ends (later in the song
+//     by the jingle's length). While unheard its channel priority (SNDPlayer.prio) is 0, so its notes
+//     take only the hardware channels no other sound wants: at its own, the route's music playing on
+//     unheard through a battle took notes from the battle's music, which came out a fifth quieter. A
+//     pause that outlasts any jingle (8 seconds: a battle) is then held still with the sound
+//     processor's own pause flag, so the song goes on from there, as the game's own pause would. A
+//     saved state (or rewind) from under a pause loaded after it, or the other way round, is told by
+//     the sound processor's own player (see ducked), so the music is never left silent.
+// Layouts: NitroSDK, as in pret/pokediamond include/nitro/SND_command_shared.h, SND_seq_shared.h
+// (SNDPlayer: flags at +0, bit 0 active and bit 2 paused; prio +4; volume +5; extFader +6; tracks +8),
+// SND_work_shared.h, SND_SetPlayerVolume in arm9/lib/NitroSDK/src/SND_interface.c, and the sound
+// processor's side in arm7/lib/src (SND_seq.c, SND_exChannel.c: a channel goes to the higher priority,
+// the player's plus the track's).
 #pragma once
 #include <algorithm>
 #include <cmath>
@@ -30,7 +46,17 @@ struct GameMusic
     melonDS::NDS* Nds = nullptr;
     int Music = 100, Effects = 100; // percent, as the menu shows them
     bool External = false; // the player's own music is playing and QUIET GAME MUSIC is on: no music
+    bool Duck = false; // MUSIC THROUGH JINGLES: a music player's pause is a silence instead (see above)
     bool Log = false;
+    // MUSIC THROUGH JINGLES: the players silenced in place of a pause (ducked), until the game ends
+    // the pause or starts or stops a song on them; of those, the ones at channel priority 0 (lowered,
+    // their own in duckPrio) and the ones held still (frozen, after duckFrames reaches FreezeFrames).
+    // (A silenced player found at another volume for a sixth of a second, as after a saved state from
+    // before the pause is loaded, is let go: duckStale counts the frames.)
+    static constexpr uint16_t FreezeFrames = 480;
+    uint32_t ducked = 0, lowered = 0, frozen = 0;
+    uint8_t duckPrio[16] = {}, duckStale[16] = {};
+    uint16_t duckFrames[16] = {};
 
     bool isMusic[16] = {};
     // (Streamed music, as Black 2's opening: the main processor locks two hardware channels at
@@ -81,6 +107,7 @@ struct GameMusic
 
     int16_t Ours(int player, int16_t game) const
     {
+        if (ducked >> player & 1) return -32768;
         const int add = Attenuation(isMusic[player] ? (External ? 0 : Music) : Effects);
         if (add <= -32768) return -32768;
         return (int16_t)std::max(-32768, (int)game + add);
@@ -89,6 +116,75 @@ struct GameMusic
     uint8_t* Ram(uint32_t addr) { return Nds->MainRAM + (addr & Nds->MainRAMMask); }
     uint32_t Read32(uint32_t addr) { uint32_t v; memcpy(&v, Ram(addr), 4); return v; }
     static bool InMain(uint32_t addr) { return addr >= 0x02000000 && addr < 0x03000000; }
+
+    // The sound processor's own player p, where found (layout above).
+    uint8_t* Live(int p) const { return players && PlayersAt(players) ? players + p * 0x24 : nullptr; }
+    static int16_t LiveVolume(const uint8_t* pl) { int16_t v; memcpy(&v, pl + 6, 2); return v; }
+
+    // How many tracks the sound processor's player p has open (0xFF for none), where found: for a
+    // song that started before a saved state was loaded, so not seen starting here (AUTO RESUME).
+    int LiveTracks(int p) const
+    {
+        const uint8_t* pl = Live(p);
+        if (!pl || !(pl[0] & 1)) return 0;
+        int n = 0;
+        for (int t = 0; t < 16; t++) n += pl[8 + t] != 0xFF;
+        return n;
+    }
+
+    // A command at cmd rewritten as PLAYER_PARAM: size bytes of data at offset in player p's SNDPlayer.
+    void SendAsParam(uint32_t cmd, uint32_t offset, uint32_t data, uint32_t size)
+    {
+        const uint32_t param = 0x06;
+        memcpy(Ram(cmd + 4), &param, 4);
+        memcpy(Ram(cmd + 12), &offset, 4);
+        memcpy(Ram(cmd + 16), &data, 4);
+        memcpy(Ram(cmd + 20), &size, 4);
+    }
+
+    // PAUSE_SEQ on player p with MUSIC THROUGH JINGLES (see the top).
+    void Pause(uint32_t cmd, uint32_t p, bool on)
+    {
+        uint8_t* pl = Live((int)p);
+        const uint32_t bit = 1u << p;
+        if (on)
+        {
+            // (Once silenced, a player's next pause is one too, the setting turned off since or not:
+            // a real pause queued behind the silence would be undone by its end.)
+            if (!(ducked & bit) && !(Duck && (isMusic[p] || LiveTracks((int)p) >= 4))) return;
+            SendAsParam(cmd, 6, (uint16_t)-32768, 2); // (the volume: nothing)
+            if (!(ducked & bit)) { duckFrames[p] = 0; duckStale[p] = 0; }
+            ducked |= bit;
+            // (The priority set here at once: the command carries only the volume. The game's own is
+            // kept for the end, and a change it makes meanwhile too: see Commands.)
+            if (pl && !(lowered & bit)) { duckPrio[p] = pl[4]; pl[4] = 0; lowered |= bit; }
+            if (Log) fprintf(stderr, "[sound] frame %u: player %u paused, silenced instead\n", Nds->NumFrames, p);
+            return;
+        }
+        // The pause's end. (Not one of ours, but found silent at priority 0 as put there: a saved
+        // state from under a pause loaded. Put back all the same, at the sound library's usual
+        // priority, 64.)
+        const bool stale = !(ducked & bit) && Duck && pl && pl[4] == 0 && LiveVolume(pl) == -32768;
+        if (!(ducked & bit) && !stale) return;
+        if (!pl && (frozen & bit))
+        {
+            // (Held still, and the players no longer found where they were: the sound processor
+            // started afresh. The game's own end of the pause goes as it is.)
+            ducked &= ~bit; lowered &= ~bit; frozen &= ~bit;
+            return;
+        }
+        const bool prioToo = pl && ((lowered & bit) || stale);
+        const uint8_t prio = (lowered & bit) ? duckPrio[p] : 64;
+        ducked &= ~bit; lowered &= ~bit; frozen &= ~bit;
+        const int16_t v = Ours((int)p, gameVolume[p]);
+        // Sent in the command's place, after whatever the game sent before it: the volume, and the
+        // priority with it (4 bytes from +4: prio, volume as it is, extFader).
+        if (prioToo) SendAsParam(cmd, 4, prio | (uint32_t)pl[5] << 8 | (uint32_t)(uint16_t)v << 16, 4);
+        else SendAsParam(cmd, 6, (uint16_t)v, 2);
+        // (Held still here: let go here too, as the game's own end of a pause would.)
+        if (pl && (pl[0] & 4)) pl[0] &= ~4;
+        if (Log) fprintf(stderr, "[sound] frame %u: player %u goes on%s: volume %d\n", Nds->NumFrames, p, stale ? " (a loaded state's)" : "", v);
+    }
 
     // How many tracks a sequence opens: its first command, 0xFE, and a mask of the tracks.
     int Tracks(uint32_t base, uint32_t offset)
@@ -117,6 +213,7 @@ struct GameMusic
             const uint32_t a0 = Read32(cmd + 8), a1 = Read32(cmd + 12), a2 = Read32(cmd + 16), a3 = Read32(cmd + 20);
             if ((id == 0x00 || id == 0x02) && a0 < 16) // START_SEQ, PREPARE_SEQ
             {
+                ducked &= ~(1u << a0); lowered &= ~(1u << a0); frozen &= ~(1u << a0); // (a new song starts afresh: PlayerInit)
                 const int tracks = Tracks(a1, a2);
                 isMusic[a0] = tracks >= 4;
                 if (isMusic[a0]) { musicOn |= 1u << a0; musicEvent++; }
@@ -124,10 +221,17 @@ struct GameMusic
                 gameVolume[a0] = 0; // (the sound processor starts a player at full: PlayerInit)
                 if (Log) fprintf(stderr, "[sound] player %u starts a sequence of %d tracks: %s\n", a0, tracks, isMusic[a0] ? "music" : "effect");
             }
-            else if (id == 0x01 && a0 < 16 && (musicOn >> a0 & 1)) // STOP_SEQ: the song on this player ends
+            else if (id == 0x01 && a0 < 16) // STOP_SEQ
             {
-                musicOn &= ~(1u << a0);
-                musicEvent++;
+                if (musicOn >> a0 & 1) { musicOn &= ~(1u << a0); musicEvent++; } // (the song on this player ends)
+                ducked &= ~(1u << a0); lowered &= ~(1u << a0); frozen &= ~(1u << a0); // (the next song starts afresh: PlayerInit)
+            }
+            else if (id == 0x04 && a0 < 16) Pause(cmd, a0, a1 != 0); // PAUSE_SEQ (see Duck)
+            else if (id == 0x06 && a0 < 16 && a1 == 4 && a3 == 1 && (lowered >> a0 & 1)) // PLAYER_PARAM: priority
+            {
+                duckPrio[a0] = (uint8_t)a2; // (a silenced player's: kept for the end, 0 meanwhile)
+                const uint32_t none = 0;
+                memcpy(Ram(cmd + 16), &none, 4);
             }
             else if (id == 0x06 && a0 < 16 && a1 == 6 && a3 == 2) // PLAYER_PARAM: volume
             {
@@ -187,15 +291,10 @@ struct GameMusic
     {
         if (!Nds) return;
         if (players && !PlayersAt(players)) players = nullptr;
-        if (Music >= 100 && Effects >= 100 && !External)
-        {
-            // (Both at full: the game's own volumes put back once, then left alone.)
-            if (active && players)
-                for (int p = 0; p < 16; p++) memcpy(players + p * 0x24 + 6, &gameVolume[p], 2);
-            active = false;
-            return;
-        }
-        active = true;
+        // (Both at full: the game's own volumes put back once, then left alone. With MUSIC THROUGH
+        // JINGLES the players are found all the same, for the silenced ones; see ducked.)
+        const bool ours = Music < 100 || Effects < 100 || External;
+        if (!ours && !active && !Duck && !ducked) return;
         if (!players)
         {
             if (searchWait) { searchWait--; return; }
@@ -205,10 +304,38 @@ struct GameMusic
         }
         for (int p = 0; p < 16; p++)
         {
-            const int16_t want = Ours(p, gameVolume[p]);
             int16_t now;
             memcpy(&now, players + p * 0x24 + 6, 2);
+            if (ducked >> p & 1)
+            {
+                // (Kept silent by the commands sent in its place, not here: so another volume found
+                // here is a saved state's, as above.)
+                uint8_t* pl = players + p * 0x24;
+                if (now != -32768)
+                {
+                    if (++duckStale[p] >= 10)
+                    {
+                        ducked &= ~(1u << p); lowered &= ~(1u << p); frozen &= ~(1u << p);
+                        duckStale[p] = 0;
+                        if (Log) fprintf(stderr, "[sound] frame %u: player %u no longer silent (%d): let go\n", Nds->NumFrames, p, now);
+                    }
+                    continue;
+                }
+                duckStale[p] = 0;
+                if (duckFrames[p] < FreezeFrames) duckFrames[p]++;
+                else if (!(frozen >> p & 1) && (pl[0] & 1))
+                {
+                    // Longer than a jingle: held still, as the game's own pause, until its end.
+                    pl[0] |= 4;
+                    frozen |= 1u << p;
+                    if (Log) fprintf(stderr, "[sound] frame %u: player %u silent %u frames: held still\n", Nds->NumFrames, p, (unsigned)FreezeFrames);
+                }
+                continue;
+            }
+            if (!ours && !active) continue;
+            const int16_t want = Ours(p, gameVolume[p]);
             if (now != want) memcpy(players + p * 0x24 + 6, &want, 2);
         }
+        active = ours;
     }
 };

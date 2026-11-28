@@ -128,10 +128,19 @@ void SoftRenderer::RecordEdges(u32 line)
             // The outermost column is the 3D world alone, with a flat 2D layer from the next
             // column in (a background scrolled by one pixel: the sky of the Fly animation):
             // the 2D layer is what the view continues beside the screen. (See MergedEdgeColumn.)
+            // (Sprites crossing that layer are passed over: the clouds over the band of HeartGold's
+            // field move cut-ins, which is scrolled so.)
             auto is3D = [&](int x) { return (BGOBJLine[x] >> 24 & 0xC0) == 0x40; };
+            auto isSprite = [](u32 f) { return (f & 0x40) ? (f & 0x80) != 0 : (f & 0x90) != 0; };
             bool inner = is3D(i) && !is3D(i + dir);
-            for (int k = 2; k < 9 && inner; k++)
-                inner = (BGOBJLine[i + dir * k] >> 24) == (BGOBJLine[i + dir] >> 24);
+            u32 layer = 0;
+            for (int k = 1; k < 9 && inner; k++)
+            {
+                const u32 f = BGOBJLine[i + dir * k] >> 24;
+                if (isSprite(f) || f == layer) continue;
+                if (!layer && (f & 0xC0) != 0x40) layer = f;
+                else inner = false;
+            }
             if (inner) i += dir;
         }
         const u32 val1 = BGOBJLine[i], val2 = BGOBJLine[256 + i];
@@ -177,6 +186,39 @@ void SoftRenderer::RecordEdges(u32 line)
         else if ((master >> 14) == 2) shown = ColorBrightnessDown(shown, factor, 0xF);
         EdgeColour[CurUnit->Num][line * 2 + side] = toXRGB(shown);
         EdgeBlend[CurUnit->Num][line * 2 + side] = (u16)(eva | evb << 8);
+        // A sprite over a background (BG0-BG3, not the 3D layer or the backdrop): the background
+        // as the screen would show it without the sprite, brightened or darkened likewise, so that
+        // a figure reaching the side of the screen over a band (a Gym Leader's arm across the band
+        // of HeartGold's introductions) can leave the band going on beside the screen instead of
+        // being drawn out into a streak itself (frontend/merged.h).
+        // (Or the next column's: a background scrolled by one pixel leaves the outermost column
+        // to the 3D world, as the band of HeartGold's field move cut-ins does, while the clouds
+        // crossing it cover both columns.)
+        u32 under = 0;
+        auto isSprite = [](u32 f) { return (f & 0x40) ? (f & 0x80) != 0 : (f & 0x90) != 0; };
+        auto isBG = [](u32 f) { return !(f & 0xF0) && (f & 0x0F); };
+        if (isSprite(flag1))
+        {
+            for (int k = 0; k < 2 && !under; k++)
+            {
+                const int c = i + dir * k;
+                u32 v = BGOBJLine[256 + c];
+                if (k == 1 && !isSprite(BGOBJLine[c] >> 24)) v = BGOBJLine[c];
+                const u32 f = v >> 24;
+                if (!isBG(f)) continue;
+                u32 u = v;
+                if ((blendCnt & f) && (WindowMask[c] & 0x20))
+                {
+                    const u32 effect = (blendCnt >> 6) & 3;
+                    if (effect == 2) u = ColorBrightnessUp(v, CurUnit->EVY, 0x8);
+                    else if (effect == 3) u = ColorBrightnessDown(v, CurUnit->EVY, 0x7);
+                }
+                if ((master >> 14) == 1) u = ColorBrightnessUp(u, factor, 0x0);
+                else if ((master >> 14) == 2) u = ColorBrightnessDown(u, factor, 0xF);
+                under = 0xFF000000 | toXRGB(u);
+            }
+        }
+        EdgeUnder[CurUnit->Num][line * 2 + side] = under;
         bool flat = true;
         for (int k = 1; k < 8 && flat; k++)
         {

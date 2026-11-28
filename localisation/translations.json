@@ -1435,7 +1435,13 @@
       "HMS WITHOUT TEACHING": "MO SIN ENSEÑAR",
       "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "Corte, Surf, Fuerza, Golpe Roca y los demás movimientos de campo funcionan sin un Pokémon que los sepa. El primer Pokémon de tu equipo usa el movimiento.",
       "You still need the badge the game asks for.": "Sigues necesitando la medalla que pide el juego.",
-      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "MANTÉN L Y R A LA VEZ PARA SOPLAR AL MICRÓFONO"
+      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "MANTÉN L Y R A LA VEZ PARA SOPLAR AL MICRÓFONO",
+      "SPEED UP WAITS": "ACELERAR ESPERAS",
+      "Fast forward by itself while the game stops to work something out or load, with nothing moving (a ROM hack's double battles).": "Avance rápido automático mientras el juego se detiene a calcular o cargar algo, sin que nada se mueva (los combates dobles de un ROM hack).",
+      "Back to normal speed as soon as the game carries on.": "Vuelve a la velocidad normal en cuanto el juego continúa.",
+      "MUSIC THROUGH JINGLES": "MÚSICA DURANTE LAS FANFARRIAS",
+      "While a jingle plays (a level up, an item), the game's music goes on silently instead of pausing, so it comes straight back.": "Mientras suena una fanfarria (subir de nivel, un objeto), la música del juego sigue en silencio en vez de pausarse, así vuelve al instante.",
+      "Off: it pauses, as on a DS, and comes back a note at a time.": "Desactivado: se pausa, como en una DS, y vuelve nota a nota."
     },
     "it": {
       " (NEXT START)": " (AL RIAVVIO)",
@@ -2862,7 +2868,13 @@
       "HMS WITHOUT TEACHING": "MN SENZA INSEGNARE",
       "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "Taglio, Surf, Forza, Spaccaroccia e le altre mosse da campo funzionano senza un Pokémon che le conosca. Le usa il primo Pokémon della squadra.",
       "You still need the badge the game asks for.": "Serve comunque la medaglia che chiede il gioco.",
-      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "TIENI PREMUTI L E R INSIEME PER SOFFIARE NEL MICROFONO"
+      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "TIENI PREMUTI L E R INSIEME PER SOFFIARE NEL MICROFONO",
+      "SPEED UP WAITS": "ACCELERA LE ATTESE",
+      "Fast forward by itself while the game stops to work something out or load, with nothing moving (a ROM hack's double battles).": "Avanti veloce automatico mentre il gioco si ferma a calcolare o caricare qualcosa, senza che nulla si muova (le lotte in doppio di una ROM hack).",
+      "Back to normal speed as soon as the game carries on.": "Torna alla velocità normale appena il gioco riprende.",
+      "MUSIC THROUGH JINGLES": "MUSICA DURANTE I JINGLE",
+      "While a jingle plays (a level up, an item), the game's music goes on silently instead of pausing, so it comes straight back.": "Mentre suona un jingle (un aumento di livello, uno strumento), la musica del gioco continua in silenzio invece di fermarsi, così torna subito.",
+      "Off: it pauses, as on a DS, and comes back a note at a time.": "Disattivato: si mette in pausa, come su un DS, e torna una nota alla volta."
     },
     "fr": {
       " (NEXT START)": " (PROCHAIN DÉBUT)",
@@ -4289,7 +4301,13 @@
       "HMS WITHOUT TEACHING": "CS SANS LES APPRENDRE",
       "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "Coupe, Surf, Force, Éclate-Roc et les autres capacités de terrain marchent sans Pokémon qui les connaisse. Le premier Pokémon de l'équipe utilise la capacité.",
       "You still need the badge the game asks for.": "Il faut toujours le badge que demande le jeu.",
-      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "MAINTIENS L ET R ENSEMBLE POUR SOUFFLER DANS LE MICRO"
+      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "MAINTIENS L ET R ENSEMBLE POUR SOUFFLER DANS LE MICRO",
+      "SPEED UP WAITS": "ACCÉLÉRER LES ATTENTES",
+      "Fast forward by itself while the game stops to work something out or load, with nothing moving (a ROM hack's double battles).": "Avance rapide automatique pendant que le jeu s'arrête pour calculer ou charger quelque chose, sans que rien ne bouge (les combats en duo d'un ROM hack).",
+      "Back to normal speed as soon as the game carries on.": "Revient à la vitesse normale dès que le jeu reprend.",
+      "MUSIC THROUGH JINGLES": "MUSIQUE PENDANT LES JINGLES",
+      "While a jingle plays (a level up, an item), the game's music goes on silently instead of pausing, so it comes straight back.": "Pendant un jingle (une montée de niveau, un objet), la musique du jeu continue en silence au lieu de se mettre en pause, et revient aussitôt.",
+      "Off: it pauses, as on a DS, and comes back a note at a time.": "Désactivé : elle se met en pause, comme sur une DS, et revient note par note."
     },
     "de": {
       " (NEXT START)": " (NÄCHSTER START)",
@@ -5716,7 +5734,13 @@
       "HMS WITHOUT TEACHING": "VM OHNE ERLERNEN",
       "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "Zerschneider, Surfer, Stärke, Zertrümmerer und die anderen Feldattacken gehen ohne ein Pokémon, das sie kann. Das erste Pokémon im Team setzt die Attacke ein.",
       "You still need the badge the game asks for.": "Den Orden, den das Spiel verlangt, brauchst du weiterhin.",
-      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "HALTE L UND R ZUSAMMEN, UM INS MIKROFON ZU PUSTEN"
+      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "HALTE L UND R ZUSAMMEN, UM INS MIKROFON ZU PUSTEN",
+      "SPEED UP WAITS": "WARTEZEITEN VORSPULEN",
+      "Fast forward by itself while the game stops to work something out or load, with nothing moving (a ROM hack's double battles).": "Spult von selbst vor, während das Spiel anhält, um etwas zu berechnen oder zu laden, und sich nichts bewegt (die Doppelkämpfe eines ROM-Hacks).",
+      "Back to normal speed as soon as the game carries on.": "Zurück zur normalen Geschwindigkeit, sobald das Spiel weiterläuft.",
+      "MUSIC THROUGH JINGLES": "MUSIK BEI JINGLES",
+      "While a jingle plays (a level up, an item), the game's music goes on silently instead of pausing, so it comes straight back.": "Während ein Jingle spielt (ein Levelaufstieg, ein Item), läuft die Spielmusik stumm weiter, statt zu pausieren, und ist sofort wieder da.",
+      "Off: it pauses, as on a DS, and comes back a note at a time.": "Aus: Sie pausiert wie auf einem DS und kommt Note für Note zurück."
     },
     "ja": {
       " (NEXT START)": " (次のスタート)",
@@ -7143,7 +7167,13 @@
       "HMS WITHOUT TEACHING": "ひでんわざを覚えずに使う",
       "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "いあいぎり、なみのり、かいりき、いわくだきなどのフィールドわざを、覚えているポケモンがいなくても使えます。手持ちの先頭のポケモンが使います。",
       "You still need the badge the game asks for.": "ゲームが求めるジムバッジは引き続き必要です。",
-      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "LとRを同時に押し続けるとマイクに息を吹きかけます"
+      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "LとRを同時に押し続けるとマイクに息を吹きかけます",
+      "SPEED UP WAITS": "待ち時間を早送り",
+      "Fast forward by itself while the game stops to work something out or load, with nothing moving (a ROM hack's double battles).": "ゲームが計算や読み込みで止まり、何も動かない間は自動で早送りします（ROMハックのダブルバトルなど）。",
+      "Back to normal speed as soon as the game carries on.": "ゲームが進み始めるとすぐに通常の速度に戻ります。",
+      "MUSIC THROUGH JINGLES": "ファンファーレ中も音楽を続ける",
+      "While a jingle plays (a level up, an item), the game's music goes on silently instead of pausing, so it comes straight back.": "ファンファーレ（レベルアップ、道具など）の間、ゲームの音楽は止まらずに無音で流れ続け、すぐに戻ります。",
+      "Off: it pauses, as on a DS, and comes back a note at a time.": "オフ：DSと同じく一時停止し、音がひとつずつ戻ります。"
     },
     "ko": {
       " (NEXT START)": " (다음 시작)",
@@ -8570,7 +8600,13 @@
       "HMS WITHOUT TEACHING": "비전머신 없이 사용",
       "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "풀베기, 파도타기, 괴력, 바위깨기 등 필드 기술을 배운 포켓몬이 없어도 쓸 수 있습니다. 파티의 첫 번째 포켓몬이 기술을 사용합니다.",
       "You still need the badge the game asks for.": "게임이 요구하는 배지는 여전히 필요합니다.",
-      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "L과 R을 함께 누르고 있으면 마이크에 바람을 붑니다"
+      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "L과 R을 함께 누르고 있으면 마이크에 바람을 붑니다",
+      "SPEED UP WAITS": "대기 시간 빨리 감기",
+      "Fast forward by itself while the game stops to work something out or load, with nothing moving (a ROM hack's double battles).": "게임이 계산이나 로딩으로 멈춰 아무것도 움직이지 않는 동안 자동으로 빨리 감기합니다(롬 핵의 더블 배틀 등).",
+      "Back to normal speed as soon as the game carries on.": "게임이 다시 진행되면 바로 보통 속도로 돌아갑니다.",
+      "MUSIC THROUGH JINGLES": "팡파르 중에도 음악 유지",
+      "While a jingle plays (a level up, an item), the game's music goes on silently instead of pausing, so it comes straight back.": "팡파르(레벨 업, 도구 등)가 나오는 동안 게임 음악이 멈추지 않고 소리 없이 계속 흘러 바로 돌아옵니다.",
+      "Off: it pauses, as on a DS, and comes back a note at a time.": "끄기: DS처럼 일시 정지하고 음이 하나씩 돌아옵니다."
     },
     "pt": {
       " (NEXT START)": " (PRÓXIMA INICIALIZAÇÃO)",
@@ -9997,7 +10033,13 @@
       "HMS WITHOUT TEACHING": "MO SEM ENSINAR",
       "Cut, Surf, Strength, Rock Smash and the other field moves work without a Pokémon that knows them. The first Pokémon in your party uses the move.": "Corte, Surfar, Força, Esmagar Rocha e os outros golpes de campo funcionam sem um Pokémon que os saiba. O primeiro Pokémon da equipe usa o golpe.",
       "You still need the badge the game asks for.": "Você ainda precisa da insígnia que o jogo pede.",
-      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "SEGURE L E R JUNTOS PARA SOPRAR NO MICROFONE"
+      "HOLD L AND R TOGETHER TO BLOW INTO THE MICROPHONE": "SEGURE L E R JUNTOS PARA SOPRAR NO MICROFONE",
+      "SPEED UP WAITS": "ACELERAR ESPERAS",
+      "Fast forward by itself while the game stops to work something out or load, with nothing moving (a ROM hack's double battles).": "Avanço rápido automático enquanto o jogo para para calcular ou carregar algo, sem nada se mexer (as batalhas duplas de um ROM hack).",
+      "Back to normal speed as soon as the game carries on.": "Volta à velocidade normal assim que o jogo continua.",
+      "MUSIC THROUGH JINGLES": "MÚSICA DURANTE AS FANFARRAS",
+      "While a jingle plays (a level up, an item), the game's music goes on silently instead of pausing, so it comes straight back.": "Enquanto toca uma fanfarra (subir de nível, um item), a música do jogo continua em silêncio em vez de pausar, e volta na hora.",
+      "Off: it pauses, as on a DS, and comes back a note at a time.": "Desligado: pausa, como num DS, e volta nota por nota."
     }
   }
 }

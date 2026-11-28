@@ -1731,6 +1731,10 @@ struct Settings : OptionalFeatures
     bool ultraNoticeSeen = false;
     // FAST FORWARD SOUND: off plays silence while fast forwarding (GitHub #45).
     bool ffMute = false;
+    // SPEED UP WAITS: fast forward by itself while the game is busy, reading no buttons (busyFrames).
+    bool busyFast = false;
+    // MUSIC THROUGH JINGLES: the game's pause of its music for a jingle is a silence instead (GameMusic::Duck).
+    bool musicThroughJingles = false;
     // ACHIEVEMENT BANNER: CLASSIC is the first unlock card (#213), in the pixel font; else FullDex's own.
     bool raClassicBanner = false;
     // QUIET GAME MUSIC: while the player's own music app plays (now_playing.h), the game's music is off.
@@ -1851,6 +1855,8 @@ struct Settings : OptionalFeatures
             else if (k == "ui_size") uiSize=v;
             else if (k == "screen_filter") screenFilter=std::clamp(atoi(v.c_str()),0,2);
             else if (k == "smart_fast") smartFast = v=="1";
+            else if (k == "busy_fast") busyFast = v=="1";
+            else if (k == "music_through_jingles") musicThroughJingles = v=="1";
             else if (k == "zoom") zoom = v=="1";
             else if (k == "zoom_text") zoomText = v=="1";
             else if (k == "turbo_a") turboA = v=="1";
@@ -1927,6 +1933,8 @@ struct Settings : OptionalFeatures
         if (!gbaLcd.empty()) f << "gba_lcd=" << gbaLcd << "\n";
         SaveExtras(f);
         f << "smart_fast=" << smartFast << "\n";
+        f << "busy_fast=" << busyFast << "\n";
+        f << "music_through_jingles=" << musicThroughJingles << "\n";
         f << "zoom=" << zoom << "\n";
         f << "zoom_text=" << zoomText << "\n";
         f << "turbo_a=" << turboA << "\n";
@@ -2518,6 +2526,7 @@ int main(int argc, char** argv)
     cfg.padTouch = true;
 #endif
     for (const std::string& kv : opt.sets) cfg.Apply(kv);
+    gameMusic.Duck = cfg.musicThroughJingles; // (MUSIC THROUGH JINGLES, after a test run's "set" lines)
     ApplyWfcSetting(cfg); // (NINTENDO WFC: before the first packet, not only from the menu)
     if (!opt.sets.empty() || opt.keepSettings) cfg.readOnly = true;
     if (autoStateAllowed && cfg.autoResume && opt.stateLoad.empty() && AutoState::Present(autoStatePath))
@@ -3388,8 +3397,25 @@ int main(int argc, char** argv)
         };
         const bool megaButton = !pt.on && blue(40, 166) && blue(128, 166) && edge(174, 166) && edge(177, 166) &&
                                 megaFace(186, 166) && megaFace(238, 166);
+        // (HeartGold and SoulSilver: a button along the bottom, the move list's CANCEL bar or the commands' RUN, has
+        // its outline across row 153, above its blue (dark grey, or mid grey while a press flashes it). The touch
+        // screen's own background can be that blue too: in the Elite Four's Will's room it is blue all over
+        // (65, 121, 154), and between the choices, with no buttons on it, it was taken for the move's targets and
+        // shown whole beside the battle the whole time, and for the move list before that.)
+        auto bar = [&](int x) { return blue(x, 166) && (pt.on || edge(x, 153)); };
+        // A move's targets in a double battle (HeartGold, SoulSilver and the hacks built on them, as Heartfelt
+        // Gold): the same CANCEL bar along the bottom as the move list, over buttons of one colour (the
+        // Pokémon: the other side's orange, those the move cannot reach grey) where a move's button is white
+        // where its name is. It was taken for the move list, and the strip showed those buttons cut and one of
+        // them as chosen, a move that hits both of the other side's Pokémon among them. It is shown whole, as a
+        // card (battle-menu, below). (The first button's name area, left of the name and above and below its
+        // letters, is read: the background above the button is the room's own colour, white in a building, blue in
+        // Will's room, and was not a move's. A pressed button flashes white for a few frames.)
+        auto light = [&](int x, int y) { int r, g, bl; rgb(x, y, r, g, bl); return r > 200 && g > 200 && bl > 200; };
+        const bool moveFace = light(16, 34) && light(16, 46);
+        const bool targets = !pt.on && !cmd && bar(40) && bar(128) && !moveFace;
         const bool moves = pt.dp ? dpShown && ptPanel == 3
-                                 : !cmd && ptPanel != 4 && blue(40, 166) && blue(128, 166) && (blue(216, 166) || megaButton);
+                                 : !cmd && !targets && ptPanel != 4 && bar(40) && bar(128) && (blue(216, 166) || megaButton);
         battleMega = moves && megaButton;
         // The Yes / No panel (battle-yesno, below): red above blue. It is read above the labels,
         // whose letters can be where it was read before ("Switch Pokemon" has one at (128, 64): in
@@ -3398,9 +3424,9 @@ int main(int argc, char** argv)
         // frames, in a grey outline, the other unchanged.
         auto lit = [&](int x, int y) { int r, g, bl; rgb(x, y, r, g, bl); return r > 160 && g > 160 && bl > 160; };
         const bool yes = red(128, 50) || red(128, 64), no = blue(128, 124) || blue(128, 136);
-        const bool yesNo = !pt.dp && !blue(128, 166) && !orange(40, 160) &&
+        const bool yesNo = !pt.dp && !bar(128) && !orange(40, 160) &&
                            ((yes && no) || (yes && lit(128, 124) && edge(128, 112)) || (no && lit(128, 50) && edge(128, 40)));
-        const bool idle = AutoFocus::Blank(screens[1].pixels) || (!blue(128, 166) && !red(128, 60));
+        const bool idle = AutoFocus::Blank(screens[1].pixels) || (!bar(128) && !red(128, 60));
         battleUnknown = (cmd || moves || idle || yesNo) ? 0 : battleUnknown + 1;
         // (Another of Platinum's panels, known for what it is: the touch screen shown at once.)
         if (ptPanel == 4 && !cmd && !moves && !AutoFocus::Blank(screens[1].pixels)) battleUnknown = std::max(battleUnknown, 20);
@@ -3846,7 +3872,7 @@ int main(int argc, char** argv)
                 for (size_t k = sc.items.size() - 2; k < sc.items.size(); k++) sc.items[k].border = true;
             }
         }
-        else if (viewWidth < 300 || battleUnknown >= 20)
+        else if (viewWidth < 300 || battleUnknown >= 20 || targets)
         {
             sc.name = "battle-menu";
             float scale = std::min((126 - L) / 256, 98.0f / 192);
@@ -6394,7 +6420,7 @@ int main(int argc, char** argv)
         M_QUIT_YES, M_RESET_YES, // (QUIT GAME / RESET GAME asked first: PAGE_QUIT_CONFIRM)
         M_SHORTCUTS, // (CONTROLS: Fulldex's own four shortcuts, opening KEYS AND BUTTONS at them)
         M_EXTRAS, M_EXTRA0=92000, M_EXTRA_END=92007, M_PLAYBACK=93000, M_FAST_SPEED, M_SMART_FAST, M_SLOW_MOTION, M_REWIND_MB, M_REWIND, M_TURBO_A, M_SCREEN_FILTER, M_COMPANION_OVERLAY, M_PARTY_HUD, M_STATUS_BAR, M_LIVE_GLASS, M_FAST_BUTTON, M_ZOOM, M_ZOOM_TEXT,
-        M_STATES, M_SLOT_SAVE, M_SLOT_LOAD, M_SLOT_PREVIOUS, M_UNDO_LOAD, M_AUTO_STATE, M_AUTO_RESUME,
+        M_STATES, M_SLOT_SAVE, M_SLOT_LOAD, M_SLOT_PREVIOUS, M_UNDO_LOAD, M_AUTO_STATE, M_AUTO_RESUME, M_BUSY_FAST, M_MUSIC_JINGLES,
         M_KEY0=94000, M_KEY_LAYER=94900, M_KEY_SPACE, M_KEY_DEL, M_KEY_DONE, M_KEY_SYMBOLS, // (the keyboard's keys, Menu::keyGrid: SEARCH, the log in)
         M_FLY0=96000, M_FREEFLIGHT=95990, M_CFORM0=97000, M_CPARTY0=80000, M_CDEX0=81000, M_CITEM0=83000, M_RRESULT0=86000, M_SLOT0=90000, M_GUIDE0=91000, M_CGUIDE_GYM0=91100,
         M_BACKUP0 = 70000,
@@ -6998,6 +7024,9 @@ int main(int argc, char** argv)
                        "While your own music app is playing, turn the game's music off and keep its sound effects.", "Its music comes back when yours stops or pauses.");
             toggle(M_FFMUTE, "FAST FORWARD SOUND", Glass::I_FAST, Menu::P_NONE, !cfg.ffMute,
                    "Keep the sound on while fast forwarding.", "Off keeps fast forward silent.");
+            toggle(M_MUSIC_JINGLES, "MUSIC THROUGH JINGLES", Glass::I_NOTE, Menu::P_NONE, cfg.musicThroughJingles,
+                   "While a jingle plays (a level up, an item), the game's music goes on silently instead of pausing, so it comes straight back.",
+                   "Off: it pauses, as on a DS, and comes back a note at a time.");
         }
         else if (menuPage == PAGE_GRAPHICS)
         {
@@ -7137,6 +7166,9 @@ int main(int argc, char** argv)
             toggle(M_SMART_FAST, "SMART FAST", Glass::I_SPARKLE, Menu::P_NONE, cfg.smartFast,
                    "Fast forward only while walking around and through battle animations, not while text is shown or you choose.",
                    "So text and menus never fly past.");
+            toggle(M_BUSY_FAST, "SPEED UP WAITS", Glass::I_FAST, Menu::P_NONE, cfg.busyFast,
+                   "Fast forward by itself while the game stops to work something out or load, with nothing moving (a ROM hack's double battles).",
+                   "Back to normal speed as soon as the game carries on.");
             picker(M_SLOW_MOTION, "SLOW MOTION", Glass::I_GAUGE, Menu::P_NONE, { "OFF", "1/2", "1/4" }, cfg.slowDivisor == 4 ? 2 : cfg.slowDivisor == 2 ? 1 : 0,
                    "Run the game at half or a quarter of its speed.", "Handy for tricky timing.");
             section("ASSIST", Glass::I_REWIND);
@@ -9490,7 +9522,7 @@ int main(int argc, char** argv)
         WideImage wide;
         bool battleRender = false; // the widened battle picture is still to be made (BattleRender)
         std::vector<uint8_t> flags[2], edgeFlat[2];
-        std::vector<uint32_t> edge[2], widePixels;
+        std::vector<uint32_t> edge[2], edgeUnder[2], widePixels;
         std::vector<uint16_t> edgeBlend[2];
 
         // For drawing while the next frame is emulated: copies of what that changes. The
@@ -9508,6 +9540,7 @@ int main(int argc, char** argv)
                 if (sc.edge) { edge[i].assign(sc.edge, sc.edge + 2 * 192); sc.edge = edge[i].data(); }
                 if (sc.edgeBlend) { edgeBlend[i].assign(sc.edgeBlend, sc.edgeBlend + 2 * 192); sc.edgeBlend = edgeBlend[i].data(); }
                 if (sc.edgeFlat) { edgeFlat[i].assign(sc.edgeFlat, sc.edgeFlat + 2 * 192); sc.edgeFlat = edgeFlat[i].data(); }
+                if (sc.edgeUnder) { edgeUnder[i].assign(sc.edgeUnder, sc.edgeUnder + 2 * 192); sc.edgeUnder = edgeUnder[i].data(); }
             }
             if (severalFrames && wide.pixels && wide.w > 0 && wide.h > 0 && wide.pixels == melonDS::Wide.Front)
             {
@@ -9593,6 +9626,10 @@ int main(int argc, char** argv)
     });
 #endif
     int emuSpeed = 1, emuGot = 0;
+    // SPEED UP WAITS: how many frames in a row the game has read no buttons (melonDS's lag frames):
+    // busy working something out or loading, with nothing moving. Heartfelt Gold's double battles
+    // read the cartridge for every choice the other side's Pokémon make, about 160 frames each.
+    std::atomic<int> busyFrames{0};
     // Fast forward's music at its own speed (ff_music.h): a copy of the console that only plays
     // the song, a frame of it for each frame shown. Its sound instead of the game's while there
     // is any (emuMusicGot); else the stretches of FastForwardAudio, as before.
@@ -9673,6 +9710,7 @@ int main(int argc, char** argv)
             if (funcWatchOn) funcWatch.NextFrame();
             const double f0 = perfNow();
             nds->RunFrame();
+            busyFrames.store(nds->LagFrameFlag ? busyFrames.load(std::memory_order_relaxed) + 1 : 0, std::memory_order_relaxed);
             if (testMusicOffAt && rc_frame == testMusicOffAt) gameMusic.Music = 0;
             gameMusic.Apply(); // (MUSIC / SOUND EFFECTS: a change heard at once)
             pokeActions.Frame();
@@ -11822,6 +11860,7 @@ int main(int argc, char** argv)
                 cfg.fastSpeed=speeds[(i+(dir<0?3:1))%4];cfg.Save(opt.config);break;
             }
             case M_SMART_FAST:cfg.smartFast=!cfg.smartFast;cfg.Save(opt.config);break;
+            case M_BUSY_FAST:cfg.busyFast=!cfg.busyFast;cfg.Save(opt.config);break;
             case M_ENCSHOWN: cfg.encountersShown = !cfg.encountersShown; cfg.Save(opt.config); break;
             case M_REPELPROMPT: cfg.repelPrompt = !cfg.repelPrompt; cfg.Save(opt.config); break;
             case M_LEVELCAPWARN: cfg.levelCapWarn = !cfg.levelCapWarn; cfg.Save(opt.config); break;
@@ -12232,6 +12271,11 @@ int main(int argc, char** argv)
             case M_FFMUTE:
                 cfg.ffMute = !cfg.ffMute;
                 break;
+            case M_MUSIC_JINGLES:
+                cfg.musicThroughJingles = !cfg.musicThroughJingles;
+                gameMusic.Duck = cfg.musicThroughJingles;
+                cfg.Save(opt.config);
+                break;
             case M_RA_BANNER:
                 cfg.raClassicBanner = !cfg.raClassicBanner;
                 break;
@@ -12416,7 +12460,15 @@ int main(int argc, char** argv)
         // in about 33 ms by the last time's measure (ffFrameMs): where the emulation itself is
         // the limit (the Switch, 10 ms or more a frame) running 4 at once is no faster than 3, it
         // only shows fewer of them.
-        if (!paused && fastRequested && (!cfg.smartFast || ((pokeActions.Flags() & PK_NDS_FIELD_SCREEN) && !(pokeActions.Flags() & (PK_NDS_FIELD_LOCKED|PK_NDS_FIELD_TEXT))) || ((pokeActions.Flags() & PK_NDS_FIELD_BATTLE) && !(pokeActions.Flags() & PK_NDS_FIELD_BATTLE_INPUT)) || (!pokeActions.Supported() && (ffInBattle || lastFieldForSpeed))))
+        // SPEED UP WAITS: fast forward by itself once the game has read no buttons for a third of a
+        // second (busyFrames), back to normal speed with the first frame that reads them again.
+        const bool busyFast = cfg.busyFast && !opt.lockstep && busyFrames.load(std::memory_order_relaxed) >= 20;
+        {
+            static bool wasBusyFast = false;
+            if (busyFast != wasBusyFast) fprintf(stderr, "[ff] frame %u: %s\n", frame, busyFast ? "the game is busy: fast forward (SPEED UP WAITS)" : "the game goes on: normal speed");
+            wasBusyFast = busyFast;
+        }
+        if (!paused && ((fastRequested && (!cfg.smartFast || ((pokeActions.Flags() & PK_NDS_FIELD_SCREEN) && !(pokeActions.Flags() & (PK_NDS_FIELD_LOCKED|PK_NDS_FIELD_TEXT))) || ((pokeActions.Flags() & PK_NDS_FIELD_BATTLE) && !(pokeActions.Flags() & PK_NDS_FIELD_BATTLE_INPUT)) || (!pokeActions.Supported() && (ffInBattle || lastFieldForSpeed)))) || busyFast))
         {
             speed = ffFrameMs > 0 && !opt.headless ? std::clamp((int)(33.3 / ffFrameMs), 2, cfg.fastSpeed) : cfg.fastSpeed; // (tests: always 4)
             // Where two frames or more fit in one refresh of the screen with the picture's own
@@ -13987,8 +14039,10 @@ int main(int argc, char** argv)
         const int topUnit = topUnitOf();
         SmButtonsArt::Ensure(UiLang::lang);
         ScreenImage screenImages[7] = {
-            { top, renderer2d.LayerFlags[topUnit], renderer2d.EdgeColour[topUnit], renderer2d.EdgeBlend[topUnit], renderer2d.EdgeFlat[topUnit] },
-            { bot, renderer2d.LayerFlags[1 - topUnit], renderer2d.EdgeColour[1 - topUnit], renderer2d.EdgeBlend[1 - topUnit], renderer2d.EdgeFlat[1 - topUnit] },
+            { top, renderer2d.LayerFlags[topUnit], renderer2d.EdgeColour[topUnit], renderer2d.EdgeBlend[topUnit], renderer2d.EdgeFlat[topUnit],
+              renderer2d.EdgeUnder[topUnit] },
+            { bot, renderer2d.LayerFlags[1 - topUnit], renderer2d.EdgeColour[1 - topUnit], renderer2d.EdgeBlend[1 - topUnit], renderer2d.EdgeFlat[1 - topUnit],
+              renderer2d.EdgeUnder[1 - topUnit] },
             { g_dexCover[0], nullptr },
             { g_dexCover[1], nullptr },
             { g_dexPages[0], nullptr },
@@ -14225,13 +14279,25 @@ int main(int argc, char** argv)
         }
         MergedPrepareEdgeWindows(scene, screenImages);
         sceneMark(1);
-        // Black 2: a picture in 2D covering the world (the Surf and Fly cut-ins) is shown at 4:3:
-        // continuing it beside the screen would only make streaks.
+        // A picture in 2D covering the world (Black 2's Surf and Fly cut-ins; the snapshot of the world that
+        // Heartfelt Gold's Elite Four introductions show, darkened, then under translucent 3D; the picture it
+        // shows on entering Viridian Forest) is shown at 4:3: continuing it beside the screen would only make
+        // streaks. Beside it, the world as it last was where that matches it (MergedHeldWorld), soft bars if not.
         // (Back to wide only after 10 frames without one: the cut-in's flashes come in between.)
+        static uint32_t pictureFrame = 0;
+        {
+            // (A bitmap background blended under the 3D layer, which is engine A's: see MergedEdgesArePicture.)
+            const auto& ua = nds->GPU.GPU2D_A;
+            const u32 mode = ua.DispCnt & 7;
+            const bool bg2Bitmap = (ua.DispCnt & (1 << 10)) && ((mode == 5 && (ua.BGCnt[2] & 0x80)) || mode == 6);
+            const bool bg3Bitmap = (ua.DispCnt & (1 << 11)) && mode >= 3 && mode <= 5 && (ua.BGCnt[3] & 0x80);
+            const bool under3D = topUnit == 0 && (ua.DispCnt & (1 << 3)) && (ua.DispCnt & (1 << 8)) &&
+                (((ua.BlendCnt & (1 << 10)) && bg2Bitmap) || ((ua.BlendCnt & (1 << 11)) && bg3Bitmap));
+            const bool fading = pictureFrame && frame - pictureFrame < 10;
+            if (scene.wide && MergedEdgesArePicture(scene, screenImages, under3D, fading)) pictureFrame = frame ? frame : 1;
+        }
         if (funcWatchOn)
         {
-            static uint32_t pictureFrame = 0;
-            if (scene.wide && MergedEdgesArePicture(scene, screenImages)) pictureFrame = frame ? frame : 1;
             // Screens drawn on below their last line (Scene::extraRows): copies with the rows
             // added, two of each in turn (the pipeline shows one while the next is made).
             for (int s = 0; s < 2; s++)
@@ -14307,8 +14373,15 @@ int main(int argc, char** argv)
                 screenImages[s].edge = nullptr;
                 screenImages[s].edgeBlend = nullptr;
                 screenImages[s].edgeFlat = nullptr;
+                screenImages[s].edgeUnder = nullptr;
             }
-            scene.narrow = scene.wide && pictureFrame && frame - pictureFrame < 10;
+        }
+        scene.narrow = scene.wide && pictureFrame && frame - pictureFrame < 10;
+        // (A still picture's sprites are not the weather's: none are repeated beside it.)
+        if (scene.narrow)
+        {
+            scene.weatherObj = false;
+            scene.weatherRepeat = 0;
         }
         if (opt.logSections)
         {
