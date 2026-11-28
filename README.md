@@ -1,19 +1,35 @@
-# FullDex
+<div align="center">
+
+<img src="docs/screenshots/banner.png" alt="FullDex: every handheld adventure, one launcher. DS, GBA and 3DS at 60 fps, on one wide screen" width="100%">
+
+<a href="../../releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/mamesj/fulldex?style=for-the-badge&label=FullDex&color=7fc3ff&labelColor=111b25"></a>
+<a href="https://fulldex.co.uk"><img alt="Website: fulldex.co.uk" src="https://img.shields.io/badge/website-fulldex.co.uk-7fc3ff?style=for-the-badge&labelColor=111b25"></a>
+<a href="https://discord.gg/pnGeMYyJR"><img alt="Discord" src="https://img.shields.io/badge/Discord-join-5865F2?style=for-the-badge&logo=discord&logoColor=white&labelColor=111b25"></a>
+<a href="https://buymeacoffee.com/mamesj"><img alt="Donate" src="https://img.shields.io/badge/donate-%E2%99%A5-ff7a9a?style=for-the-badge&labelColor=111b25"></a>
+
+**All your favourite Pokémon games, on one wide screen at 60 fps.**<br>
+PC, Mac, Linux and Steam Deck, Android, iPhone and iPad, and a modded Nintendo Switch.
+
+<sub>60 fps on DS, GBA and 3DS &nbsp;·&nbsp; Free &nbsp;·&nbsp; No ads &nbsp;·&nbsp; No account needed &nbsp;·&nbsp; Open source</sub>
+
+<img src="docs/screenshots/hero-1-8.gif" alt="FullDex at 60 fps: Groudon in Omega Ruby, a wild Gastrodon in Ultra Moon, a wild Graveler in X, then Black 2, HeartGold, Platinum and FireRed walking into wild battles, each on one wide screen" width="100%">
+
+<a href="#downloads"><img alt="Download FullDex" src="https://img.shields.io/badge/%E2%AC%87%20Download-for%20your%20device-f3f7fb?style=for-the-badge&labelColor=7fc3ff&color=111b25"></a>
+&nbsp;
+<a href="https://fulldex.co.uk"><img alt="See it in motion on fulldex.co.uk" src="https://img.shields.io/badge/%E2%96%B6%20See%20it%20in%20motion-fulldex.co.uk-f3f7fb?style=for-the-badge&labelColor=111b25&color=111b25"></a>
 
 <a href="https://recomplauncher.com/game/pokemon-fulldex"><picture><source media="(prefers-color-scheme: dark)" srcset="https://recomplauncher.com/assets/press/launcher/badge-light.svg"><img alt="Get it on RecompLauncher" src="https://recomplauncher.com/assets/press/launcher/badge-dark.svg" height="48"></picture></a>
 
-**Website: [fulldex.co.uk](https://fulldex.co.uk)**, to see it in motion and find the download for your device.
+</div>
 
-**All your favourite Pokémon games on a PC (Windows and Linux), a Mac, a Steam
-Deck or other handheld PC, an Android phone, an iPhone or iPad, or a modded Nintendo Switch: one screen,
-widescreen, 60 fps, up to 4K on a PC and 720p on the Switch.** No more squinting at two tiny stacked DS screens.
+| | Games |
+|---|---|
+| **DS** | Black 2, White 2, Black, White, HeartGold, SoulSilver, Platinum, Diamond and Pearl |
+| **GBA** | Emerald, Ruby, Sapphire, FireRed, LeafGreen and Ultra Violet |
+| **3DS** <sup>beta</sup> | Omega Ruby, Alpha Sapphire, X, Y, Ultra Sun and Ultra Moon: Windows, Linux and Steam Deck, Android and Switch (Mac being tested, iPhone and iPad later) |
+| **ROM hacks** | Renegade Platinum, Monomyth, Volt White 2 Redux, Blaze Black, Radical Red, Unbound and more, under their own names with their own saves |
 
-**DS:** Black 2, White 2, Black, White, HeartGold, SoulSilver, Platinum, Diamond and Pearl.<br>
-**GBA:** Emerald, Ruby, Sapphire, FireRed, LeafGreen and Ultra Violet.<br>
-**3DS (beta):** Omega Ruby, Alpha Sapphire, X, Y, Ultra Sun and Ultra Moon on Windows, Linux (and the Steam Deck), Android and Switch; Mac being tested, iPhone and iPad later.<br>
 Which languages: [Supported games](#supported-games).
-
-![FullDex at 60 fps: Groudon in Omega Ruby, a wild Gastrodon in Ultra Moon, a wild Graveler in X, then Black 2, HeartGold, Platinum and FireRed walking into wild battles, each on one wide screen](docs/screenshots/hero-1-8.gif)
 
 ## Downloads
 
@@ -30,20 +46,31 @@ Which languages: [Supported games](#supported-games).
 One program per platform: start it and pick the game from the list. You bring your own ROMs:
 the downloads hold none of the games. What's new in each update: [Releases](../../releases).
 
-## What is it?
+## The 3DS games, at 60 fps
 
-A program for your PC or your Switch (as homebrew) that runs the game on the
-melonDS emulator core (built in: there is nothing else to install), plus a
-layer that knows what the game is doing (which screen, which menu, which
-battle) and rearranges it into one proper widescreen picture. It is **not a
-native port** (those are the dream, see [What's next](#whats-next)); it's the
-DS game, presented the way it should look on a modern screen.
+<img src="docs/screenshots/feature-3ds.gif" alt="Omega Ruby: Groudon rising from the magma at 60 fps, on one wide screen" width="100%">
 
-| | melonDS | this |
-|---|---|---|
-| Screens | two 256×192 DS screens, stacked or side by side | one 16:9 picture, the touch screen's buttons tucked beside the action |
-| 3D world | 4:3 at DS resolution | 16:9, skies and scenery carried to the edges: up to 4K on a PC (your graphics card), 720p on the Switch (its graphics chip) |
-| Frame rate | the game's own 30 fps 3D | 60 fps, with in-between frames |
+FullDex is the first to play **Omega Ruby, Alpha Sapphire, X, Y, Ultra Sun and Ultra Moon** natively at **60 fps** in
+widescreen: smoothed from the games' own 30, sharp 3D up to 4K, one screen or two, and battles that fill the whole
+picture. Made from your own dump, in beta on Windows, Linux, Android and Switch. [How to set them up](#the-3ds-games-beta).
+
+## Highlights
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/feature-nav.gif" alt="FullDex Nav: the quick menu opening over the game" width="100%"><br><b>Your quick menu, one press away.</b><br>Fly, Party, Open PC, Repel, Encounters, Map, Pokédex and Bag, in the style you like: Modern, Classic, Simple or Wheel.</td>
+<td width="50%"><img src="docs/screenshots/feature-flight.gif" alt="Free Flight: flying over the map on a Pokémon" width="100%"><br><b>Free Flight.</b><br>Fly over the map yourself in every DS and GBA game, and land wherever you like.</td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/feature-themes.gif" alt="Launcher themes from the Theme Gallery" width="100%"><br><b>Fully customisable. Make it yours.</b><br>Themes from the Theme Gallery, your own colours and backgrounds, and four layouts.</td>
+<td width="50%"><img src="docs/screenshots/feature-hub.gif" alt="The Hub: moving Pokémon between games" width="100%"><br><b>The Hub.</b><br>Cloud saves through your own Google Drive or WebDAV, moving Pokémon between your games, trades and one Pokédex.</td>
+</tr>
+<tr>
+<td colspan="2"><img src="docs/screenshots/feature-hacks.gif" alt="ROM hacks in widescreen: Renegade Platinum, Monomyth, Volt White 2 Redux and Blaze Black" width="100%"><br><b>ROM hacks, on one wide screen.</b><br>Hacks of the supported games show up under their own names, with their own saves and widescreen where it's been made for them.</td>
+</tr>
+</table>
+
+More: [Features](#features), [Cheats](#cheats) and [the games](#the-games).
 
 ## Supported games
 
@@ -70,9 +97,28 @@ DS game, presented the way it should look on a modern screen.
   (Brazil) (DISPLAY > LANGUAGE; AUTO follows your system), whatever the game's own language. More in
   [regional games and touch controls](docs/REGIONAL-AND-TOUCH-CONTROLS.md).
 
+## How it works
+
+A program for your PC or your Switch (as homebrew) that runs the game on the
+melonDS emulator core (built in: there is nothing else to install), plus a
+layer that knows what the game is doing (which screen, which menu, which
+battle) and rearranges it into one proper widescreen picture. It is **not a
+native port** (those are the dream, see [What's next](#whats-next)); it's the
+DS game, presented the way it should look on a modern screen.
+
+| | melonDS | this |
+|---|---|---|
+| Screens | two 256×192 DS screens, stacked or side by side | one 16:9 picture, the touch screen's buttons tucked beside the action |
+| 3D world | 4:3 at DS resolution | 16:9, skies and scenery carried to the edges: up to 4K on a PC (your graphics card), 720p on the Switch (its graphics chip) |
+| Frame rate | the game's own 30 fps 3D | 60 fps, with in-between frames |
+
 ## Install
 
-### On a PC, Mac, Steam Deck or handheld (Windows, macOS and Linux)
+Pick your device to see how to set it up.
+
+<a id="on-a-pc-mac-steam-deck-or-handheld-windows-macos-and-linux"></a>
+<details><summary><b>On a PC, Mac, Steam Deck or handheld (Windows, macOS and Linux)</b></summary>
+
 
 <details>
 <summary><b>Show the guide</b></summary>
@@ -204,7 +250,12 @@ Tell us how yours runs, with its `game.log`.
 
 </details>
 
-### On the Nintendo Switch
+
+</details>
+
+<a id="on-the-nintendo-switch"></a>
+<details><summary><b>On the Nintendo Switch</b></summary>
+
 
 <details>
 <summary><b>Show the guide</b></summary>
@@ -287,7 +338,12 @@ the next one falls back by itself (hold L while starting for the interpreter).
 
 </details>
 
-### On Android
+
+</details>
+
+<a id="on-android"></a>
+<details><summary><b>On Android</b></summary>
+
 
 <details>
 <summary><b>Show the guide</b></summary>
@@ -335,7 +391,12 @@ speed; please tell us how yours runs (see [Reporting a bug](#reporting-a-bug)).
 
 Android also has a layout editor in the pause menu for moving and resizing the on-screen buttons.
 
-### On an iPhone or iPad
+
+</details>
+
+<a id="on-an-iphone-or-ipad"></a>
+<details><summary><b>On an iPhone or iPad</b></summary>
+
 
 <details>
 <summary><b>Show the guide</b></summary>
@@ -374,7 +435,12 @@ Please tell us how it runs on yours, with your model (see [Reporting a bug](#rep
 
 </details>
 
-### The 3DS games (beta)
+
+</details>
+
+<a id="the-3ds-games-beta"></a>
+<details><summary><b>The 3DS games (beta)</b></summary>
+
 
 Omega Ruby, Alpha Sapphire, X, Y, Ultra Sun and Ultra Moon are played natively from your own game
 dump (a `.3ds` file; none is included), with widescreen or one screen, sharp 3D up to 4K, fast
@@ -405,6 +471,9 @@ It is a beta: back up your saves, and please [report](#reporting-a-bug) anything
 game's `hd-textures` folder. See [installing a texture pack](docs/howto/3ds-texture-packs.md)
 for the folder, file naming and **3DS > HD textures** setting. The packs are supplied
 separately; compatibility of the individual packs requested in #266 still needs testing.
+
+
+</details>
 
 ## Features
 
