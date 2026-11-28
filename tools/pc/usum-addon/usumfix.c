@@ -1052,12 +1052,14 @@ static const LiveBand LIVE_BANDS[] = {
 #define LIVE_N ((int)(sizeof LIVE_BANDS / sizeof LIVE_BANDS[0]))
 static MaskInfo live_mi[M_N];
 static int live_have[M_N];
+static int live_age[M_N];         /* read-backs since the label's last good cut */
+static int live_nf[M_N];          /* the letters' pixels in that cut */
 static float live_plate[M_N][3];
 static void live_read(void)
 {
     /* the letters are ringed by a dark edge (their fill runs from white to the button's own colour): what a flood from
        the band's border cannot reach through the dark is a letter (or a hole in one), and the dark next to it its edge */
-    static unsigned char dark[32][100], reach[32][100], fill[32][100];
+    static unsigned char dark[32][100], reach[32][100], fill[32][100], cut[32][100];
     static int q[32 * 100];
     int ax = 1;
     for (int i = 0; i < LIVE_N; i++) {
@@ -1093,12 +1095,25 @@ static void live_read(void)
                     int xx = x + dx, yy = y + dy;
                     if (xx >= 0 && yy >= 0 && xx < W && yy < H && fill[yy][xx]) { v = 1; break; }
                 }
-            atlas_px[LIVE_AY + y][ax + x] = v ? 255 : 0;
+            cut[y][x] = v ? 255 : 0;
             if (v) { if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y; }
             if (v && dark[y][x]) { const unsigned char *c = rb[b->y0 + y][b->x0 + x]; for (int k = 0; k < 3; k++) pc[k] += c[k] / 255.0f; pn++; }
         }
-        live_have[m] = nf > 25 && nf < W * H * 2 / 5 && bx1 >= bx0;
-        if (live_have[m]) {
+        /* (and not much less of the lettering than the last good cut found: the shine breaking its dark edge) */
+        const int good = nf > 25 && nf < W * H * 2 / 5 && bx1 >= bx0 && (!live_have[m] || live_age[m] > 90 || nf * 10 >= live_nf[m] * 7);
+        /* a cut that fails for a moment (FIGHT's shine running over its lettering) keeps the last good one,
+           as it was, for up to 90 read-backs: the label blinked out a frame or more every second or so */
+        if (!good) {
+            if (live_have[m] && ++live_age[m] <= 90) { ax += W + 4; continue; }
+            live_have[m] = 0;
+            ax += W + 4;
+            continue;
+        }
+        live_have[m] = 1;
+        live_age[m] = 0;
+        live_nf[m] = nf;
+        for (int y = 0; y < H; y++) memcpy(&atlas_px[LIVE_AY + y][ax], cut[y], W);
+        {
             MaskInfo *mi = &live_mi[m];
             mi->sx = (float)(b->x0 + bx0); mi->sy = (float)(b->y0 + by0);
             mi->w = (float)(bx1 - bx0 + 1); mi->h = (float)(by1 - by0 + 1);
