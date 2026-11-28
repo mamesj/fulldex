@@ -14,6 +14,9 @@ class LanguageRegistryTests(unittest.TestCase):
         for name in ('translations', 'guide_translations'):
             tables = json.loads((ROOT / f'localisation/{name}.json').read_text(encoding='utf-8'))['tables']
             self.assertEqual(sorted(tables), sorted(registry()[1:]), name)
+    def test_companion_tables_are_languages_of_the_registry(self):
+        tables = json.loads((ROOT / 'localisation/companion_translations.json').read_text(encoding='utf-8'))['tables']
+        self.assertTrue(set(tables) <= set(registry()[1:]))
     def test_header_codes_follow_the_registry(self):
         source = (ROOT / 'frontend/ui_lang_codes.h').read_text(encoding='utf-8')
         codes = re.findall(r'"([a-z]+)"', re.search(r'Codes\[CodeCount\]\s*=\s*\{([^}]*)\}', source).group(1))

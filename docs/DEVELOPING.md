@@ -299,8 +299,8 @@ release APK's `lib/arm64-v8a/libmain.so` or supply your own: never commit them.
 - `runtime/recomp_*` and `gen/` belong to the single-game recompilation path; the all-games
   builds do not use recompiled game code.
 - Interface text is generated: `localisation/languages.json` (the languages and their order)
-  becomes `frontend/ui_lang_codes.h`; `translations.json` and `guide_translations.json` become
-  `frontend/ui_translations.h` and `frontend/guide_translations.h`, all through `tools/localisation/`. See
+  becomes `frontend/ui_lang_codes.h`; `translations.json`, `guide_translations.json` and `companion_translations.json` become
+  `frontend/ui_translations.h`, `frontend/guide_translations.h` and `frontend/companion_translations.h`, all through `tools/localisation/`. See
   [`localisation/README.md`](../localisation/README.md).
 - Online features are optional build flags: the Hub (`SSR_POKEMON_HUB`), the theme Gallery
   relay (`FULLDEX_RELAY_URL`) and Google Drive cloud saves (`FULLDEX_GOOGLE_CLIENT_FILE`).
