@@ -15,12 +15,7 @@
 #include "ui_font.h"
 #include "ui_lang_codes.h"
 #include "companion_translations.h"
-#ifndef UI_TITLE_LANG_DEFINED
-#define UI_TITLE_LANG_DEFINED
-// (The menu language for title case, a position in UiLang::Codes; English is UiLang::En. Outside English a lone Y, E, O or U between
-// words is "and"/"or", so it is written small, not kept as the Y button.)
-inline int& UiTitleLang() { static int l = UiLang::En; return l; }
-#endif
+#include "ui_title_lang.h"
 
 namespace UiLang
 {
@@ -143,7 +138,8 @@ inline void LowerLatin(std::string& w, size_t from)
         else if (b >= 0xC0) { while (k + 1 < w.size() && ((unsigned char)w[k + 1] & 0xC0) == 0x80) k++; } // (other letters as they are)
     }
 }
-inline std::string Tr(const std::string& s) {
+// The words in `lang`, a position in Codes[] (a language given, so nothing has to switch the menus' language to ask).
+inline std::string Tr(int lang,const std::string& s) {
     if(IsEnglish(lang)||s.empty())return s;
     const auto& table=UiTranslations::Table(lang);
     auto direct=[&](const std::string& key)->const std::string* {auto it=table.find(key);return it==table.end()?nullptr:&it->second;};
@@ -151,21 +147,21 @@ inline std::string Tr(const std::string& s) {
     if(actionColon!=std::string::npos && actionColon<48) {
         const auto action=s.substr(actionColon+2);
         for(const char* known:{"PLAY","BACK","QUIT","OPEN","CHOOSE","SELECT","CHANGE","TABS","SETTINGS","ON / OFF"})
-            if(action==known)if(const auto* value=direct(action=="SELECT"?"CHOOSE":action))return Tr(s.substr(0,actionColon))+": "+*value;
+            if(action==known)if(const auto* value=direct(action=="SELECT"?"CHOOSE":action))return Tr(lang,s.substr(0,actionColon))+": "+*value;
     }
     const bool columns=s.find("  ")!=std::string::npos && s.find(":")!=std::string::npos;
     if(!columns)if(const auto* value=direct(s))if(*value!=s)return *value;
     if(columns) {
         std::string out;size_t start=0;
         while(start<s.size()) {
-            size_t end=s.find("  ",start);out+=Tr(s.substr(start,end==std::string::npos?end:end-start));
+            size_t end=s.find("  ",start);out+=Tr(lang,s.substr(start,end==std::string::npos?end:end-start));
             if(end==std::string::npos)break;
             size_t next=end;while(next<s.size()&&s[next]==' ')++next;out+=s.substr(end,next-end);start=next;
         }
         return out;
     }
     for(const char* prefix:{"RETROACHIEVEMENTS: LOGGED IN AS ","RETROACHIEVEMENTS: LOGIN FAILED: ","RETROACHIEVEMENTS: COULD NOT LOAD: ","USRCHEAT.DAT HAS NO ENTRY FOR THIS GAME CODE: ","ACHIEVEMENT: ","SETTINGS: ","FOLDER: ","LOADED: ","FAILED: ","UNLOCKED ","SO FAR ","VERSION ","FIND: ","SAVE IN ","NEW IN ","ZOOM ","OBTAINED "}) {
-        const std::string key=prefix;if(s.size()>key.size()&&!s.compare(0,key.size(),key))if(const auto* value=direct(key))return *value+((key=="UNLOCKED "||key=="SO FAR ")?Tr(s.substr(key.size())):s.substr(key.size()));
+        const std::string key=prefix;if(s.size()>key.size()&&!s.compare(0,key.size(),key))if(const auto* value=direct(key))return *value+((key=="UNLOCKED "||key=="SO FAR ")?Tr(lang,s.substr(key.size())):s.substr(key.size()));
     }
     const auto colon=s.find(": ");
     if(colon!=std::string::npos && colon<48)if(const auto* value=direct(s.substr(colon+2)=="SELECT"?"CHOOSE":s.substr(colon+2))) {
@@ -173,7 +169,7 @@ inline std::string Tr(const std::string& s) {
     }
     if(s.find(" / ")!=std::string::npos && (s.rfind("LEFT / ",0)==0 || s.rfind("UP / ",0)==0)) {
         std::string out;size_t start=0;
-        while(start<s.size()) {size_t end=s.find(" / ",start);out+=Tr(s.substr(start,end==std::string::npos?end:end-start));if(end==std::string::npos)break;out+=" / ";start=end+3;}
+        while(start<s.size()) {size_t end=s.find(" / ",start);out+=Tr(lang,s.substr(start,end==std::string::npos?end:end-start));if(end==std::string::npos)break;out+=" / ";start=end+3;}
         return out;
     }
     size_t digits=0;while(digits<s.size()&&s[digits]>='0'&&s[digits]<='9')++digits;
@@ -184,6 +180,8 @@ inline std::string Tr(const std::string& s) {
     // Companion pages (PokeDaisy) keep their own es/it/fr/de text; ja/ko/pt fall back to English.
     return HasCompanionText(lang) ? CompanionTranslation(lang, s) : s;
 }
+// The words in the menus' language (UiLang::lang).
+inline std::string Tr(const std::string& s) { return Tr(lang,s); }
 // A template in the menus' language with its {0}, {1}... filled in ("Holding {0}": "Lleva {0}").
 inline std::string F(const std::string& tmpl, std::initializer_list<std::string> args)
 {

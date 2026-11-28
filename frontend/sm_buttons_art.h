@@ -54,10 +54,7 @@ inline void Ensure(int lang)
         std::string word = english[b];
         if (UiLang::HasCompanionText(lang))
         {
-            const int keep = UiLang::lang;
-            UiLang::lang = lang;
-            const std::string t = UiLang::Tr(b == SmButtons::POKEMON ? "POKEMON" : english[b]);
-            UiLang::lang = keep;
+            const std::string t = UiLang::Tr(lang, b == SmButtons::POKEMON ? "POKEMON" : english[b]);
             if (!t.empty() && t != (b == SmButtons::POKEMON ? "POKEMON" : english[b])) word = t;
         }
         const float scale = stbtt_ScaleForPixelHeight(&font, sizes[b]);

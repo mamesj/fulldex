@@ -13,13 +13,7 @@
 #include "stb_truetype.h"
 #include "ui_clean_font_data.h"
 #include "launcher_cjk.h"
-#include "ui_lang_codes.h"
-#ifndef UI_TITLE_LANG_DEFINED
-#define UI_TITLE_LANG_DEFINED
-// (The menu language for title case, a position in UiLang::Codes; English is UiLang::En. Outside English a lone Y, E, O or U between
-// words is "and"/"or", so it is written small, not kept as the Y button.)
-inline int& UiTitleLang() { static int l = UiLang::En; return l; }
-#endif
+#include "ui_title_lang.h"
 
 namespace CleanFont
 {
